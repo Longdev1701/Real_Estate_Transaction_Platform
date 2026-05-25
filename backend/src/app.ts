@@ -1,5 +1,6 @@
 import express from "express";
 
+import { authRouter } from "./auth/auth.routes.js";
 import { corsMiddleware } from "./config/cors.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
 import { sendSuccess } from "./utils/response.js";
@@ -15,5 +16,7 @@ app.get("/api/health", (_req, res) => {
     status: "ok",
   });
 });
+
+app.use("/api/auth", authRouter);
 
 app.use(errorMiddleware);
