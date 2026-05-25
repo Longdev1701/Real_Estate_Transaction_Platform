@@ -18,5 +18,8 @@ export const signRefreshToken = (payload: AuthTokenPayload) =>
     expiresIn: "7d",
   });
 
+export const verifyAccessToken = (token: string) =>
+  jwt.verify(token, JWT_ACCESS_SECRET) as AuthTokenPayload;
+
 export const verifyRefreshToken = (token: string) =>
   jwt.verify(token, JWT_REFRESH_SECRET) as AuthTokenPayload;

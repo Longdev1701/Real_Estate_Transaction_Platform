@@ -1,8 +1,11 @@
 import express from "express";
+import { UserRole } from "@prisma/client";
 
 import { authRouter } from "./auth/auth.routes.js";
 import { corsMiddleware } from "./config/cors.js";
+import { authenticate } from "./middlewares/auth.middleware.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
+import { authorizeRoles } from "./middlewares/role.middleware.js";
 import { sendSuccess } from "./utils/response.js";
 
 export const app = express();
@@ -18,5 +21,14 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/auth", authRouter);
+app.get("/api/admin/test", authenticate, authorizeRoles(UserRole.ADMIN), (req, res) => {
+  sendSuccess(
+    res,
+    {
+      user: req.user,
+    },
+    "Admin route accessed successfully.",
+  );
+});
 
 app.use(errorMiddleware);
