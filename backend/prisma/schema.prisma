@@ -1,0 +1,239 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  BANNED
+}
+
+enum PropertyType {
+  HOUSE
+  APARTMENT
+  LAND
+  ROOM
+}
+
+enum PostType {
+  SELL
+  RENT
+  FIND
+}
+
+enum PostStatus {
+  ACTIVE
+  HIDDEN
+  BANNED
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+}
+
+enum NotificationType {
+  MESSAGE
+  POST
+  REPORT
+  SYSTEM
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  REJECTED
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String
+  fullName     String
+  phone        String?
+  avatarUrl    String?
+  role         UserRole   @default(USER)
+  status       UserStatus @default(ACTIVE)
+
+  posts         PropertyPost[]
+  sentMessages  Message[]
+  notifications Notification[]
+  reports       Report[]
+  savedPosts    SavedPost[]
+  refreshTokens RefreshToken[]
+  systemLogs    SystemLog[]
+
+  buyerConversations  Conversation[] @relation("BuyerConversation")
+  sellerConversations Conversation[] @relation("SellerConversation")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PropertyPost {
+  id String @id @default(cuid())
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id])
+
+  title       String
+  description String
+
+  price Float
+  area  Float
+
+  address  String
+  city     String
+  district String
+  ward     String?
+
+  latitude  Float
+  longitude Float
+
+  propertyType PropertyType
+  postType     PostType
+  status       PostStatus   @default(ACTIVE)
+
+  images        PropertyImage[]
+  conversations Conversation[]
+  reports       Report[]
+  savedBy       SavedPost[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PropertyImage {
+  id String @id @default(cuid())
+
+  postId String
+  post   PropertyPost @relation(fields: [postId], references: [id])
+
+  imageUrl String
+  caption  String?
+  order    Int     @default(0)
+
+  createdAt DateTime @default(now())
+}
+
+model Conversation {
+  id String @id @default(cuid())
+
+  buyerId String
+  buyer   User   @relation("BuyerConversation", fields: [buyerId], references: [id])
+
+  sellerId String
+  seller   User   @relation("SellerConversation", fields: [sellerId], references: [id])
+
+  postId String
+  post   PropertyPost @relation(fields: [postId], references: [id])
+
+  messages Message[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Message {
+  id String @id @default(cuid())
+
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+
+  senderId String
+  sender   User   @relation(fields: [senderId], references: [id])
+
+  content     String
+  messageType MessageType @default(TEXT)
+
+  isRead Boolean @default(false)
+
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  title   String
+  content String
+
+  type   NotificationType
+  isRead Boolean          @default(false)
+
+  relatedId String?
+
+  createdAt DateTime @default(now())
+}
+
+model Report {
+  id String @id @default(cuid())
+
+  reporterId String
+  reporter   User   @relation(fields: [reporterId], references: [id])
+
+  postId String
+  post   PropertyPost @relation(fields: [postId], references: [id])
+
+  reason      String
+  description String?
+
+  status ReportStatus @default(PENDING)
+
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+}
+
+model SystemLog {
+  id String @id @default(cuid())
+
+  actorId String
+  actor   User   @relation(fields: [actorId], references: [id])
+
+  action      String
+  targetType  String
+  targetId    String
+  description String?
+
+  createdAt DateTime @default(now())
+}
+
+model SavedPost {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  postId String
+  post   PropertyPost @relation(fields: [postId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, postId])
+}
+
+model RefreshToken {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  tokenHash String
+
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  createdAt DateTime @default(now())
+}
