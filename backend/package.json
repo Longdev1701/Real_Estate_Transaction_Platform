@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "description": "Express API for the real estate transaction platform.",
-  "type": "module",
   "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
