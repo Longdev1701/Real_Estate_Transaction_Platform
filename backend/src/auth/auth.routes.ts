@@ -1,6 +1,8 @@
 import { Router } from "express";
 
+import { authenticate } from "../middlewares/auth.middleware.js";
 import { validateRequest } from "../middlewares/validate.middleware.js";
+import { sendSuccess } from "../utils/response.js";
 import {
   loginController,
   logoutController,
@@ -32,3 +34,6 @@ authRouter.post(
   validateRequest({ body: logoutSchema }),
   logoutController,
 );
+authRouter.get("/me", authenticate, (req, res) => {
+  sendSuccess(res, req.user, "Current user fetched successfully.");
+});
