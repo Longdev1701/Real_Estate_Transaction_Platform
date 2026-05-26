@@ -6,12 +6,15 @@ import * as z from "zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-// import { api } from "@/lib/api"; // Will be used when integrating with real backend
+import { AxiosError } from "axios";
+import { api } from "@/lib/api";
 
 const registerSchema = z
   .object({
+    fullName: z.string().min(2, "Họ tên ít nhất 2 ký tự"),
     email: z.string().email("Email không hợp lệ"),
-    password: z.string().min(6, "Mật khẩu ít nhất 6 ký tự"),
+    phone: z.string().optional(),
+    password: z.string().min(8, "Mật khẩu ít nhất 8 ký tự"),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -36,12 +39,16 @@ export default function RegisterPage() {
   const onSubmit = async (data: RegisterFormValues) => {
     try {
       setError(null);
-      // await api.post("/auth/register", data);
-      
-      // Mock registration
+      const { confirmPassword: _confirmPassword, phone, ...payload } = data;
+
+      await api.post("/auth/register", {
+        ...payload,
+        ...(phone ? { phone } : {}),
+      });
       router.push("/auth/login");
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Đăng ký thất bại");
+    } catch (err) {
+      const error = err as AxiosError<{ message?: string }>;
+      setError(error.response?.data?.message || "Đăng ký thất bại");
     }
   };
 
@@ -60,6 +67,21 @@ export default function RegisterPage() {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">
+              Họ tên
+            </label>
+            <input
+              type="text"
+              {...register("fullName")}
+              className="input-dark"
+              placeholder="Nguyễn Văn A"
+            />
+            {errors.fullName && (
+              <p className="text-red-400 text-sm mt-1">{errors.fullName.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
               Email
             </label>
             <input
@@ -70,6 +92,21 @@ export default function RegisterPage() {
             />
             {errors.email && (
               <p className="text-red-400 text-sm mt-1">{errors.email.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Số điện thoại
+            </label>
+            <input
+              type="tel"
+              {...register("phone")}
+              className="input-dark"
+              placeholder="0901234567"
+            />
+            {errors.phone && (
+              <p className="text-red-400 text-sm mt-1">{errors.phone.message}</p>
             )}
           </div>
 
