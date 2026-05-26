@@ -3,17 +3,22 @@ import type { RequestHandler } from "express";
 import { Router } from "express";
 
 import { authenticate } from "../middlewares/auth.middleware.js";
+import { postImagesField } from "../middlewares/upload.middleware.js";
 import { validateRequest } from "../middlewares/validate.middleware.js";
 import {
+  addPostImagesController,
   createPostController,
   deletePostController,
+  deletePostImageController,
   getPostByIdController,
   getPostsController,
   updatePostController,
 } from "./post.controller.js";
 import {
   createPostSchema,
+  imageMetadataSchema,
   postFilterSchema,
+  postImageParamSchema,
   postIdParamSchema,
   updatePostSchema,
 } from "./post.validation.js";
@@ -32,6 +37,7 @@ const optionalAuthenticate: RequestHandler = (req, res, next) => {
 postRoutes.post(
   "/",
   authenticate,
+  postImagesField,
   validateRequest({ body: createPostSchema }),
   createPostController,
 );
@@ -52,6 +58,19 @@ postRoutes.patch(
   authenticate,
   validateRequest({ params: postIdParamSchema, body: updatePostSchema }),
   updatePostController,
+);
+postRoutes.post(
+  "/:id/images",
+  authenticate,
+  postImagesField,
+  validateRequest({ params: postIdParamSchema, body: imageMetadataSchema }),
+  addPostImagesController,
+);
+postRoutes.delete(
+  "/:id/images/:imageId",
+  authenticate,
+  validateRequest({ params: postImageParamSchema }),
+  deletePostImageController,
 );
 postRoutes.delete(
   "/:id",

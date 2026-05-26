@@ -2,8 +2,10 @@ import type { RequestHandler } from "express";
 
 import { sendSuccess } from "../utils/response.js";
 import {
+  addPostImages,
   createPost,
   deletePost,
+  deletePostImage,
   getPostById,
   getPosts,
   updatePost,
@@ -14,7 +16,12 @@ const getPostIdParam = (id: string | string[]) =>
 
 export const createPostController: RequestHandler = async (req, res, next) => {
   try {
-    const result = await createPost(req.body, req.user);
+    const result = await createPost(
+      req.body,
+      Array.isArray(req.files) ? req.files : [],
+      req.body.imageMetadata,
+      req.user,
+    );
 
     sendSuccess(res, result, "Post created successfully.", 201);
   } catch (error) {
@@ -61,6 +68,39 @@ export const deletePostController: RequestHandler = async (req, res, next) => {
     await deletePost(getPostIdParam(req.params.id), req.user);
 
     sendSuccess(res, null, "Post deleted successfully.");
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const addPostImagesController: RequestHandler = async (req, res, next) => {
+  try {
+    const result = await addPostImages(
+      getPostIdParam(req.params.id),
+      Array.isArray(req.files) ? req.files : [],
+      req.body.imageMetadata,
+      req.user,
+    );
+
+    sendSuccess(res, result, "Post images added successfully.");
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deletePostImageController: RequestHandler = async (
+  req,
+  res,
+  next,
+) => {
+  try {
+    await deletePostImage(
+      getPostIdParam(req.params.id),
+      getPostIdParam(req.params.imageId),
+      req.user,
+    );
+
+    sendSuccess(res, null, "Post image deleted successfully.");
   } catch (error) {
     next(error);
   }
