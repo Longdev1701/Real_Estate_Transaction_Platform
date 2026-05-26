@@ -1,3 +1,4 @@
+import type { Express } from "express";
 import type { Prisma } from "@prisma/client";
 
 import { PostStatus, UserRole } from "@prisma/client";
@@ -6,6 +7,7 @@ import type { AuthenticatedUser } from "../types/auth.type.js";
 
 import { AppError } from "../middlewares/error.middleware.js";
 import { prisma } from "../prisma/prisma.service.js";
+import { deleteImageByUrl, uploadPostImages } from "../services/upload.service.js";
 import type {
   CreatePostInput,
   PostFilterInput,
@@ -66,30 +68,132 @@ const toPaginationNumber = (
   return max === undefined ? minBounded : Math.min(max, minBounded);
 };
 
+const parseImageMetadata = (value: unknown) => {
+  if (value === undefined || value === null || value === "") {
+    return [];
+  }
+
+  if (typeof value !== "string") {
+    throw new AppError("imageMetadata must be a JSON string.", 400);
+  }
+
+  let parsedValue: unknown;
+
+  try {
+    parsedValue = JSON.parse(value);
+  } catch {
+    throw new AppError("imageMetadata must be valid JSON.", 400);
+  }
+
+  if (!Array.isArray(parsedValue)) {
+    throw new AppError("imageMetadata must be an array.", 400);
+  }
+
+  return parsedValue.map((item, index) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      throw new AppError(`imageMetadata[${index}] is invalid.`, 400);
+    }
+
+    const record = item as Record<string, unknown>;
+    const caption =
+      typeof record.caption === "string" && record.caption.trim()
+        ? record.caption.trim()
+        : undefined;
+    const order =
+      record.order === undefined ? undefined : Number(record.order);
+
+    if (caption && caption.length > 255) {
+      throw new AppError(`imageMetadata[${index}].caption is too long.`, 400);
+    }
+
+    if (
+      order !== undefined &&
+      (!Number.isInteger(order) || order < 0 || !Number.isFinite(order))
+    ) {
+      throw new AppError(`imageMetadata[${index}].order is invalid.`, 400);
+    }
+
+    return { caption, order };
+  });
+};
+
+const validateImageMetadataCount = (
+  files: Express.Multer.File[],
+  imageMetadata: Array<{ caption?: string; order?: number }>,
+) => {
+  if (imageMetadata.length > files.length) {
+    throw new AppError(
+      "imageMetadata cannot contain more items than uploaded images.",
+      400,
+    );
+  }
+};
+
+const getPostOwnership = async (postId: string) => {
+  const post = await prisma.propertyPost.findUnique({
+    where: {
+      id: postId,
+    },
+    select: {
+      id: true,
+      authorId: true,
+      status: true,
+    },
+  });
+
+  if (!post) {
+    throw new AppError("Post not found.", 404);
+  }
+
+  return post;
+};
+
 export const createPost = async (
   input: CreatePostInput,
+  files: Express.Multer.File[] = [],
+  imageMetadataValue?: unknown,
   user?: AuthenticatedUser,
 ) => {
   const actor = ensureAuthenticated(user);
-  const { images, ...postData } = input;
-
-  return prisma.propertyPost.create({
+  const imageMetadata = parseImageMetadata(imageMetadataValue);
+  validateImageMetadataCount(files, imageMetadata);
+  const { imageMetadata: _imageMetadata, ...postData } = input;
+  const post = await prisma.propertyPost.create({
     data: {
       ...postData,
       authorId: actor.id,
       status: PostStatus.ACTIVE,
-      images: images?.length
-        ? {
-            create: images.map((image, index) => ({
-              imageUrl: image.imageUrl,
-              caption: image.caption,
-              order: image.order ?? index,
-            })),
-          }
-        : undefined,
     },
-    include: postInclude,
   });
+
+  try {
+    if (files.length > 0) {
+      const uploadedImages = await uploadPostImages(post.id, files, imageMetadata);
+
+      await prisma.propertyImage.createMany({
+        data: uploadedImages.map((image) => ({
+          postId: post.id,
+          imageUrl: image.imageUrl,
+          caption: image.caption,
+          order: image.order,
+        })),
+      });
+    }
+
+    return prisma.propertyPost.findUniqueOrThrow({
+      where: {
+        id: post.id,
+      },
+      include: postInclude,
+    });
+  } catch (error) {
+    await prisma.propertyPost.delete({
+      where: {
+        id: post.id,
+      },
+    });
+    throw error;
+  }
 };
 
 export const getPosts = async (
@@ -193,19 +297,7 @@ export const updatePost = async (
   user?: AuthenticatedUser,
 ) => {
   const actor = ensureAuthenticated(user);
-  const existingPost = await prisma.propertyPost.findUnique({
-    where: {
-      id,
-    },
-    select: {
-      id: true,
-      authorId: true,
-    },
-  });
-
-  if (!existingPost) {
-    throw new AppError("Post not found.", 404);
-  }
+  const existingPost = await getPostOwnership(id);
 
   if (!canManagePost(actor, existingPost.authorId)) {
     throw new AppError("You do not have permission to update this post.", 403);
@@ -215,53 +307,24 @@ export const updatePost = async (
     throw new AppError("Only admin can update post status.", 403);
   }
 
-  const { images, ...postData } = input;
+  if (Object.keys(input).length === 0) {
+    throw new AppError("At least one field is required for update.", 400);
+  }
 
-  return prisma.$transaction(async (tx) => {
-    if (images) {
-      await tx.propertyImage.deleteMany({
-        where: {
-          postId: id,
-        },
-      });
-    }
-
-    return tx.propertyPost.update({
-      where: {
-        id,
-      },
-      data: {
-        ...postData,
-        images: images
-          ? {
-              create: images.map((image, index) => ({
-                imageUrl: image.imageUrl,
-                caption: image.caption,
-                order: image.order ?? index,
-              })),
-            }
-          : undefined,
-      },
-      include: postInclude,
-    });
+  return prisma.propertyPost.update({
+    where: {
+      id,
+    },
+    data: {
+      ...input,
+    },
+    include: postInclude,
   });
 };
 
 export const deletePost = async (id: string, user?: AuthenticatedUser) => {
   const actor = ensureAuthenticated(user);
-  const existingPost = await prisma.propertyPost.findUnique({
-    where: {
-      id,
-    },
-    select: {
-      id: true,
-      authorId: true,
-    },
-  });
-
-  if (!existingPost) {
-    throw new AppError("Post not found.", 404);
-  }
+  const existingPost = await getPostOwnership(id);
 
   if (!canManagePost(actor, existingPost.authorId)) {
     throw new AppError("You do not have permission to delete this post.", 403);
@@ -275,4 +338,117 @@ export const deletePost = async (id: string, user?: AuthenticatedUser) => {
       status: PostStatus.HIDDEN,
     },
   });
+};
+
+export const addPostImages = async (
+  postId: string,
+  files: Express.Multer.File[] = [],
+  imageMetadataValue: unknown,
+  user?: AuthenticatedUser,
+) => {
+  const actor = ensureAuthenticated(user);
+
+  if (files.length === 0) {
+    throw new AppError("At least one image is required.", 400);
+  }
+
+  const existingPost = await getPostOwnership(postId);
+
+  if (!canManagePost(actor, existingPost.authorId)) {
+    throw new AppError("You do not have permission to add images to this post.", 403);
+  }
+
+  const existingImageCount = await prisma.propertyImage.count({
+    where: {
+      postId,
+    },
+  });
+
+  if (existingImageCount + files.length > 10) {
+    throw new AppError("A post can have at most 10 images.", 400);
+  }
+
+  const imageMetadata = parseImageMetadata(imageMetadataValue);
+  validateImageMetadataCount(files, imageMetadata);
+  const uploadedImages = await uploadPostImages(postId, files, imageMetadata);
+
+  try {
+    await prisma.propertyImage.createMany({
+      data: uploadedImages.map((image, index) => ({
+        postId,
+        imageUrl: image.imageUrl,
+        caption: image.caption,
+        order: image.order ?? existingImageCount + index,
+      })),
+    });
+  } catch (error) {
+    await Promise.allSettled(
+      uploadedImages.map((image) => deleteImageByUrl(image.imageUrl)),
+    );
+    throw error;
+  }
+
+  return prisma.propertyPost.findUniqueOrThrow({
+    where: {
+      id: postId,
+    },
+    include: postInclude,
+  });
+};
+
+export const deletePostImage = async (
+  postId: string,
+  imageId: string,
+  user?: AuthenticatedUser,
+) => {
+  const actor = ensureAuthenticated(user);
+  const image = await prisma.propertyImage.findUnique({
+    where: {
+      id: imageId,
+    },
+    include: {
+      post: {
+        select: {
+          authorId: true,
+        },
+      },
+      id: true,
+      postId: true,
+      imageUrl: true,
+      caption: true,
+      order: true,
+      createdAt: true,
+    },
+  });
+
+  if (!image || image.postId !== postId) {
+    throw new AppError("Post image not found.", 404);
+  }
+
+  if (!canManagePost(actor, image.post.authorId)) {
+    throw new AppError("You do not have permission to delete this image.", 403);
+  }
+
+  await prisma.propertyImage.delete({
+    where: {
+      id: imageId,
+    },
+  });
+
+  try {
+    await deleteImageByUrl(image.imageUrl);
+  } catch (error) {
+    await prisma.propertyImage.create({
+      data: {
+        id: image.id,
+        postId: image.postId,
+        imageUrl: image.imageUrl,
+        caption: image.caption,
+        order: image.order,
+        createdAt: image.createdAt,
+      },
+    });
+
+    throw error;
+  }
 };

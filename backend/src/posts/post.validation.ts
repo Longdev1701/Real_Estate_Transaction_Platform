@@ -16,10 +16,8 @@ const optionalNumberSchema = z.preprocess(
   z.coerce.number().nonnegative().optional(),
 );
 
-const imageSchema = z.object({
-  imageUrl: z.url("Image URL must be valid."),
-  caption: z.string().max(255).optional(),
-  order: z.coerce.number().int().min(0).optional(),
+export const imageMetadataSchema = z.object({
+  imageMetadata: z.string().optional(),
 });
 
 export const createPostSchema = z.object({
@@ -37,17 +35,11 @@ export const createPostSchema = z.object({
   longitude: z.coerce.number().min(-180).max(180),
   propertyType: z.enum(propertyTypeValues),
   postType: z.enum(postTypeValues),
-  images: z.array(imageSchema).optional(),
-});
+}).merge(imageMetadataSchema);
 
-export const updatePostSchema = createPostSchema
-  .partial()
-  .extend({
-    status: z.enum(postStatusValues).optional(),
-  })
-  .refine((data) => Object.keys(data).length > 0, {
-    message: "At least one field is required for update.",
-  });
+export const updatePostSchema = createPostSchema.partial().extend({
+  status: z.enum(postStatusValues).optional(),
+});
 
 export const postFilterSchema = z
   .object({
@@ -87,6 +79,10 @@ export const postFilterSchema = z
 
 export const postIdParamSchema = z.object({
   id: z.string().min(1, "Post id is required."),
+});
+
+export const postImageParamSchema = postIdParamSchema.extend({
+  imageId: z.string().min(1, "Image id is required."),
 });
 
 export type CreatePostInput = z.infer<typeof createPostSchema>;
