@@ -3,6 +3,7 @@ import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { FloatingCreateButton } from "@/components/layout/FloatingCreateButton";
+import { AuthSessionProvider } from "@/components/auth/AuthSessionProvider";
 
 export const metadata: Metadata = {
   title: "TrustEstate - Premium Real Estate Platform",
@@ -17,12 +18,14 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <body className="flex flex-col min-h-screen">
-        <Header />
-        <main className="flex-grow pt-20">
-          {children}
-        </main>
-        <Footer />
-        <FloatingCreateButton />
+        <AuthSessionProvider>
+          <Header />
+          <main className="flex-grow pt-20">
+            {children}
+          </main>
+          <Footer />
+          <FloatingCreateButton />
+        </AuthSessionProvider>
       </body>
     </html>
   );

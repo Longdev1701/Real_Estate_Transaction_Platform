@@ -1,8 +1,12 @@
 import axios from 'axios';
 import { useAuthStore } from '@/stores/auth.store';
 
-// Default to localhost:4000 if not specified in env
-const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+const apiURL = process.env.NEXT_PUBLIC_API_URL;
+const baseURL = apiURL
+  ? apiURL.replace(/\/$/, "").endsWith("/api")
+    ? apiURL.replace(/\/$/, "")
+    : `${apiURL.replace(/\/$/, "")}/api`
+  : undefined;
 
 export const api = axios.create({
   baseURL,

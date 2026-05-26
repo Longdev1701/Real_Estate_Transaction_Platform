@@ -5,16 +5,17 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 export default function ProfilePage() {
-  const { user } = useAuthStore();
+  const { user, accessToken, hasHydrated, isLoadingUser } = useAuthStore();
   const router = useRouter();
 
   useEffect(() => {
-    if (!user) {
+    if (hasHydrated && !accessToken && !user) {
       router.push("/auth/login");
     }
-  }, [user, router]);
+  }, [accessToken, hasHydrated, user, router]);
 
-  if (!user) return null; // or loading spinner
+  if (!hasHydrated || isLoadingUser || (accessToken && !user)) return null;
+  if (!user) return null;
 
   return (
     <div className="container mx-auto px-4 py-8">

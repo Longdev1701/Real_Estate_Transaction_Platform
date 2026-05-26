@@ -27,9 +27,18 @@ export const validateRequest =
   (schema: RequestSchema): RequestHandler =>
   (req: Request, _res: Response, next: NextFunction) => {
     try {
-      req.body = validatePart(schema.body, req.body);
-      req.query = validatePart(schema.query, req.query) as Request["query"];
-      req.params = validatePart(schema.params, req.params) as Request["params"];
+      if (schema.body) {
+        req.body = validatePart(schema.body, req.body);
+      }
+
+      if (schema.query) {
+        validatePart(schema.query, req.query);
+      }
+
+      if (schema.params) {
+        req.params = validatePart(schema.params, req.params) as Request["params"];
+      }
+
       next();
     } catch (error) {
       next(error);

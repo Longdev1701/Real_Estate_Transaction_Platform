@@ -7,7 +7,9 @@ import Link from "next/link";
 import { useAuthStore } from "@/stores/auth.store";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-// import { api } from "@/lib/api"; // Will be used when integrating with real backend
+import { AxiosError } from "axios";
+import { normalizeUser } from "@/components/auth/AuthSessionProvider";
+import { api } from "@/lib/api";
 
 const loginSchema = z.object({
   email: z.string().email("Email không hợp lệ"),
@@ -18,7 +20,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const setAuth = useAuthStore((state) => state.setAuth);
+  const { setAccessToken, setAuth } = useAuthStore();
   const [error, setError] = useState<string | null>(null);
 
   const {
@@ -32,19 +34,17 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormValues) => {
     try {
       setError(null);
-      // const response = await api.post("/auth/login", data);
-      // setAuth(response.data.user, response.data.accessToken);
-      
-      // Mock login for now
-      if (data.email && data.password) {
-        setAuth(
-          { id: "1", email: data.email, name: "Test User" },
-          "mock-token-123"
-        );
-        router.push("/");
-      }
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Đăng nhập thất bại");
+      const loginResponse = await api.post("/auth/login", data);
+      const accessToken = loginResponse.data.data.tokens.accessToken;
+
+      setAccessToken(accessToken);
+
+      const meResponse = await api.get("/auth/me");
+      setAuth(normalizeUser(meResponse.data.data), accessToken);
+      router.push("/");
+    } catch (err) {
+      const error = err as AxiosError<{ message?: string }>;
+      setError(error.response?.data?.message || "Đăng nhập thất bại");
     }
   };
 
