@@ -11,7 +11,7 @@ type RequestSchema = {
 
 const validatePart = (schema: ZodType | undefined, value: unknown) => {
   if (!schema) {
-    return;
+    return value;
   }
 
   const result = schema.safeParse(value);
@@ -19,15 +19,17 @@ const validatePart = (schema: ZodType | undefined, value: unknown) => {
   if (!result.success) {
     throw new AppError("Validation failed", 400, result.error.issues);
   }
+
+  return result.data;
 };
 
 export const validateRequest =
   (schema: RequestSchema): RequestHandler =>
   (req: Request, _res: Response, next: NextFunction) => {
     try {
-      validatePart(schema.body, req.body);
-      validatePart(schema.query, req.query);
-      validatePart(schema.params, req.params);
+      req.body = validatePart(schema.body, req.body);
+      req.query = validatePart(schema.query, req.query) as Request["query"];
+      req.params = validatePart(schema.params, req.params) as Request["params"];
       next();
     } catch (error) {
       next(error);
