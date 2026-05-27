@@ -31,6 +31,70 @@ const postInclude = {
   },
 } satisfies Prisma.PropertyPostInclude;
 
+const postListSelect = {
+  id: true,
+  authorId: true,
+  title: true,
+  description: true,
+  price: true,
+  area: true,
+  address: true,
+  city: true,
+  district: true,
+  ward: true,
+  latitude: true,
+  longitude: true,
+  propertyType: true,
+  postType: true,
+  status: true,
+  createdAt: true,
+  updatedAt: true,
+  author: {
+    select: {
+      id: true,
+      fullName: true,
+      email: true,
+      phone: true,
+      avatarUrl: true,
+    },
+  },
+  images: {
+    orderBy: {
+      order: "asc" as const,
+    },
+    take: 1,
+    select: {
+      id: true,
+      imageUrl: true,
+      caption: true,
+      order: true,
+    },
+  },
+  _count: {
+    select: {
+      images: true,
+    },
+  },
+} satisfies Prisma.PropertyPostSelect;
+
+const POSTS_CACHE_TTL_MS = 15_000;
+const postsCache = new Map<
+  string,
+  {
+    expiresAt: number;
+    data: {
+      items: Array<Record<string, unknown>>;
+      meta: {
+        page: number;
+        limit: number;
+        total: number | null;
+        totalPages: number | null;
+        hasMore: boolean;
+      };
+    };
+  }
+>();
+
 const ensureAuthenticated = (user?: AuthenticatedUser) => {
   if (!user) {
     throw new AppError("Authentication required.", 401);
@@ -200,6 +264,7 @@ export const getPosts = async (
   filter: PostFilterInput,
   user?: AuthenticatedUser,
 ) => {
+  const isCacheableQuery = !user || user.role !== UserRole.ADMIN;
   const page = toPaginationNumber(filter.page, 1, 1);
   const limit = toPaginationNumber(filter.limit, 10, 1, 100);
   const skip = (page - 1) * limit;
@@ -245,28 +310,73 @@ export const getPosts = async (
       : undefined,
   };
 
-  const [items, total] = await prisma.$transaction([
-    prisma.propertyPost.findMany({
-      where,
-      include: postInclude,
-      orderBy: {
+  const cacheKey = isCacheableQuery
+    ? JSON.stringify({
+        page,
+        limit,
+        keyword: keyword ?? "",
+        city: toOptionalString(filter.city) ?? "",
+        district: toOptionalString(filter.district) ?? "",
+        postType: filter.postType ?? "",
+        propertyType: filter.propertyType ?? "",
+        minPrice: minPrice ?? null,
+        maxPrice: maxPrice ?? null,
+        minArea: minArea ?? null,
+        maxArea: maxArea ?? null,
+      })
+    : null;
+
+  if (cacheKey) {
+    const cached = postsCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.data;
+    }
+  }
+
+  const rawItems = await prisma.propertyPost.findMany({
+    where,
+    select: postListSelect,
+    orderBy: [
+      {
         createdAt: "desc",
       },
-      skip,
-      take: limit,
-    }),
-    prisma.propertyPost.count({ where }),
-  ]);
+      {
+        id: "desc",
+      },
+    ],
+    skip,
+    take: limit + 1,
+  });
 
-  return {
+  const hasMore = rawItems.length > limit;
+  const pagedItems = hasMore ? rawItems.slice(0, limit) : rawItems;
+  const items = pagedItems.map((item) => {
+    const { _count, ...rest } = item;
+    return {
+      ...rest,
+      imageCount: _count.images,
+    };
+  });
+
+  const data = {
     items,
     meta: {
       page,
       limit,
-      total,
-      totalPages: Math.ceil(total / limit),
+      total: null,
+      totalPages: null,
+      hasMore,
     },
   };
+
+  if (cacheKey) {
+    postsCache.set(cacheKey, {
+      data,
+      expiresAt: Date.now() + POSTS_CACHE_TTL_MS,
+    });
+  }
+
+  return data;
 };
 
 export const getPostById = async (id: string, user?: AuthenticatedUser) => {

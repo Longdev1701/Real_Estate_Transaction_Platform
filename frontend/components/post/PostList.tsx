@@ -121,8 +121,8 @@ export function PostList() {
           append ? [...currentPosts, ...payload.items] : payload.items,
         );
         setPage(payload.meta.page);
-        setHasMore(payload.meta.page < payload.meta.totalPages);
-        setTotal(payload.meta.total);
+        setHasMore(payload.meta.hasMore);
+        setTotal(payload.meta.total ?? payload.items.length);
       } catch (err) {
         const axiosError = err as AxiosError<{ message?: string }>;
         if (requestId === requestIdRef.current) {
@@ -290,7 +290,11 @@ export function PostList() {
             <div>
               <h2 className="text-2xl font-semibold text-white">{"B\u1ea3ng tin b\u1ea5t \u0111\u1ed9ng s\u1ea3n"}</h2>
               <p className="mt-1 text-sm text-gray-400">
-                {total > 0 ? `${total} b\u00e0i \u0111\u0103ng \u0111ang hi\u1ec3n th\u1ecb` : "Ch\u01b0a c\u00f3 b\u00e0i \u0111\u0103ng ph\u00f9 h\u1ee3p."}
+                {posts.length > 0
+                  ? (total > 0
+                    ? `${total} b\u00e0i \u0111\u0103ng \u0111ang hi\u1ec3n th\u1ecb`
+                    : `${posts.length} b\u00e0i \u0111\u0103ng \u0111ang hi\u1ec3n th\u1ecb`)
+                  : "Ch\u01b0a c\u00f3 b\u00e0i \u0111\u0103ng ph\u00f9 h\u1ee3p."}
               </p>
             </div>
           </div>

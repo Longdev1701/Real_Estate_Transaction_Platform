@@ -19,6 +19,7 @@ export function PostCard({ post }: { post: Post }) {
   const [imageError, setImageError] = useState(false);
 
   const mainImage = post.images.length > 0 ? post.images[0].imageUrl : imageFallback;
+  const totalImages = post.imageCount ?? post.images.length;
 
   return (
     <article className="glass-card flex h-full flex-col overflow-hidden p-4 md:p-5">
@@ -50,7 +51,7 @@ export function PostCard({ post }: { post: Post }) {
           onError={() => setImageError(true)}
         />
         <div className="absolute left-2 top-2 rounded-md border border-white/10 bg-black/60 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-md">
-          {post.images.length} {"\u1ea3nh"}
+          {totalImages} {"\u1ea3nh"}
         </div>
       </Link>
 
