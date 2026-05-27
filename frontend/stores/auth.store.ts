@@ -16,10 +16,12 @@ export interface User {
 interface AuthState {
   user: User | null;
   accessToken: string | null;
+  refreshToken: string | null;
   hasHydrated: boolean;
   isLoadingUser: boolean;
-  setAuth: (user: User, token: string) => void;
+  setAuth: (user: User, accessToken: string, refreshToken: string) => void;
   setAccessToken: (token: string) => void;
+  setTokens: (accessToken: string, refreshToken: string) => void;
   setUser: (user: User) => void;
   setHasHydrated: (hasHydrated: boolean) => void;
   setIsLoadingUser: (isLoadingUser: boolean) => void;
@@ -31,18 +33,24 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       accessToken: null,
+      refreshToken: null,
       hasHydrated: false,
       isLoadingUser: false,
-      setAuth: (user, token) => set({ user, accessToken: token }),
+      setAuth: (user, accessToken, refreshToken) =>
+        set({ user, accessToken, refreshToken }),
       setAccessToken: (token) => set({ accessToken: token }),
+      setTokens: (accessToken, refreshToken) => set({ accessToken, refreshToken }),
       setUser: (user) => set({ user }),
       setHasHydrated: (hasHydrated) => set({ hasHydrated }),
       setIsLoadingUser: (isLoadingUser) => set({ isLoadingUser }),
-      logout: () => set({ user: null, accessToken: null }),
+      logout: () => set({ user: null, accessToken: null, refreshToken: null }),
     }),
     {
       name: 'auth-storage',
-      partialize: (state) => ({ accessToken: state.accessToken }),
+      partialize: (state) => ({
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
+      }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
       },

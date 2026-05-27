@@ -20,7 +20,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { setAccessToken, setAuth } = useAuthStore();
+  const { setAuth } = useAuthStore();
   const [error, setError] = useState<string | null>(null);
 
   const {
@@ -35,12 +35,10 @@ export default function LoginPage() {
     try {
       setError(null);
       const loginResponse = await api.post("/auth/login", data);
+      const user = loginResponse.data.data.user;
       const accessToken = loginResponse.data.data.tokens.accessToken;
-
-      setAccessToken(accessToken);
-
-      const meResponse = await api.get("/auth/me");
-      setAuth(normalizeUser(meResponse.data.data), accessToken);
+      const refreshToken = loginResponse.data.data.tokens.refreshToken;
+      setAuth(normalizeUser(user), accessToken, refreshToken);
       router.push("/");
     } catch (err) {
       const error = err as AxiosError<{ message?: string }>;
