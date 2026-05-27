@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Filter, RotateCcw, Search } from "lucide-react";
+import { ChevronDown, Filter, Search } from "lucide-react";
 
 import {
   POST_TYPES,
@@ -39,16 +39,16 @@ export function PostFilter({
           <div className="rounded-2xl border border-blue-400/20 bg-blue-500/10 p-2 text-blue-300">
             <Filter className="h-5 w-5" />
           </div>
-          <h2 className="text-xl font-semibold text-white">Bo loc tim kiem</h2>
+          <h2 className="text-xl font-semibold text-white">{"B\u1ed9 l\u1ecdc t\u00ecm ki\u1ebfm"}</h2>
         </div>
         <button type="button" onClick={onReset} className="text-sm font-medium text-blue-300 transition hover:text-blue-200">
-          Dat lai
+          {"\u0110\u1eb7t l\u1ea1i"}
         </button>
       </div>
 
       <div className="space-y-5">
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-200">Tu khoa</label>
+          <label className="mb-2 block text-sm font-medium text-gray-200">{"T\u1eeb kh\u00f3a"}</label>
           <div className="relative">
             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
             <input
@@ -56,13 +56,13 @@ export function PostFilter({
               value={value.keyword}
               onChange={(event) => updateField("keyword", event.target.value)}
               className="input-dark pl-11"
-              placeholder="Ten bai dang, dia chi..."
+              placeholder={"T\u00ean b\u00e0i \u0111\u0103ng, \u0111\u1ecba ch\u1ec9..."}
             />
           </div>
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-200">Vi tri</label>
+          <label className="mb-2 block text-sm font-medium text-gray-200">{"V\u1ecb tr\u00ed"}</label>
           <div className="space-y-3">
             <div className="relative">
               <input
@@ -70,7 +70,7 @@ export function PostFilter({
                 value={value.city}
                 onChange={(event) => updateField("city", event.target.value)}
                 className="input-dark pr-10"
-                placeholder="Chon tinh / thanh"
+                placeholder={"Ch\u1ecdn t\u1ec9nh / th\u00e0nh ph\u1ed1"}
               />
               <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
             </div>
@@ -80,7 +80,7 @@ export function PostFilter({
                 value={value.district}
                 onChange={(event) => updateField("district", event.target.value)}
                 className="input-dark pr-10"
-                placeholder="Chon quan / huyen"
+                placeholder={"Ch\u1ecdn qu\u1eadn / huy\u1ec7n"}
               />
               <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
             </div>
@@ -88,7 +88,7 @@ export function PostFilter({
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-200">Loai bat dong san</label>
+          <label className="mb-2 block text-sm font-medium text-gray-200">{"Lo\u1ea1i b\u1ea5t \u0111\u1ed9ng s\u1ea3n"}</label>
           <div className="relative">
             <select
               value={value.propertyType}
@@ -97,7 +97,7 @@ export function PostFilter({
               }
               className="input-dark appearance-none pr-10"
             >
-              <option value="">Chon loai</option>
+              <option value="">{"Ch\u1ecdn lo\u1ea1i"}</option>
               {PROPERTY_TYPES.map((propertyType) => (
                 <option key={propertyType} value={propertyType}>
                   {propertyTypeLabels[propertyType]}
@@ -109,14 +109,14 @@ export function PostFilter({
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-200">Loai giao dich</label>
+          <label className="mb-2 block text-sm font-medium text-gray-200">{"Lo\u1ea1i giao d\u1ecbch"}</label>
           <div className="relative">
             <select
               value={value.postType}
               onChange={(event) => updateField("postType", event.target.value as PostFilterValue["postType"])}
               className="input-dark appearance-none pr-10"
             >
-              <option value="">Tat ca giao dich</option>
+              <option value="">{"T\u1ea5t c\u1ea3 giao d\u1ecbch"}</option>
               {POST_TYPES.map((postType) => (
                 <option key={postType} value={postType}>
                   {postTypeLabels[postType]}
@@ -128,7 +128,7 @@ export function PostFilter({
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-200">Khoang gia</label>
+          <label className="mb-2 block text-sm font-medium text-gray-200">{"Kho\u1ea3ng gi\u00e1"}</label>
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
             <input
               type="number"
@@ -136,7 +136,7 @@ export function PostFilter({
               value={value.minPrice}
               onChange={(event) => updateField("minPrice", event.target.value)}
               className="input-dark"
-              placeholder="Tu"
+              placeholder={"T\u1eeb"}
             />
             <span className="text-gray-500">-</span>
             <input
@@ -145,28 +145,43 @@ export function PostFilter({
               value={value.maxPrice}
               onChange={(event) => updateField("maxPrice", event.target.value)}
               className="input-dark"
-              placeholder="Den"
+              placeholder={"\u0110\u1ebfn"}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-medium text-gray-200">{"Di\u1ec7n t\u00edch"}</label>
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+            <input
+              type="number"
+              min="0"
+              value={value.minArea}
+              onChange={(event) => updateField("minArea", event.target.value)}
+              className="input-dark"
+              placeholder={"T\u1eeb"}
+            />
+            <span className="text-gray-500">-</span>
+            <input
+              type="number"
+              min="0"
+              value={value.maxArea}
+              onChange={(event) => updateField("maxArea", event.target.value)}
+              className="input-dark"
+              placeholder={"\u0110\u1ebfn"}
             />
           </div>
         </div>
       </div>
 
-      <div className="mt-6 flex flex-col gap-3">
+      <div className="mt-6">
         <button
           type="button"
           onClick={onSubmit}
           disabled={isLoading}
-          className="btn-primary inline-flex items-center justify-center gap-2 py-3"
+          className="btn-primary inline-flex w-full items-center justify-center gap-2 py-3"
         >
-          {isLoading ? "Dang tai..." : "Ap dung bo loc"}
-        </button>
-        <button
-          type="button"
-          onClick={onReset}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-medium text-gray-200 transition hover:bg-white/10"
-        >
-          <RotateCcw className="h-4 w-4" />
-          Xem them bo loc
+          {isLoading ? "\u0110ang t\u1ea3i..." : "\u00c1p d\u1ee5ng b\u1ed9 l\u1ecdc"}
         </button>
       </div>
     </section>

@@ -56,7 +56,7 @@ export default function ProfilePostsPage() {
     [posts, user],
   );
 
-  const saleCount = useMemo(() => myPosts.filter(p => p.postType === 'SALE').length, [myPosts]);
+  const saleCount = useMemo(() => myPosts.filter(p => p.postType === 'SELL').length, [myPosts]);
   const rentCount = useMemo(() => myPosts.filter(p => p.postType === 'RENT').length, [myPosts]);
 
   if (!hasHydrated || isLoadingUser) {
@@ -76,6 +76,7 @@ export default function ProfilePostsPage() {
     );
   }
 
+  const displayName = user.fullName ?? user.name ?? user.email;
   const username = user.email ? user.email.split('@')[0] : "user";
 
   return (
@@ -97,10 +98,10 @@ export default function ProfilePostsPage() {
           <div className="flex flex-col md:flex-row items-start md:items-end gap-6 w-full md:w-auto">
             <div className="w-32 h-32 md:w-44 md:h-44 rounded-full border-4 border-[#0B1120] overflow-hidden bg-blue-900 flex-shrink-0 relative">
               {user.avatarUrl ? (
-                <img src={user.avatarUrl} alt={user.fullName} className="w-full h-full object-cover" />
+                <img src={user.avatarUrl} alt={displayName} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-5xl font-bold text-blue-200">
-                  {user.fullName.charAt(0).toUpperCase()}
+                  {displayName.charAt(0).toUpperCase()}
                 </div>
               )}
               <div className="absolute bottom-2 right-2 w-10 h-10 bg-white/20 backdrop-blur-md rounded-full border border-white/30 flex items-center justify-center text-white cursor-pointer hover:bg-white/30 transition-colors">
@@ -111,7 +112,7 @@ export default function ProfilePostsPage() {
             <div className="pb-2 w-full">
               <div className="flex items-center justify-between md:justify-start gap-4">
                 <div className="flex items-center gap-2">
-                  <h1 className="text-2xl md:text-3xl font-bold text-white">{user.fullName}</h1>
+                  <h1 className="text-2xl md:text-3xl font-bold text-white">{displayName}</h1>
                   <BadgeCheck className="w-6 h-6 text-blue-500" />
                 </div>
               </div>

@@ -3,6 +3,7 @@ import { UserRole } from "@prisma/client";
 
 import { authRouter } from "./auth/auth.routes.js";
 import { corsMiddleware } from "./config/cors.js";
+import { homeRoutes } from "./home/home.routes.js";
 import { authenticate } from "./middlewares/auth.middleware.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
 import { authorizeRoles } from "./middlewares/role.middleware.js";
@@ -22,6 +23,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/auth", authRouter);
+app.use("/api/home", homeRoutes);
 app.use("/api/posts", postRoutes);
 app.get("/api/admin/test", authenticate, authorizeRoles(UserRole.ADMIN), (req, res) => {
   sendSuccess(

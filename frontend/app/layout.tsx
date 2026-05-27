@@ -17,14 +17,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi">
-      <body className="flex flex-col min-h-screen">
+      <body className="overflow-hidden">
         <AuthSessionProvider>
-          <Header />
-          <main className="flex-grow pt-20">
-            {children}
-          </main>
-          <Footer />
-          <FloatingCreateButton />
+          <div className="no-scrollbar flex h-screen flex-col overflow-y-auto overflow-x-hidden">
+            <Header />
+            <main className="flex-1 pt-20">
+              {children}
+            </main>
+            <Footer />
+            <FloatingCreateButton />
+          </div>
         </AuthSessionProvider>
       </body>
     </html>
