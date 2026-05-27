@@ -12,13 +12,13 @@ import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth.store";
 
 const createPostSchema = z.object({
-  title: z.string().min(5, "Tieu de it nhat 5 ky tu"),
-  description: z.string().min(10, "Mo ta it nhat 10 ky tu"),
-  price: z.coerce.number().positive("Gia phai lon hon 0"),
-  area: z.coerce.number().positive("Dien tich phai lon hon 0"),
-  address: z.string().min(3, "Vui long nhap dia chi"),
-  city: z.string().min(2, "Vui long nhap tinh / thanh"),
-  district: z.string().min(2, "Vui long nhap quan / huyen"),
+  title: z.string().min(5, "Tiêu đề ít nhất 5 ký tự"),
+  description: z.string().min(10, "Mô tả ít nhất 10 ký tự"),
+  price: z.coerce.number().positive("Giá phải lớn hơn 0"),
+  area: z.coerce.number().positive("Diện tích phải lớn hơn 0"),
+  address: z.string().min(3, "Vui lòng nhập địa chỉ"),
+  city: z.string().min(2, "Vui lòng nhập tỉnh / thành phố"),
+  district: z.string().min(2, "Vui lòng nhập quận / huyện"),
   ward: z.string().optional(),
   latitude: z.coerce.number().min(-90).max(90),
   longitude: z.coerce.number().min(-180).max(180),
