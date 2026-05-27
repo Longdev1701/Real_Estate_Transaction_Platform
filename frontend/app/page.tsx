@@ -27,7 +27,9 @@ import {
 } from "@/lib/posts";
 
 const heroImage =
-  "https://images.unsplash.com/photo-1617336422396-e1dfc4210ec5?q=80&w=1471&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D";
+  "https://images.pexels.com/photos/313782/pexels-photo-313782.jpeg?auto=compress&cs=tinysrgb&w=2400";
+
+const sectionContainerClass = "mx-auto w-full max-w-[1360px] px-4 sm:px-6 lg:px-8";
 
 const propertyIcons: Record<PropertyType, LucideIcon> = {
   APARTMENT: Building2,
@@ -149,7 +151,7 @@ export default async function HomePage() {
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(2,6,23,0.96)_0%,rgba(2,6,23,0.82)_42%,rgba(2,6,23,0.48)_78%,rgba(2,6,23,0.72)_100%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(37,99,235,0.34),transparent_36%),radial-gradient(circle_at_76%_18%,rgba(14,165,233,0.18),transparent_32%)]" />
 
-        <div className="relative mx-auto max-w-[1360px] px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+        <div className={`${sectionContainerClass} relative py-8 lg:py-10`}>
           <div className="max-w-2xl">
             <div className="mb-5 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-medium text-blue-100 backdrop-blur">
               <ShieldCheck className="h-4 w-4 text-blue-300" />
@@ -232,7 +234,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="relative z-10 mx-auto -mt-8 max-w-[1360px] px-4 sm:px-6 lg:px-8">
+      <section className={`${sectionContainerClass} relative z-10 -mt-8`}>
         <div className="grid gap-4 rounded-2xl border border-white/10 bg-white/5 p-5 shadow-xl shadow-blue-950/20 backdrop-blur-xl sm:grid-cols-2 xl:grid-cols-4">
           {stats.map((stat) => (
             <div key={stat.label} className="flex items-center gap-4 px-2 py-2">
@@ -248,7 +250,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto mt-8 max-w-[1360px] px-4 sm:px-6 lg:px-8">
+      <section className={`${sectionContainerClass} mt-8`}>
         <div className="mb-5 flex items-center justify-between gap-4">
           <h2 className="text-2xl font-bold text-white sm:text-3xl">{"B\u1ea5t \u0111\u1ed9ng s\u1ea3n m\u1edbi nh\u1ea5t"}</h2>
           <Link href="/posts" className="inline-flex items-center gap-2 text-sm font-medium text-blue-300 transition hover:text-blue-200">
@@ -271,7 +273,7 @@ export default async function HomePage() {
       </section>
 
       {homeData && homeData.categories.length > 0 && (
-        <section className="mx-auto mt-9 max-w-[1360px] px-4 sm:px-6 lg:px-8">
+        <section className={`${sectionContainerClass} mt-9`}>
           <div className="mb-5 flex items-center justify-between gap-4">
             <h2 className="text-2xl font-bold text-white sm:text-3xl">{"Kh\u00e1m ph\u00e1 theo lo\u1ea1i h\u00ecnh"}</h2>
             <Link href="/posts" className="inline-flex items-center gap-2 text-sm font-medium text-blue-300 transition hover:text-blue-200">
