@@ -49,6 +49,8 @@ export type PostFilterValue = {
   propertyType: "" | PropertyType;
   minPrice: string;
   maxPrice: string;
+  minArea: string;
+  maxArea: string;
 };
 
 export type PostListData = {
@@ -69,19 +71,21 @@ export const defaultPostFilter: PostFilterValue = {
   propertyType: "",
   minPrice: "",
   maxPrice: "",
+  minArea: "",
+  maxArea: "",
 };
 
 export const postTypeLabels: Record<PostType, string> = {
-  SELL: "Ban",
-  RENT: "Cho thue",
-  FIND: "Can tim",
+  SELL: "B\u00e1n",
+  RENT: "Cho thu\u00ea",
+  FIND: "C\u1ea7n t\u00ecm",
 };
 
 export const propertyTypeLabels: Record<PropertyType, string> = {
-  HOUSE: "Nha",
-  APARTMENT: "Can ho",
-  LAND: "Dat",
-  ROOM: "Phong",
+  HOUSE: "Nh\u00e0",
+  APARTMENT: "C\u0103n h\u1ed9",
+  LAND: "\u0110\u1ea5t",
+  ROOM: "Ph\u00f2ng",
 };
 
 export const formatPrice = (price: number) =>
@@ -94,7 +98,7 @@ export const formatPrice = (price: number) =>
 export const formatArea = (area: number) =>
   `${new Intl.NumberFormat("vi-VN", {
     maximumFractionDigits: area % 1 === 0 ? 0 : 1,
-  }).format(area)} m2`;
+  }).format(area)} m\u00b2`;
 
 export const formatLocation = (post: Pick<Post, "ward" | "district" | "city">) =>
   [post.ward, post.district, post.city].filter(Boolean).join(", ");

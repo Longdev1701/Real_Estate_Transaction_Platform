@@ -2,11 +2,10 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Bookmark, Building2, Ellipsis, Expand, MapPin, MessageCircle, Share2 } from "lucide-react";
+import { Expand, MapPin } from "lucide-react";
 
 import {
   formatArea,
-  formatLocation,
   formatPrice,
   postTypeLabels,
   propertyTypeLabels,
@@ -22,11 +21,10 @@ export function PostCard({ post }: { post: Post }) {
   const mainImage = post.images.length > 0 ? post.images[0].imageUrl : imageFallback;
 
   return (
-    <article className="glass-card overflow-hidden p-4 md:p-5 flex flex-col h-full">
-      {/* Header */}
-      <div className="mb-4 flex items-start justify-between gap-4">
+    <article className="glass-card flex h-full flex-col overflow-hidden p-4 md:p-5">
+      <div className="mb-4 flex items-start gap-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-blue-400/30 bg-blue-500/10 text-sm font-semibold text-blue-200 shrink-0">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-blue-400/30 bg-blue-500/10 text-sm font-semibold text-blue-200">
             {post.author.avatarUrl ? (
               <img src={post.author.avatarUrl} alt={post.author.fullName} className="h-full w-full object-cover" />
             ) : (
@@ -34,75 +32,57 @@ export function PostCard({ post }: { post: Post }) {
             )}
           </div>
           <div>
-            <p className="font-semibold text-white line-clamp-1">{post.author.fullName}</p>
+            <p className="line-clamp-1 font-semibold text-white">{post.author.fullName}</p>
             <div className="mt-0.5 flex items-center gap-1.5 text-xs text-gray-400">
-              <span className="text-blue-400 font-medium">{postTypeLabels[post.postType]}</span>
+              <span className="font-medium text-blue-400">{postTypeLabels[post.postType]}</span>
               <span className="h-1 w-1 rounded-full bg-gray-600" />
               <span>{propertyTypeLabels[post.propertyType]}</span>
             </div>
           </div>
         </div>
-
-        <button
-          type="button"
-          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-gray-400 transition hover:bg-white/10 hover:text-white"
-        >
-          <Ellipsis className="h-4 w-4" />
-        </button>
       </div>
 
-      {/* Main Image */}
-      <Link href={`/posts/${post.id}`} className="relative overflow-hidden rounded-xl border border-white/10 bg-white/5 mb-4 aspect-video group shrink-0 block">
+      <Link href={`/posts/${post.id}`} className="group relative mb-4 block aspect-video shrink-0 overflow-hidden rounded-xl border border-white/10 bg-white/5">
         <img
           src={imageError ? imageFallback : mainImage}
           alt={post.title}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           onError={() => setImageError(true)}
         />
-        <div className="absolute top-2 left-2 rounded-md bg-black/60 backdrop-blur-md px-2.5 py-1 text-xs font-medium text-white border border-white/10">
-          {post.images.length} ảnh
+        <div className="absolute left-2 top-2 rounded-md border border-white/10 bg-black/60 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-md">
+          {post.images.length} {"\u1ea3nh"}
         </div>
       </Link>
 
-      {/* Content */}
-      <div className="flex-grow flex flex-col">
-        <Link href={`/posts/${post.id}`} className="block text-xl font-bold text-white transition hover:text-blue-400 line-clamp-2 mb-2">
+      <div className="flex flex-grow flex-col">
+        <Link href={`/posts/${post.id}`} className="mb-2 block line-clamp-2 text-xl font-bold text-white transition hover:text-blue-400">
           {post.title}
         </Link>
-        
-        <p className="text-sm text-gray-400 line-clamp-2 mb-4 flex-grow">
+
+        <p className="mb-4 line-clamp-2 flex-grow text-sm text-gray-400">
           {post.description}
         </p>
 
         <div className="mt-auto">
-          <p className="text-2xl font-bold text-blue-400 mb-3">{formatPrice(post.price)}</p>
-          
-          <div className="flex flex-wrap items-center gap-3 text-sm text-gray-300 mb-5">
-            <span className="inline-flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-lg border border-white/5">
+          <p className="mb-3 text-2xl font-bold text-blue-400">{formatPrice(post.price)}</p>
+
+          <div className="mb-5 flex flex-wrap items-center gap-3 text-sm text-gray-300">
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/5 bg-white/5 px-2.5 py-1">
               <Expand className="h-3.5 w-3.5 text-gray-400" />
               {formatArea(post.area)}
             </span>
-            <span className="inline-flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-lg border border-white/5">
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/5 bg-white/5 px-2.5 py-1">
               <MapPin className="h-3.5 w-3.5 text-gray-400" />
               <span className="line-clamp-1 max-w-[120px]">{post.city}</span>
             </span>
           </div>
-          
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2 pt-4 border-t border-white/10">
-            <button className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2 text-gray-300 transition hover:bg-white/10 hover:text-white text-sm">
-              <Bookmark className="h-4 w-4" />
-              <span className="hidden sm:inline">Lưu</span>
-            </button>
-            <button className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2 text-gray-300 transition hover:bg-white/10 hover:text-white text-sm">
-              <Share2 className="h-4 w-4" />
-              <span className="hidden sm:inline">Chia sẻ</span>
-            </button>
+
+          <div className="flex items-center gap-2 border-t border-white/10 pt-4">
             <Link
               href={`/posts/${post.id}`}
-              className="flex-[2] inline-flex items-center justify-center rounded-xl bg-blue-600 py-2 font-medium text-white transition hover:bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.3)] text-sm"
+              className="inline-flex w-full items-center justify-center rounded-xl bg-blue-600 py-2 text-sm font-medium text-white shadow-[0_0_15px_rgba(59,130,246,0.3)] transition hover:bg-blue-500"
             >
-              Xem chi tiết
+              {"Xem chi ti\u1ebft"}
             </Link>
           </div>
         </div>

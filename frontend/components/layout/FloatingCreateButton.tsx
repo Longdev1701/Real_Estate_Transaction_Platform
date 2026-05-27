@@ -1,12 +1,18 @@
 "use client";
 
 import { Plus } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+
 import { useAuthStore } from "@/stores/auth.store";
-import { useRouter } from "next/navigation";
 
 export function FloatingCreateButton() {
   const router = useRouter();
+  const pathname = usePathname();
   const { user } = useAuthStore();
+
+  if (pathname === "/posts") {
+    return null;
+  }
 
   const handleClick = () => {
     if (user) {
@@ -19,10 +25,10 @@ export function FloatingCreateButton() {
   return (
     <button
       onClick={handleClick}
-      className="fixed bottom-6 right-6 md:bottom-8 md:right-8 w-14 h-14 bg-blue-600 hover:bg-blue-500 rounded-full flex items-center justify-center text-white shadow-[0_0_20px_rgba(59,130,246,0.4)] hover:shadow-[0_0_30px_rgba(59,130,246,0.7)] transition-all duration-300 z-50 group"
-      aria-label="Tạo bài đăng"
+      className="group fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-[0_0_20px_rgba(59,130,246,0.4)] transition-all duration-300 hover:bg-blue-500 hover:shadow-[0_0_30px_rgba(59,130,246,0.7)] md:bottom-8 md:right-8"
+      aria-label={"T\u1ea1o b\u00e0i \u0111\u0103ng"}
     >
-      <Plus size={28} className="group-hover:rotate-90 transition-transform duration-300" />
+      <Plus size={28} className="transition-transform duration-300 group-hover:rotate-90" />
     </button>
   );
 }
