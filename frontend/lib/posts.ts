@@ -39,6 +39,7 @@ export type Post = {
   updatedAt: string;
   author: PostAuthor;
   images: PostImage[];
+  imageCount?: number;
 };
 
 export type PostFilterValue = {
@@ -58,8 +59,9 @@ export type PostListData = {
   meta: {
     page: number;
     limit: number;
-    total: number;
-    totalPages: number;
+    total: number | null;
+    totalPages: number | null;
+    hasMore: boolean;
   };
 };
 

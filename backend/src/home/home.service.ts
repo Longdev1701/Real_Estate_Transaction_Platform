@@ -2,6 +2,14 @@ import { PostStatus, PostType, PropertyType } from "@prisma/client";
 
 import { prisma } from "../prisma/prisma.service.js";
 
+const HOME_CACHE_TTL_MS = 30_000;
+let homeCache:
+  | {
+      expiresAt: number;
+      data: Awaited<ReturnType<typeof fetchHomeData>>;
+    }
+  | null = null;
+
 const postInclude = {
   author: {
     select: {
@@ -34,6 +42,21 @@ const sortPropertyTypes: PropertyType[] = [
 ];
 
 export const getHomeData = async () => {
+  const now = Date.now();
+  if (homeCache && homeCache.expiresAt > now) {
+    return homeCache.data;
+  }
+
+  const data = await fetchHomeData();
+  homeCache = {
+    data,
+    expiresAt: now + HOME_CACHE_TTL_MS,
+  };
+
+  return data;
+};
+
+const fetchHomeData = async () => {
   const [
     featuredPosts,
     activePostCount,

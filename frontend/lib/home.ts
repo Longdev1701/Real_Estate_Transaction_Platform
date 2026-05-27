@@ -34,7 +34,9 @@ const getApiBaseUrl = () => {
 export const getHomeData = async (): Promise<HomeData | null> => {
   try {
     const response = await fetch(`${getApiBaseUrl()}/home`, {
-      cache: "no-store",
+      next: {
+        revalidate: 30,
+      },
     });
 
     if (!response.ok) {
