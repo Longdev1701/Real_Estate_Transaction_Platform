@@ -91,6 +91,7 @@ export default function PostDetailPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [editForm, setEditForm] = useState<EditFormState | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     const rawValue = window.localStorage.getItem(savedKey);
@@ -260,7 +261,7 @@ export default function PostDetailPage() {
   }
 
   return (
-    <div className="container mx-auto space-y-6 px-4 py-8 lg:px-8 lg:py-10">
+    <div className="container mx-auto space-y-6 px-4 pt-8 pb-28 lg:px-8 lg:py-10">
       <div className="flex flex-wrap items-center gap-2 text-sm text-gray-400">
         <Link href="/" className="transition hover:text-white">
           Trang chu
@@ -279,71 +280,106 @@ export default function PostDetailPage() {
         </div>
       )}
 
-      <div className="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <section className="space-y-6 min-w-0">
           <div className="glass-card overflow-hidden p-0">
-            <div className="grid gap-1 lg:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.9fr)]">
-              <div className="relative overflow-hidden">
+            <div className={`grid gap-1 overflow-hidden ${
+              images.length === 1 ? 'grid-cols-1' :
+              images.length === 2 ? 'grid-cols-1 lg:grid-cols-2' :
+              'grid-cols-1 lg:grid-cols-[1.8fr_1fr]'
+            }`}>
+              {/* Left Column - Main Image */}
+              <div className="relative overflow-hidden w-full h-full group">
                 <img
                   src={activeImage}
                   alt={post.title}
-                  className="aspect-[16/10] w-full object-cover lg:aspect-[16/9]"
+                  className="w-full h-full object-cover aspect-[16/10] lg:aspect-[16/9] transition duration-700 group-hover:scale-[1.02] cursor-pointer"
+                  onClick={() => setIsFullscreen(true)}
                   onError={(event) => {
                     event.currentTarget.src = imageFallback;
                   }}
                 />
-                <div className="absolute left-4 top-4 rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white">
+                
+                <div className="absolute left-4 top-4 rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white pointer-events-none shadow-md">
                   {postTypeLabels[post.postType]}
                 </div>
-                <div className="absolute bottom-4 left-4 flex gap-2">
-                  <div className="rounded-xl border border-white/10 bg-slate-950/75 px-3 py-2 text-sm text-white">
-                    Anh ({images.length})
-                  </div>
+                
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setIsFullscreen(true); }}
+                  className="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-slate-950/50 text-white opacity-0 transition-all duration-300 group-hover:opacity-100 hover:bg-slate-950/80 hover:scale-110 backdrop-blur-sm"
+                  title="Phóng to ảnh"
+                >
+                  <Expand className="h-5 w-5" />
+                </button>
+                
+                <div className="absolute bottom-4 left-4">
+                  <button 
+                    type="button" 
+                    onClick={(e) => { e.stopPropagation(); setIsFullscreen(true); }} 
+                    className="rounded-xl border border-white/20 bg-slate-950/60 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-slate-950/80 backdrop-blur-sm"
+                  >
+                    Ảnh ({images.length})
+                  </button>
                 </div>
+                
                 {images.length > 1 && (
                   <>
                     <button
                       type="button"
-                      onClick={() => setSelectedImage((current) => (current === 0 ? images.length - 1 : current - 1))}
-                      className="absolute left-4 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-slate-950/65 text-white transition hover:bg-slate-900"
+                      onClick={(e) => { e.stopPropagation(); setSelectedImage((current) => (current === 0 ? images.length - 1 : current - 1)); }}
+                      className="absolute left-4 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-slate-950/50 text-white opacity-0 transition-all duration-300 group-hover:opacity-100 hover:bg-slate-950/80 hover:scale-110 backdrop-blur-sm"
                     >
-                      <ChevronLeft className="h-5 w-5" />
+                      <ChevronLeft className="h-6 w-6" />
                     </button>
                     <button
                       type="button"
-                      onClick={() => setSelectedImage((current) => (current === images.length - 1 ? 0 : current + 1))}
-                      className="absolute right-4 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-slate-950/65 text-white transition hover:bg-slate-900"
+                      onClick={(e) => { e.stopPropagation(); setSelectedImage((current) => (current === images.length - 1 ? 0 : current + 1)); }}
+                      className="absolute right-4 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-slate-950/50 text-white opacity-0 transition-all duration-300 group-hover:opacity-100 hover:bg-slate-950/80 hover:scale-110 backdrop-blur-sm"
                     >
-                      <ChevronRight className="h-5 w-5" />
+                      <ChevronRight className="h-6 w-6" />
                     </button>
                   </>
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-1 bg-slate-950/20 p-1">
-                {images.slice(0, 4).map((image, index) => (
-                  <button
-                    key={image.id}
-                    type="button"
-                    onClick={() => setSelectedImage(index)}
-                    className="relative overflow-hidden rounded-2xl"
-                  >
-                    <img
-                      src={image.imageUrl}
-                      alt={post.title}
-                      className="aspect-[4/3] w-full object-cover transition hover:scale-105"
-                      onError={(event) => {
-                        event.currentTarget.src = imageFallback;
-                      }}
-                    />
-                    {index === 3 && images.length > 4 && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-slate-950/65 text-3xl font-semibold text-white">
-                        +{images.length - 4}
-                      </div>
-                    )}
-                  </button>
-                ))}
-              </div>
+              {/* Right Column - Secondary Images (Hidden on mobile) */}
+              {images.length > 1 && (
+                <div className={`hidden lg:grid gap-1 w-full h-full ${
+                  images.length === 2 ? 'grid-cols-1 grid-rows-1' :
+                  images.length === 3 ? 'grid-cols-1 grid-rows-2' :
+                  'grid-cols-2 grid-rows-2'
+                }`}>
+                  {images.slice(1, 5).map((image, index) => {
+                    const actualIndex = index + 1;
+                    return (
+                      <button
+                        key={image.id}
+                        type="button"
+                        onClick={() => { setSelectedImage(actualIndex); setIsFullscreen(true); }}
+                        className="relative overflow-hidden w-full h-full group bg-slate-900"
+                      >
+                        <img
+                          src={image.imageUrl}
+                          alt={post.title}
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                          onError={(event) => {
+                            event.currentTarget.src = imageFallback;
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-slate-950/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                        
+                        {/* +X overlay on the last image if there are more */}
+                        {index === 3 && images.length > 5 && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-slate-950/60 text-3xl font-semibold text-white transition hover:bg-slate-950/80">
+                            +{images.length - 5}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
@@ -354,7 +390,7 @@ export default function PostDetailPage() {
                   <h1 className="text-4xl font-bold tracking-tight text-white">{post.title}</h1>
                   <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-sm font-medium text-emerald-300">
                     <BadgeCheck className="h-4 w-4" />
-                    Da xac thuc
+                    Đã xác thực
                   </span>
                 </div>
                 <div className="flex flex-wrap items-center gap-3 text-sm text-gray-400">
@@ -362,7 +398,7 @@ export default function PostDetailPage() {
                     <MapPin className="h-4 w-4 text-blue-300" />
                     {formatLocation(post)}
                   </span>
-                  <span className="text-blue-300">Xem tren ban do</span>
+                  <span className="text-blue-300">Xem trên bản đồ</span>
                 </div>
               </div>
 
@@ -373,15 +409,15 @@ export default function PostDetailPage() {
                   className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-gray-200 transition hover:bg-white/10"
                 >
                   <Heart className={`h-4 w-4 ${isSaved ? "fill-blue-400 text-blue-400" : "text-blue-300"}`} />
-                  {isSaved ? "Da luu" : "Luu"}
+                  {isSaved ? "Đã lưu" : "Lưu"}
                 </button>
                 <button type="button" className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-gray-200 transition hover:bg-white/10">
                   <Building2 className="h-4 w-4 text-blue-300" />
-                  So sanh
+                  So sánh
                 </button>
                 <button type="button" className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-gray-200 transition hover:bg-white/10">
                   <Share2 className="h-4 w-4 text-blue-300" />
-                  Chia se
+                  Chia sẻ
                 </button>
               </div>
             </div>
@@ -389,60 +425,60 @@ export default function PostDetailPage() {
             <div className="mt-6 grid gap-4 border-b border-white/10 pb-6 sm:grid-cols-2 xl:grid-cols-5">
               <div>
                 <p className="text-4xl font-semibold text-blue-300">{formatPrice(post.price)}</p>
-                <p className="mt-1 text-sm text-gray-400">Gia dang tin</p>
+                <p className="mt-1 text-sm text-gray-400">Giá đăng tin</p>
               </div>
               <div>
                 <p className="inline-flex items-center gap-2 text-2xl font-semibold text-white">
                   <Expand className="h-5 w-5 text-blue-300" />
                   {formatArea(post.area)}
                 </p>
-                <p className="mt-1 text-sm text-gray-400">Dien tich</p>
+                <p className="mt-1 text-sm text-gray-400">Diện tích</p>
               </div>
               <div>
                 <p className="text-2xl font-semibold text-white">{propertyTypeLabels[post.propertyType]}</p>
-                <p className="mt-1 text-sm text-gray-400">Loai hinh</p>
+                <p className="mt-1 text-sm text-gray-400">Loại hình</p>
               </div>
               <div>
                 <p className="text-2xl font-semibold text-white">{postTypeLabels[post.postType]}</p>
-                <p className="mt-1 text-sm text-gray-400">Loai tin</p>
+                <p className="mt-1 text-sm text-gray-400">Loại tin</p>
               </div>
               <div>
                 <p className="text-2xl font-semibold text-white">{post.city}</p>
-                <p className="mt-1 text-sm text-gray-400">Khu vuc</p>
+                <p className="mt-1 text-sm text-gray-400">Khu vực</p>
               </div>
             </div>
 
             <div className="mt-6 grid gap-8 xl:grid-cols-[minmax(0,1fr)_420px]">
               <div>
-                <h2 className="text-2xl font-semibold text-white">Mo ta chi tiet</h2>
+                <h2 className="text-2xl font-semibold text-white">Mô tả chi tiết</h2>
                 <p className="mt-4 whitespace-pre-line leading-8 text-gray-300">{post.description}</p>
               </div>
 
               <div className="border-t border-white/10 pt-6 xl:border-l xl:border-t-0 xl:pl-8 xl:pt-0">
-                <h2 className="text-2xl font-semibold text-white">Thong tin chi tiet</h2>
+                <h2 className="text-2xl font-semibold text-white">Thông tin chi tiết</h2>
                 <dl className="mt-5 grid gap-4 sm:grid-cols-2">
                   <div>
-                    <dt className="text-sm text-gray-400">Ma tin</dt>
+                    <dt className="text-sm text-gray-400">Mã tin</dt>
                     <dd className="mt-1 font-medium text-white">{post.id}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm text-gray-400">Nguoi dang</dt>
+                    <dt className="text-sm text-gray-400">Người đăng</dt>
                     <dd className="mt-1 font-medium text-white">{post.author.fullName}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm text-gray-400">Dia chi</dt>
+                    <dt className="text-sm text-gray-400">Địa chỉ</dt>
                     <dd className="mt-1 font-medium text-white">{post.address}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm text-gray-400">Quan / huyen</dt>
+                    <dt className="text-sm text-gray-400">Quận / huyện</dt>
                     <dd className="mt-1 font-medium text-white">{post.district}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm text-gray-400">Tinh / thanh</dt>
+                    <dt className="text-sm text-gray-400">Tỉnh / thành</dt>
                     <dd className="mt-1 font-medium text-white">{post.city}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm text-gray-400">Trang thai</dt>
+                    <dt className="text-sm text-gray-400">Trạng thái</dt>
                     <dd className="mt-1 font-medium text-white">{post.status}</dd>
                   </div>
                 </dl>
@@ -450,12 +486,34 @@ export default function PostDetailPage() {
             </div>
           </div>
 
+          <div className="glass-card p-6">
+            <h2 className="text-2xl font-semibold text-white">Đặc điểm nổi bật</h2>
+            <ul className="mt-4 grid gap-3 sm:grid-cols-2 text-sm text-gray-300">
+              <li className="flex items-start gap-3">
+                <span className="mt-1 shrink-0 h-2 w-2 rounded-full bg-blue-400" />
+                Giá đăng tin {formatPrice(post.price)} cho {formatArea(post.area)}.
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="mt-1 shrink-0 h-2 w-2 rounded-full bg-blue-400" />
+                Thuộc nhóm {propertyTypeLabels[post.propertyType].toLowerCase()} tại {post.district}.
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="mt-1 shrink-0 h-2 w-2 rounded-full bg-blue-400" />
+                Đăng tin theo hình thức {postTypeLabels[post.postType].toLowerCase()}.
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="mt-1 shrink-0 h-2 w-2 rounded-full bg-blue-400" />
+                Vị trí: {post.address}.
+              </li>
+            </ul>
+          </div>
+
           <div className="glass-card overflow-hidden p-0">
             <div className="border-b border-white/10 px-6 py-4">
-              <h2 className="text-2xl font-semibold text-white">Vi tri tren ban do</h2>
+              <h2 className="text-2xl font-semibold text-white">Vị trí trên bản đồ</h2>
             </div>
             <iframe
-              title={`Ban do ${post.title}`}
+              title={`Bản đồ ${post.title}`}
               src={`https://maps.google.com/maps?q=${post.latitude},${post.longitude}&z=15&output=embed`}
               className="h-[360px] w-full border-0"
               loading="lazy"
@@ -463,29 +521,29 @@ export default function PostDetailPage() {
           </div>
 
           {canManagePost && isEditing && (
-            <form onSubmit={handleEditSubmit} className="glass-card space-y-4 p-6">
+            <form onSubmit={handleEditSubmit} className="glass-card space-y-4 p-6 mt-6">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-xl font-semibold text-white">Cap nhat bai dang</h2>
-                  <p className="text-sm text-gray-400">Chinh sua thong tin chinh cua bai dang hien tai.</p>
+                  <h2 className="text-xl font-semibold text-white">Cập nhật bài đăng</h2>
+                  <p className="text-sm text-gray-400">Chỉnh sửa thông tin chính của bài đăng hiện tại.</p>
                 </div>
               </div>
 
-              <input className="input-dark" value={editForm.title} onChange={(event) => setEditForm({ ...editForm, title: event.target.value })} placeholder="Tieu de" />
-              <textarea className="input-dark min-h-32" value={editForm.description} onChange={(event) => setEditForm({ ...editForm, description: event.target.value })} placeholder="Mo ta" />
+              <input className="input-dark w-full" value={editForm.title} onChange={(event) => setEditForm({ ...editForm, title: event.target.value })} placeholder="Tiêu đề" />
+              <textarea className="input-dark w-full min-h-32" value={editForm.description} onChange={(event) => setEditForm({ ...editForm, description: event.target.value })} placeholder="Mô tả" />
               <div className="grid gap-4 md:grid-cols-2">
-                <input className="input-dark" type="number" min="0" value={editForm.price} onChange={(event) => setEditForm({ ...editForm, price: event.target.value })} placeholder="Gia" />
-                <input className="input-dark" type="number" min="0" value={editForm.area} onChange={(event) => setEditForm({ ...editForm, area: event.target.value })} placeholder="Dien tich" />
+                <input className="input-dark w-full" type="number" min="0" value={editForm.price} onChange={(event) => setEditForm({ ...editForm, price: event.target.value })} placeholder="Giá" />
+                <input className="input-dark w-full" type="number" min="0" value={editForm.area} onChange={(event) => setEditForm({ ...editForm, area: event.target.value })} placeholder="Diện tích" />
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-                <select className="input-dark" value={editForm.postType} onChange={(event) => setEditForm({ ...editForm, postType: event.target.value as PostType })}>
+                <select className="input-dark w-full" value={editForm.postType} onChange={(event) => setEditForm({ ...editForm, postType: event.target.value as PostType })}>
                   {POST_TYPES.map((value) => (
                     <option key={value} value={value}>
                       {postTypeLabels[value]}
                     </option>
                   ))}
                 </select>
-                <select className="input-dark" value={editForm.propertyType} onChange={(event) => setEditForm({ ...editForm, propertyType: event.target.value as PropertyType })}>
+                <select className="input-dark w-full" value={editForm.propertyType} onChange={(event) => setEditForm({ ...editForm, propertyType: event.target.value as PropertyType })}>
                   {PROPERTY_TYPES.map((value) => (
                     <option key={value} value={value}>
                       {propertyTypeLabels[value]}
@@ -493,93 +551,97 @@ export default function PostDetailPage() {
                   ))}
                 </select>
               </div>
-              <input className="input-dark" value={editForm.address} onChange={(event) => setEditForm({ ...editForm, address: event.target.value })} placeholder="Dia chi" />
+              <input className="input-dark w-full" value={editForm.address} onChange={(event) => setEditForm({ ...editForm, address: event.target.value })} placeholder="Địa chỉ" />
               <div className="grid gap-4 md:grid-cols-3">
-                <input className="input-dark" value={editForm.city} onChange={(event) => setEditForm({ ...editForm, city: event.target.value })} placeholder="Tinh / thanh" />
-                <input className="input-dark" value={editForm.district} onChange={(event) => setEditForm({ ...editForm, district: event.target.value })} placeholder="Quan / huyen" />
-                <input className="input-dark" value={editForm.ward} onChange={(event) => setEditForm({ ...editForm, ward: event.target.value })} placeholder="Phuong / xa" />
+                <input className="input-dark w-full" value={editForm.city} onChange={(event) => setEditForm({ ...editForm, city: event.target.value })} placeholder="Tỉnh / thành phố" />
+                <input className="input-dark w-full" value={editForm.district} onChange={(event) => setEditForm({ ...editForm, district: event.target.value })} placeholder="Quận / huyện" />
+                <input className="input-dark w-full" value={editForm.ward} onChange={(event) => setEditForm({ ...editForm, ward: event.target.value })} placeholder="Phường / xã" />
               </div>
               <div className="grid gap-4 md:grid-cols-2">
-                <input className="input-dark" type="number" step="any" value={editForm.latitude} onChange={(event) => setEditForm({ ...editForm, latitude: event.target.value })} placeholder="Vi do" />
-                <input className="input-dark" type="number" step="any" value={editForm.longitude} onChange={(event) => setEditForm({ ...editForm, longitude: event.target.value })} placeholder="Kinh do" />
+                <input className="input-dark w-full" type="number" step="any" value={editForm.latitude} onChange={(event) => setEditForm({ ...editForm, latitude: event.target.value })} placeholder="Vĩ độ" />
+                <input className="input-dark w-full" type="number" step="any" value={editForm.longitude} onChange={(event) => setEditForm({ ...editForm, longitude: event.target.value })} placeholder="Kinh độ" />
               </div>
 
               <button type="submit" disabled={isSaving} className="btn-primary inline-flex items-center gap-2">
                 <Save className="h-4 w-4" />
-                {isSaving ? "Dang luu..." : "Luu thay doi"}
+                {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
               </button>
             </form>
           )}
         </section>
 
         <aside className="space-y-5">
-          <div className="2xl:sticky 2xl:top-24 2xl:space-y-5">
-            <div className="glass-card p-6">
-              <h2 className="text-2xl font-semibold text-white">Lien he voi nguoi dang</h2>
-              <div className="mt-5 flex items-center gap-4">
-                <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-blue-400/30 bg-blue-500/10 text-xl font-semibold text-blue-200">
-                  {post.author.avatarUrl ? (
-                    <img src={post.author.avatarUrl} alt={post.author.fullName} className="h-full w-full object-cover" />
-                  ) : (
-                    post.author.fullName.charAt(0).toUpperCase()
-                  )}
+          <div className="lg:sticky lg:top-24 space-y-5">
+            <div className="glass-card p-6 border-t-4 border-t-blue-500 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-blue-500/20 to-transparent pointer-events-none" />
+              <h2 className="text-xl font-semibold text-white relative">Liên hệ người bán</h2>
+              <div className="mt-5 flex items-center gap-4 relative">
+                <div className="relative shrink-0">
+                  <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border-2 border-blue-500 bg-blue-500/10 text-xl font-semibold text-blue-200">
+                    {post.author.avatarUrl ? (
+                      <img src={post.author.avatarUrl} alt={post.author.fullName} className="h-full w-full object-cover" />
+                    ) : (
+                      post.author.fullName.charAt(0).toUpperCase()
+                    )}
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 rounded-full bg-slate-900 p-1">
+                    <BadgeCheck className="h-4 w-4 text-blue-500" />
+                  </div>
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-xl font-semibold text-white">{post.author.fullName}</p>
-                    <BadgeCheck className="h-4 w-4 text-blue-400" />
-                  </div>
-                  <p className="mt-1 text-gray-400">{post.author.email}</p>
+                  <p className="text-lg font-bold text-white line-clamp-1">{post.author.fullName}</p>
+                  <p className="text-sm text-gray-400 mt-1">Hoạt động gần đây</p>
                 </div>
               </div>
 
-              <div className="mt-5 space-y-3">
+              <div className="mt-6 space-y-3 relative">
                 <a
                   href={post.author.phone ? `tel:${post.author.phone}` : `mailto:${post.author.email}`}
-                  className="btn-primary inline-flex w-full items-center justify-center gap-2 py-3"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3.5 font-bold text-white shadow-[0_0_15px_rgba(5,150,105,0.3)] transition hover:bg-emerald-500"
                 >
-                  <MessageCircle className="h-4 w-4" />
-                  Nhan tin
+                  <Phone className="h-5 w-5" />
+                  {post.author.phone ? post.author.phone : "Gọi điện thoại"}
                 </a>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <a
-                    href={post.author.phone ? `tel:${post.author.phone}` : `mailto:${post.author.email}`}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-gray-100 transition hover:bg-white/10"
-                  >
-                    <Phone className="h-4 w-4" />
-                    Goi dien
-                  </a>
-                  <a
-                    href={`mailto:${post.author.email}`}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-gray-100 transition hover:bg-white/10"
-                  >
-                    <Mail className="h-4 w-4" />
-                    Email
-                  </a>
+                <a
+                  href={`mailto:${post.author.email}`}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3.5 font-medium text-white transition hover:bg-white/10"
+                >
+                  <MessageCircle className="h-5 w-5" />
+                  Nhắn tin ngay
+                </a>
+              </div>
+
+              <div className="mt-6 border-t border-white/10 pt-6 relative">
+                <h3 className="text-sm font-medium text-gray-300 mb-4">Hoặc để lại số điện thoại, chúng tôi sẽ gọi lại:</h3>
+                <div className="flex gap-2">
+                  <input type="text" placeholder="Số điện thoại của bạn" className="input-dark w-full text-sm py-2.5" />
+                  <button type="button" className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500 whitespace-nowrap shadow-[0_0_15px_rgba(37,99,235,0.3)]">
+                    Gửi
+                  </button>
                 </div>
               </div>
 
-              <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4 relative">
                 <div className="mb-3 flex items-center gap-2 text-white">
                   <ShieldCheck className="h-5 w-5 text-emerald-400" />
-                  <h3 className="font-semibold">Giao dich an toan</h3>
+                  <h3 className="font-semibold text-sm">Giao dịch an toàn</h3>
                 </div>
-                <ul className="space-y-2 text-sm text-gray-300">
-                  <li>Khong chuyen khoan truoc khi xem nha.</li>
-                  <li>Kiem tra giay to va thong tin nguoi dang.</li>
-                  <li>Lien he truc tiep qua kenh chinh thong.</li>
+                <ul className="space-y-1.5 text-xs text-gray-300">
+                  <li>• Không chuyển khoản trước khi xem nhà.</li>
+                  <li>• Kiểm tra giấy tờ và thông tin người đăng.</li>
+                  <li>• Liên hệ trực tiếp qua kênh chính thống.</li>
                 </ul>
               </div>
 
               {canManagePost && (
-                <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                <div className="mt-6 grid gap-3 sm:grid-cols-2 relative">
                   <button
                     type="button"
                     onClick={() => setIsEditing((current) => !current)}
                     className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-medium text-gray-100 transition hover:bg-white/10"
                   >
                     {isEditing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-                    {isEditing ? "Dong sua" : "Chinh sua"}
+                    {isEditing ? "Đóng sửa" : "Chỉnh sửa"}
                   </button>
                   <button
                     type="button"
@@ -588,46 +650,25 @@ export default function PostDetailPage() {
                     className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 font-medium text-red-200 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <Trash2 className="h-4 w-4" />
-                    {isDeleting ? "Dang xoa..." : "Xoa bai"}
+                    {isDeleting ? "Đang xoá..." : "Xoá bài"}
                   </button>
                 </div>
               )}
             </div>
 
             <div className="glass-card p-6">
-              <h2 className="text-2xl font-semibold text-white">Dac diem noi bat</h2>
-              <ul className="mt-4 space-y-3 text-sm text-gray-300">
-                <li className="flex items-start gap-3">
-                  <span className="mt-1 h-2 w-2 rounded-full bg-blue-400" />
-                  Gia dang tin {formatPrice(post.price)} cho {formatArea(post.area)}.
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="mt-1 h-2 w-2 rounded-full bg-blue-400" />
-                  Thuoc nhom {propertyTypeLabels[post.propertyType].toLowerCase()} tai {post.district}.
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="mt-1 h-2 w-2 rounded-full bg-blue-400" />
-                  Dang tin theo hinh thuc {postTypeLabels[post.postType].toLowerCase()}.
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="mt-1 h-2 w-2 rounded-full bg-blue-400" />
-                  Vi tri: {post.address}.
-                </li>
-              </ul>
-            </div>
-
-            <div className="glass-card p-6">
               <div className="mb-5 flex items-center justify-between gap-3">
-                <h2 className="text-2xl font-semibold text-white">Bat dong san tuong tu</h2>
+                <h2 className="text-2xl font-semibold text-white">Bất động sản tương tự</h2>
                 <Link href="/posts" className="text-sm font-medium text-blue-300 transition hover:text-blue-200">
-                  Xem tat ca
+                  Xem tất cả
                 </Link>
               </div>
 
               <div className="space-y-4">
                 {relatedPosts.length === 0 ? (
-                  <p className="text-sm text-gray-400">Chua co bai dang tuong tu.</p>
-                ) : (
+                <div className="flex min-h-[200px] items-center justify-center rounded-2xl border border-dashed border-white/10">
+                  <p className="text-sm text-gray-400">Chưa có bài đăng tương tự.</p>
+                </div>) : (
                   relatedPosts.map((item) => (
                     <Link
                       key={item.id}
@@ -663,6 +704,70 @@ export default function PostDetailPage() {
             </button>
           </div>
         </aside>
+      </div>
+
+      {isFullscreen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-sm">
+          <button 
+            onClick={() => setIsFullscreen(false)} 
+            className="absolute top-6 right-6 text-white/70 hover:text-white bg-white/10 p-2 rounded-full transition z-10"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          
+          {images.length > 1 && (
+            <button
+              onClick={() => setSelectedImage((current) => (current === 0 ? images.length - 1 : current - 1))}
+              className="absolute left-4 sm:left-8 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition z-10"
+            >
+              <ChevronLeft className="w-8 h-8" />
+            </button>
+          )}
+
+          <img 
+            src={activeImage} 
+            alt={post.title} 
+            className="max-h-[90vh] max-w-[90vw] object-contain"
+          />
+
+          {images.length > 1 && (
+            <button
+              onClick={() => setSelectedImage((current) => (current === images.length - 1 ? 0 : current + 1))}
+              className="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition z-10"
+            >
+              <ChevronRight className="w-8 h-8" />
+            </button>
+          )}
+
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/50 px-4 py-2 rounded-full text-white text-sm z-10">
+            {selectedImage + 1} / {images.length}
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Bottom Action Bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center gap-3 border-t border-white/10 bg-slate-950/90 p-4 pb-6 backdrop-blur-xl lg:hidden shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+        <button 
+          type="button"
+          onClick={handleSaveToggle}
+          className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-gray-200 transition hover:bg-white/10"
+        >
+          <Heart className={`h-5 w-5 ${isSaved ? "fill-blue-400 text-blue-400" : "text-blue-300"}`} />
+        </button>
+        <a
+          href={`mailto:${post.author.email}`}
+          className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 font-medium text-white transition hover:bg-white/10"
+        >
+          <MessageCircle className="h-5 w-5" />
+          Nhắn tin
+        </a>
+        <a
+          href={post.author.phone ? `tel:${post.author.phone}` : `mailto:${post.author.email}`}
+          className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 font-bold text-white shadow-[0_0_15px_rgba(5,150,105,0.3)] transition hover:bg-emerald-500"
+        >
+          <Phone className="h-5 w-5" />
+          Gọi điện
+        </a>
       </div>
     </div>
   );
