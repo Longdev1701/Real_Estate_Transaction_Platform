@@ -1,5 +1,6 @@
-import axios from 'axios';
-import { useAuthStore } from '@/stores/auth.store';
+import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
+
+import { useAuthStore } from "@/stores/auth.store";
 
 const apiURL = process.env.NEXT_PUBLIC_API_URL;
 const baseURL = apiURL
@@ -8,35 +9,106 @@ const baseURL = apiURL
     : `${apiURL.replace(/\/$/, "")}/api`
   : undefined;
 
+type RetriableRequestConfig = InternalAxiosRequestConfig & {
+  _retry?: boolean;
+};
+
+type RefreshTokenResponse = {
+  data: {
+    accessToken: string;
+    refreshToken: string;
+  };
+};
+
 export const api = axios.create({
   baseURL,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
-// Request interceptor to attach access token
+let refreshPromise: Promise<string> | null = null;
+
+const isAuthEndpoint = (url?: string) =>
+  typeof url === "string" &&
+  (url.includes("/auth/login") ||
+    url.includes("/auth/register") ||
+    url.includes("/auth/refresh-token") ||
+    url.includes("/auth/logout"));
+
+const refreshAccessToken = async () => {
+  const { refreshToken, setTokens, logout } = useAuthStore.getState();
+
+  if (!refreshToken) {
+    logout();
+    throw new Error("Missing refresh token.");
+  }
+
+  if (!refreshPromise) {
+    refreshPromise = api
+      .post<RefreshTokenResponse>(
+        "/auth/refresh-token",
+        { refreshToken },
+        {
+          headers: {
+            Authorization: undefined,
+          },
+        },
+      )
+      .then((response) => {
+        const nextAccessToken = response.data.data.accessToken;
+        const nextRefreshToken = response.data.data.refreshToken;
+        setTokens(nextAccessToken, nextRefreshToken);
+        return nextAccessToken;
+      })
+      .catch((error) => {
+        logout();
+        throw error;
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+
+  return refreshPromise;
+};
+
 api.interceptors.request.use(
   (config) => {
     const token = useAuthStore.getState().accessToken;
+    if (config.data instanceof FormData && config.headers) {
+      delete config.headers["Content-Type"];
+    }
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error),
 );
 
-// Response interceptor (optional: handle 401 unauthenticated globally)
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Auto logout if 401
-      useAuthStore.getState().logout();
+  async (error: AxiosError) => {
+    const originalRequest = error.config as RetriableRequestConfig | undefined;
+
+    if (!originalRequest || originalRequest._retry || error.response?.status !== 401) {
+      return Promise.reject(error);
     }
-    return Promise.reject(error);
-  }
+
+    if (isAuthEndpoint(originalRequest.url)) {
+      useAuthStore.getState().logout();
+      return Promise.reject(error);
+    }
+
+    try {
+      originalRequest._retry = true;
+      const nextAccessToken = await refreshAccessToken();
+      originalRequest.headers = originalRequest.headers ?? {};
+      originalRequest.headers.Authorization = `Bearer ${nextAccessToken}`;
+      return api(originalRequest);
+    } catch (refreshError) {
+      return Promise.reject(refreshError);
+    }
+  },
 );

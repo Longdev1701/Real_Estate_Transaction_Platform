@@ -1,13 +1,15 @@
 "use client";
 
+import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth.store";
 import { LogOut, User as UserIcon, List } from "lucide-react";
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 
 export function UserMenu() {
-  const { user, logout } = useAuthStore();
+  const { user, refreshToken, logout } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -27,6 +29,21 @@ export function UserMenu() {
       </Link>
     );
   }
+
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      if (refreshToken) {
+        await api.post("/auth/logout", { refreshToken });
+      }
+    } catch {
+      // Always clear local auth state even if revoke fails.
+    } finally {
+      logout();
+      setIsOpen(false);
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <div className="relative" ref={menuRef}>
@@ -64,14 +81,12 @@ export function UserMenu() {
           </Link>
           <div className="h-px bg-white/10 my-1"></div>
           <button
-            onClick={() => {
-              logout();
-              setIsOpen(false);
-            }}
+            onClick={handleLogout}
+            disabled={isLoggingOut}
             className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-white/10 transition-colors text-red-400 hover:text-red-300"
           >
             <LogOut size={16} />
-            <span>Logout</span>
+            <span>{isLoggingOut ? "Logging out..." : "Logout"}</span>
           </button>
         </div>
       )}
