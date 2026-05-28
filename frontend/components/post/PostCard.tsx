@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Expand, MapPin } from "lucide-react";
+import { Bookmark, Expand, MapPin } from "lucide-react";
 
 import {
   formatArea,
@@ -53,6 +53,12 @@ export function PostCard({ post }: { post: Post }) {
         <div className="absolute left-2 top-2 rounded-md border border-white/10 bg-black/60 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-md">
           {totalImages} {"\u1ea3nh"}
         </div>
+        {post.isSaved ? (
+          <div className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full border border-blue-400/30 bg-slate-950/75 px-2.5 py-1 text-xs font-medium text-blue-200 backdrop-blur-md">
+            <Bookmark className="h-3.5 w-3.5 fill-blue-400 text-blue-400" />
+            Đã lưu
+          </div>
+        ) : null}
       </Link>
 
       <div className="flex flex-grow flex-col">
