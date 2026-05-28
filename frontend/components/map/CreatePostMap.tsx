@@ -40,6 +40,10 @@ export default function CreatePostMap({ latitude, longitude, onChange }: CreateP
   const initLeafletMap = () => {
     if (!mapRef.current || !window.L) return;
 
+    if (leafletMapInstance.current) {
+      return; // Đã khởi tạo rồi, tránh chạy lại
+    }
+
     const L = window.L;
     const lat = Number(latRef.current);
     const lng = Number(lngRef.current);
@@ -50,6 +54,11 @@ export default function CreatePostMap({ latitude, longitude, onChange }: CreateP
     try {
       // Dọn dẹp DOM trước để tránh bị trùng lặp container
       mapRef.current.innerHTML = "";
+
+      // Giải quyết triệt để lỗi "Map container is already initialized"
+      if (mapRef.current) {
+        (mapRef.current as any)._leaflet_id = null;
+      }
 
       // Khắc phục lỗi hiển thị marker icon của Leaflet trong Next.js do sai đường dẫn tương đối
       delete L.Icon.Default.prototype._getIconUrl;
