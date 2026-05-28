@@ -29,6 +29,7 @@ export default function ProfilePostsPage() {
         setIsLoading(true);
         setError(null);
         const response = await api.get<{ data: PostListData }>("/posts?limit=100");
+
         if (isMounted) {
           setPosts(response.data.data.items);
         }
@@ -56,8 +57,14 @@ export default function ProfilePostsPage() {
     [posts, user],
   );
 
-  const saleCount = useMemo(() => myPosts.filter(p => p.postType === 'SELL').length, [myPosts]);
-  const rentCount = useMemo(() => myPosts.filter(p => p.postType === 'RENT').length, [myPosts]);
+  const saleCount = useMemo(
+    () => myPosts.filter((post) => post.postType === "SELL").length,
+    [myPosts],
+  );
+  const rentCount = useMemo(
+    () => myPosts.filter((post) => post.postType === "RENT").length,
+    [myPosts],
+  );
 
   if (!hasHydrated || isLoadingUser) {
     return null;
@@ -77,127 +84,126 @@ export default function ProfilePostsPage() {
   }
 
   const displayName = user.fullName ?? user.name ?? user.email;
-  const username = user.email ? user.email.split('@')[0] : "user";
+  const username = user.email ? user.email.split("@")[0] : "user";
 
   return (
-    <div className="container mx-auto px-4 py-8 lg:px-8 max-w-7xl">
-      {/* Profile Header Section */}
+    <div className="container mx-auto max-w-7xl px-4 py-8 lg:px-8">
       <div className="relative mb-6 overflow-hidden rounded-2xl glass-panel">
-        {/* Cover Image */}
-        <div className="h-48 md:h-72 w-full relative">
-          <img 
-            src="https://images.unsplash.com/photo-1449844908441-8829872d2607?auto=format&fit=crop&q=80&w=2000" 
-            alt="Cover" 
-            className="w-full h-full object-cover" 
+        <div className="relative h-48 w-full md:h-72">
+          <img
+            src="https://images.unsplash.com/photo-1449844908441-8829872d2607?auto=format&fit=crop&q=80&w=2000"
+            alt="Cover"
+            className="h-full w-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0B1120] to-transparent"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0B1120] to-transparent" />
         </div>
-        
-        {/* Avatar & User Info */}
-        <div className="px-6 md:px-10 pb-8 -mt-16 md:-mt-24 relative flex flex-col md:flex-row items-start md:items-end justify-between gap-6">
-          <div className="flex flex-col md:flex-row items-start md:items-end gap-6 w-full md:w-auto">
-            <div className="w-32 h-32 md:w-44 md:h-44 rounded-full border-4 border-[#0B1120] overflow-hidden bg-blue-900 flex-shrink-0 relative">
+
+        <div className="relative -mt-16 flex flex-col items-start justify-between gap-6 px-6 pb-8 md:-mt-24 md:flex-row md:items-end md:px-10">
+          <div className="flex w-full flex-col items-start gap-6 md:w-auto md:flex-row md:items-end">
+            <div className="relative h-32 w-32 shrink-0 overflow-hidden rounded-full border-4 border-[#0B1120] bg-blue-900 md:h-44 md:w-44">
               {user.avatarUrl ? (
-                <img src={user.avatarUrl} alt={displayName} className="w-full h-full object-cover" />
+                <img src={user.avatarUrl} alt={displayName} className="h-full w-full object-cover" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-5xl font-bold text-blue-200">
+                <div className="flex h-full w-full items-center justify-center text-5xl font-bold text-blue-200">
                   {displayName.charAt(0).toUpperCase()}
                 </div>
               )}
-              <div className="absolute bottom-2 right-2 w-10 h-10 bg-white/20 backdrop-blur-md rounded-full border border-white/30 flex items-center justify-center text-white cursor-pointer hover:bg-white/30 transition-colors">
-                <Edit className="w-4 h-4" />
+              <div className="absolute bottom-2 right-2 flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-white/20 text-white backdrop-blur-md transition-colors hover:bg-white/30">
+                <Edit className="h-4 w-4" />
               </div>
             </div>
-            
-            <div className="pb-2 w-full">
-              <div className="flex items-center justify-between md:justify-start gap-4">
-                <div className="flex items-center gap-2">
-                  <h1 className="text-2xl md:text-3xl font-bold text-white">{displayName}</h1>
-                  <BadgeCheck className="w-6 h-6 text-blue-500" />
-                </div>
+
+            <div className="w-full pb-2">
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold text-white md:text-3xl">{displayName}</h1>
+                <BadgeCheck className="h-6 w-6 text-blue-500" />
               </div>
-              <p className="text-gray-400 mt-1">@{username}</p>
-              <p className="text-sm text-gray-300 mt-3 max-w-2xl">
-                Chuyên viên môi giới và đầu tư bất động sản khu vực TP.HCM và các tỉnh lân cận. Uy tín - Tận tâm - Chuyên nghiệp.
+              <p className="mt-1 text-gray-400">@{username}</p>
+              <p className="mt-3 max-w-2xl text-sm text-gray-300">
+                Chuyên viên môi giới và đầu tư bất động sản khu vực TP.HCM và các tỉnh lân cận.
+                Uy tín, tận tâm và chuyên nghiệp.
               </p>
-              
-              <div className="flex items-center gap-6 md:gap-10 mt-5">
+
+              <div className="mt-5 flex items-center gap-6 md:gap-10">
                 <div>
                   <div className="text-xl font-bold text-white">{myPosts.length}</div>
-                  <div className="text-xs text-gray-400 uppercase tracking-wider mt-1">Bài đăng</div>
+                  <div className="mt-1 text-xs uppercase tracking-wider text-gray-400">Bài đăng</div>
                 </div>
                 <div>
                   <div className="text-xl font-bold text-white">128</div>
-                  <div className="text-xs text-gray-400 uppercase tracking-wider mt-1">Đang theo dõi</div>
+                  <div className="mt-1 text-xs uppercase tracking-wider text-gray-400">Đang theo dõi</div>
                 </div>
                 <div>
                   <div className="text-xl font-bold text-white">1.2K</div>
-                  <div className="text-xs text-gray-400 uppercase tracking-wider mt-1">Người theo dõi</div>
+                  <div className="mt-1 text-xs uppercase tracking-wider text-gray-400">Người theo dõi</div>
                 </div>
                 <div>
                   <div className="text-xl font-bold text-white">4.8</div>
-                  <div className="text-xs text-gray-400 uppercase tracking-wider mt-1">Đánh giá</div>
+                  <div className="mt-1 text-xs uppercase tracking-wider text-gray-400">Đánh giá</div>
                 </div>
               </div>
             </div>
           </div>
-          
-          <div className="pb-2 w-full md:w-auto flex md:justify-end">
-            <Link href="/profile" className="w-full md:w-auto px-6 py-2.5 rounded-xl border border-blue-500/50 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors font-medium text-center">
+
+          <div className="flex w-full pb-2 md:w-auto md:justify-end">
+            <Link
+              href="/profile"
+              className="w-full rounded-xl border border-blue-500/50 bg-blue-500/10 px-6 py-2.5 text-center font-medium text-blue-400 transition-colors hover:bg-blue-500/20 md:w-auto"
+            >
               Chỉnh sửa hồ sơ
             </Link>
           </div>
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="glass-panel mb-8 rounded-2xl overflow-hidden">
+      <div className="glass-panel mb-8 overflow-hidden rounded-2xl">
         <div className="flex overflow-x-auto hide-scrollbar">
-          <button className="px-6 py-4 border-b-2 border-blue-500 text-blue-400 font-medium whitespace-nowrap bg-blue-500/5">
+          <button className="whitespace-nowrap border-b-2 border-blue-500 bg-blue-500/5 px-6 py-4 font-medium text-blue-400">
             Bài đăng của tôi
           </button>
-          <button className="px-6 py-4 border-b-2 border-transparent text-gray-400 hover:text-gray-200 hover:bg-white/5 font-medium whitespace-nowrap transition-colors">
+          <Link
+            href="/profile/saved"
+            className="whitespace-nowrap border-b-2 border-transparent px-6 py-4 font-medium text-gray-400 transition-colors hover:bg-white/5 hover:text-gray-200"
+          >
             Bài đã lưu
-          </button>
-          <button className="px-6 py-4 border-b-2 border-transparent text-gray-400 hover:text-gray-200 hover:bg-white/5 font-medium whitespace-nowrap transition-colors">
+          </Link>
+          <button className="whitespace-nowrap border-b-2 border-transparent px-6 py-4 font-medium text-gray-400 transition-colors hover:bg-white/5 hover:text-gray-200">
             Yêu thích
           </button>
-          <button className="px-6 py-4 border-b-2 border-transparent text-gray-400 hover:text-gray-200 hover:bg-white/5 font-medium whitespace-nowrap transition-colors">
+          <button className="whitespace-nowrap border-b-2 border-transparent px-6 py-4 font-medium text-gray-400 transition-colors hover:bg-white/5 hover:text-gray-200">
             Lịch sử xem
           </button>
         </div>
       </div>
 
-      {/* Main Content Area */}
       <div className="glass-card p-6 md:p-8">
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <h2 className="text-2xl font-bold text-white">Bài đăng của tôi</h2>
           <Link href="/posts/create" className="btn-primary inline-flex items-center justify-center gap-2">
             <span>+</span> Đăng tin mới
           </Link>
         </div>
 
-        {/* Filter Pills */}
-        <div className="flex overflow-x-auto gap-3 mb-8 pb-2 hide-scrollbar">
-          <button className="px-5 py-2 rounded-full bg-white/10 border border-white/20 text-white text-sm font-medium whitespace-nowrap transition-colors">
+        <div className="mb-8 flex gap-3 overflow-x-auto pb-2 hide-scrollbar">
+          <button className="whitespace-nowrap rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-medium text-white transition-colors">
             Tất cả ({myPosts.length})
           </button>
-          <button className="px-5 py-2 rounded-full bg-transparent border border-white/10 text-gray-400 hover:bg-white/5 hover:text-white text-sm font-medium whitespace-nowrap transition-colors">
+          <button className="whitespace-nowrap rounded-full border border-white/10 bg-transparent px-5 py-2 text-sm font-medium text-gray-400 transition-colors hover:bg-white/5 hover:text-white">
             Đang bán ({saleCount})
           </button>
-          <button className="px-5 py-2 rounded-full bg-transparent border border-white/10 text-gray-400 hover:bg-white/5 hover:text-white text-sm font-medium whitespace-nowrap transition-colors">
+          <button className="whitespace-nowrap rounded-full border border-white/10 bg-transparent px-5 py-2 text-sm font-medium text-gray-400 transition-colors hover:bg-white/5 hover:text-white">
             Đang cho thuê ({rentCount})
           </button>
-          <button className="px-5 py-2 rounded-full bg-transparent border border-white/10 text-gray-400 hover:bg-white/5 hover:text-white text-sm font-medium whitespace-nowrap transition-colors">
+          <button className="whitespace-nowrap rounded-full border border-white/10 bg-transparent px-5 py-2 text-sm font-medium text-gray-400 transition-colors hover:bg-white/5 hover:text-white">
             Đã bán/cho thuê (0)
           </button>
         </div>
 
-        {error && (
+        {error ? (
           <div className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
             {error}
           </div>
-        )}
+        ) : null}
 
         {isLoading ? (
           <div className="flex min-h-[240px] items-center justify-center">
@@ -207,11 +213,11 @@ export default function ProfilePostsPage() {
             </div>
           </div>
         ) : myPosts.length === 0 ? (
-          <div className="p-12 text-center text-gray-400 border border-dashed border-white/10 rounded-2xl">
+          <div className="rounded-2xl border border-dashed border-white/10 p-12 text-center text-gray-400">
             Bạn chưa có bài đăng nào đang hiển thị. Hãy tạo bài đăng mới trên bảng tin.
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
             {myPosts.map((post) => (
               <PostCard key={post.id} post={post} />
             ))}
