@@ -4,6 +4,7 @@ import { useEffect } from "react";
 
 import { api } from "@/lib/api";
 import { useAuthStore, type User } from "@/stores/auth.store";
+import { useSocketStore } from "@/stores/socket.store";
 
 type BackendUser = {
   id: string;
@@ -62,6 +63,14 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
       isMounted = false;
     };
   }, [accessToken, hasHydrated, logout, setIsLoadingUser, setUser, user]);
+
+  useEffect(() => {
+    if (accessToken) {
+      useSocketStore.getState().connect();
+    } else {
+      useSocketStore.getState().disconnect();
+    }
+  }, [accessToken]);
 
   return children;
 }

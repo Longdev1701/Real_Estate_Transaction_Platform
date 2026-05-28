@@ -5,7 +5,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useAuthStore } from "@/stores/auth.store";
+import { useState, useEffect } from "react";
 import { AxiosError } from "axios";
 import { api } from "@/lib/api";
 
@@ -26,7 +27,14 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { user, hasHydrated } = useAuthStore();
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (hasHydrated && user) {
+      router.push("/");
+    }
+  }, [hasHydrated, user, router]);
 
   const {
     register,

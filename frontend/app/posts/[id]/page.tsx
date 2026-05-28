@@ -232,6 +232,22 @@ export default function PostDetailPage() {
     }
   };
 
+  const handleMessageClick = async () => {
+    if (!user) {
+      router.push("/auth/login");
+      return;
+    }
+    try {
+      const response = await api.post("/conversations", {
+        postId: post?.id,
+        sellerId: post?.author.id
+      });
+      router.push(`/messages/${response.data.data.conversation.id}`);
+    } catch (err) {
+      console.error("Failed to start conversation:", err);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto flex min-h-[60vh] items-center justify-center px-4 py-10 lg:px-8">
@@ -602,13 +618,14 @@ export default function PostDetailPage() {
                   <Phone className="h-5 w-5" />
                   {post.author.phone ? post.author.phone : "Gọi điện thoại"}
                 </a>
-                <a
-                  href={`mailto:${post.author.email}`}
+                <button
+                  type="button"
+                  onClick={handleMessageClick}
                   className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3.5 font-medium text-white transition hover:bg-white/10"
                 >
                   <MessageCircle className="h-5 w-5" />
                   Nhắn tin ngay
-                </a>
+                </button>
               </div>
 
               <div className="mt-6 border-t border-white/10 pt-6 relative">

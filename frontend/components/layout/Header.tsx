@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { UserMenu } from "./UserMenu";
-import { Bell, Heart } from "lucide-react";
+import { Bell, Heart, MessageSquare } from "lucide-react";
 
 export function Header() {
   return (
@@ -35,6 +35,10 @@ export function Header() {
             <Bell size={20} />
             <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-blue-500" />
           </button>
+
+          <Link href="/messages" className="relative p-2 text-gray-400 transition-colors hover:text-blue-400">
+            <MessageSquare size={20} />
+          </Link>
 
           <button className="p-2 text-gray-400 transition-colors hover:text-red-400">
             <Heart size={20} />

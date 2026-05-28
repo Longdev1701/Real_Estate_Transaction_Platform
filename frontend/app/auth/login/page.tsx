@@ -6,7 +6,7 @@ import * as z from "zod";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth.store";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AxiosError } from "axios";
 import { normalizeUser } from "@/components/auth/AuthSessionProvider";
 import { api } from "@/lib/api";
@@ -20,8 +20,14 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const { setAuth } = useAuthStore();
+  const { setAuth, user, hasHydrated } = useAuthStore();
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (hasHydrated && user) {
+      router.push("/");
+    }
+  }, [hasHydrated, user, router]);
 
   const {
     register,
