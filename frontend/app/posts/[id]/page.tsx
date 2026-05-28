@@ -90,6 +90,8 @@ export default function PostDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isStartingConversation, setIsStartingConversation] = useState(false);
+  const [conversationError, setConversationError] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditFormState | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -164,6 +166,7 @@ export default function PostDetailPage() {
   }, [post]);
 
   const activeImage = images[selectedImage]?.imageUrl ?? imageFallback;
+  const isOwnPost = !!user && !!post && user.id === post.author.id;
 
   const handleSaveToggle = () => {
     const rawValue = window.localStorage.getItem(savedKey);
@@ -237,14 +240,36 @@ export default function PostDetailPage() {
       router.push("/auth/login");
       return;
     }
+
+    if (!post) {
+      return;
+    }
+
+    if (user.id === post.author.id) {
+      setConversationError("Đây là bài đăng của bạn. Không thể tự tạo cuộc trò chuyện.");
+      return;
+    }
+
+    if (isStartingConversation) {
+      return;
+    }
+
     try {
+      setIsStartingConversation(true);
+      setConversationError(null);
       const response = await api.post("/conversations", {
-        postId: post?.id,
-        sellerId: post?.author.id
+        postId: post.id,
+        sellerId: post.author.id
       });
       router.push(`/messages/${response.data.data.conversation.id}`);
     } catch (err) {
+      const axiosError = err as AxiosError<{ message?: string }>;
+      setConversationError(
+        axiosError.response?.data?.message ?? "Không thể bắt đầu cuộc trò chuyện lúc này."
+      );
       console.error("Failed to start conversation:", err);
+    } finally {
+      setIsStartingConversation(false);
     }
   };
 
@@ -435,6 +460,11 @@ export default function PostDetailPage() {
                   <Share2 className="h-4 w-4 text-blue-300" />
                   Chia sẻ
                 </button>
+                {conversationError ? (
+                  <p className="rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+                    {conversationError}
+                  </p>
+                ) : null}
               </div>
             </div>
 
@@ -621,9 +651,17 @@ export default function PostDetailPage() {
                 <button
                   type="button"
                   onClick={handleMessageClick}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3.5 font-medium text-white transition hover:bg-white/10"
+                  disabled={isStartingConversation || isOwnPost}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3.5 font-medium text-transparent transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <MessageCircle className="h-5 w-5" />
+                  <MessageCircle className="h-5 w-5 text-white" />
+                  <span className="text-white">
+                    {isOwnPost
+                      ? "Bài đăng của bạn"
+                      : isStartingConversation
+                        ? "Đang mở chat..."
+                        : "Nhắn tin ngay"}
+                  </span>
                   Nhắn tin ngay
                 </button>
               </div>

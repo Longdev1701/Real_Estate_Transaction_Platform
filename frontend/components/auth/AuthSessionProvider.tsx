@@ -65,12 +65,17 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
   }, [accessToken, hasHydrated, logout, setIsLoadingUser, setUser, user]);
 
   useEffect(() => {
-    if (accessToken) {
-      useSocketStore.getState().connect();
-    } else {
-      useSocketStore.getState().disconnect();
+    if (!hasHydrated) {
+      return;
     }
-  }, [accessToken]);
+
+    if (accessToken && user) {
+      useSocketStore.getState().connect();
+      return;
+    }
+
+    useSocketStore.getState().disconnect();
+  }, [accessToken, hasHydrated, user]);
 
   return children;
 }
