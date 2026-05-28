@@ -72,6 +72,7 @@ model User {
   savedPosts    SavedPost[]
   refreshTokens RefreshToken[]
   systemLogs    SystemLog[]
+  comments      Comment[]
 
   buyerConversations  Conversation[] @relation("BuyerConversation")
   sellerConversations Conversation[] @relation("SellerConversation")
@@ -108,9 +109,12 @@ model PropertyPost {
   conversations Conversation[]
   reports       Report[]
   savedBy       SavedPost[]
+  comments      Comment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([authorId])
 }
 
 model PropertyImage {
@@ -124,6 +128,8 @@ model PropertyImage {
   order    Int     @default(0)
 
   createdAt DateTime @default(now())
+
+  @@index([postId])
 }
 
 model Conversation {
@@ -143,6 +149,10 @@ model Conversation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   deletedByIds String[] @default([])
+
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([postId])
 }
 
 model Message {
@@ -162,6 +172,9 @@ model Message {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([conversationId])
+  @@index([senderId])
 }
 
 model Notification {
@@ -179,6 +192,8 @@ model Notification {
   relatedId String?
 
   createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model Report {
@@ -197,6 +212,9 @@ model Report {
 
   createdAt  DateTime  @default(now())
   resolvedAt DateTime?
+
+  @@index([reporterId])
+  @@index([postId])
 }
 
 model SystemLog {
@@ -211,6 +229,8 @@ model SystemLog {
   description String?
 
   createdAt DateTime @default(now())
+
+  @@index([actorId])
 }
 
 model SavedPost {
@@ -225,6 +245,7 @@ model SavedPost {
   createdAt DateTime @default(now())
 
   @@unique([userId, postId])
+  @@index([postId])
 }
 
 model RefreshToken {
@@ -239,4 +260,20 @@ model RefreshToken {
   revokedAt DateTime?
 
   createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Comment {
+  id        String       @id @default(cuid())
+  postId    String
+  post      PropertyPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([postId])
+  @@index([authorId])
 }
