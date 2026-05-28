@@ -12,9 +12,29 @@ const commentInclude = {
       avatarUrl: true,
     },
   },
+  replies: {
+    include: {
+      author: {
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          avatarUrl: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "asc" as const,
+    },
+  },
 } as const;
 
-export const createComment = async (postId: string, authorId: string, content: string) => {
+export const createComment = async (
+  postId: string,
+  authorId: string,
+  content: string,
+  parentId?: string,
+) => {
   const post = await prisma.propertyPost.findUnique({
     where: { id: postId },
     select: { id: true, status: true },
@@ -24,11 +44,27 @@ export const createComment = async (postId: string, authorId: string, content: s
     throw new AppError("Post not found.", 404);
   }
 
+  if (parentId) {
+    const parentComment = await prisma.comment.findUnique({
+      where: { id: parentId },
+      select: { id: true, postId: true },
+    });
+
+    if (!parentComment) {
+      throw new AppError("Parent comment not found.", 404);
+    }
+
+    if (parentComment.postId !== postId) {
+      throw new AppError("Parent comment must belong to the same post.", 400);
+    }
+  }
+
   const comment = await prisma.comment.create({
     data: {
       postId,
       authorId,
       content,
+      parentId,
     },
     include: commentInclude,
   });
@@ -41,14 +77,20 @@ export const getComments = async (postId: string, page: number = 1, limit: numbe
 
   const [items, total] = await prisma.$transaction([
     prisma.comment.findMany({
-      where: { postId },
+      where: {
+        postId,
+        parentId: null, // Only fetch root-level comments
+      },
       include: commentInclude,
       orderBy: { createdAt: "desc" },
       skip,
       take: limit,
     }),
     prisma.comment.count({
-      where: { postId },
+      where: {
+        postId,
+        parentId: null,
+      },
     }),
   ]);
 

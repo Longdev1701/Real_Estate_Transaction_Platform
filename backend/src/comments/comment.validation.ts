@@ -3,6 +3,7 @@ import { z } from "zod";
 export const createCommentSchema = z.object({
   postId: z.string().min(1, "Post id is required."),
   content: z.string().min(1, "Comment content cannot be empty.").max(1000, "Comment is too long."),
+  parentId: z.string().optional(),
 });
 
 export const getCommentsQuerySchema = z.object({

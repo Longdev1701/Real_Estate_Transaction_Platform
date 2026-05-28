@@ -18,8 +18,8 @@ Tính năng Bình luận (Comments) cho phép khách hàng tương tác trực t
 Hệ thống sử dụng **Prisma ORM** liên kết với cơ sở dữ liệu **PostgreSQL** trên Supabase.
 
 ### 2.1. Model Comment
-Bảng `Comment` được định nghĩa trong [schema.prisma](file:///c:/Users/A.Long/OneDrive/Desktop/Accommodation_Platform/backend/prisma/schema.prisma) như sau:
-
+Bảng `Comment` được định nghĩa trong [schema.prisma](file:///c:/Users/A.Long/OneDrive/Desktop/Accommodation_Platform/backend/prisma/schema.prisma) để hỗ trợ bình luận phân tầng (Replies):
+ 
 ```prisma
 model Comment {
   id        String       @id @default(cuid())
@@ -28,34 +28,38 @@ model Comment {
   authorId  String
   author    User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
   content   String
+  parentId  String?
+  parent    Comment?     @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[]    @relation("CommentReplies")
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
 
   @@index([postId])
   @@index([authorId])
+  @@index([parentId])
 }
 ```
-
-* **Quan hệ ràng buộc (Cascade Delete):** Khi một bài viết hoặc tài khoản người dùng bị xóa, toàn bộ bình luận liên quan sẽ được tự động xóa sạch khỏi cơ sở dữ liệu nhờ tùy chọn `onDelete: Cascade`.
-* **Tối ưu hóa Index:** Thêm `@@index([postId])` và `@@index([authorId])` để lập chỉ mục tìm kiếm nhanh cho khóa ngoại, ngăn ngừa quét toàn bộ bảng (Full Table Scan) khi truy vấn danh sách bình luận theo bài đăng.
-
+ 
+* **Quan hệ ràng buộc (Cascade Delete):** Khi một bài viết, tài khoản người dùng hoặc bình luận cha bị xóa, toàn bộ bình luận con liên quan sẽ được tự động xóa sạch khỏi cơ sở dữ liệu nhờ tùy chọn `onDelete: Cascade`.
+* **Tối ưu hóa Index:** Thêm `@@index([postId])`, `@@index([authorId])` và `@@index([parentId])` để lập chỉ mục tìm kiếm nhanh cho khóa ngoại, ngăn ngừa quét toàn bộ bảng (Full Table Scan).
+ 
 ---
-
+ 
 ## 3. Các API Endpoints (Backend REST API)
-
+ 
 Tất cả các route được quản lý tại [comment.routes.ts](file:///c:/Users/A.Long/OneDrive/Desktop/Accommodation_Platform/backend/src/comments/comment.routes.ts) và được gắn kết dưới tiền tố `/api/comments` tại [app.ts](file:///c:/Users/A.Long/OneDrive/Desktop/Accommodation_Platform/backend/src/app.ts).
-
+ 
 ### 3.1. Danh Sách API Endpoints
 1. **Lấy danh sách bình luận (Public)**
    * **Method:** `GET`
    * **URL:** `/api/comments`
    * **Query Params:**
      * `postId` (string, required): ID bài đăng.
-     * `page` (number, optional, default: 1): Số trang.
+     * `page` (number, optional, default: 1): Số trang (chỉ phân trang ở bình luận gốc).
      * `limit` (number, optional, default: 10): Số lượng bình luận mỗi trang.
-   * **Response:** Trả về danh sách bình luận kèm theo thông tin tác giả (fullName, avatarUrl) và metadata phân trang.
-
-2. **Tạo bình luận mới (Private)**
+   * **Response:** Trả về danh sách bình luận gốc kèm theo danh sách các phản hồi lồng nhau (`replies`), thông tin tác giả và metadata phân trang.
+ 
+2. **Tạo bình luận/câu trả lời mới (Private)**
    * **Method:** `POST`
    * **URL:** `/api/comments`
    * **Middleware:** `authenticate`
@@ -63,38 +67,43 @@ Tất cả các route được quản lý tại [comment.routes.ts](file:///c:/U
      ```json
      {
        "postId": "cuid_post_id",
-       "content": "Nội dung bình luận..."
+       "content": "Nội dung bình luận...",
+       "parentId": "cuid_parent_comment_id" // Tùy chọn, gửi khi trả lời bình luận khác
      }
      ```
    * **Response:** Trả về thông tin bình luận vừa tạo thành công (mã 201).
-
-3. **Xóa bình luận (Private)**
+ 
+3. **Xóa bình luận/câu trả lời (Private)**
    * **Method:** `DELETE`
    * **URL:** `/api/comments/:id`
    * **Middleware:** `authenticate`
    * **Response:** Thực hiện kiểm tra quyền (ADMIN hoặc Tác giả bình luận) và xóa bình luận khỏi cơ sở dữ liệu.
-
+ 
 ### 3.2. Ràng Buộc Kiểm Tra Dữ Liệu (Zod Validation)
 Biểu mẫu đầu vào được kiểm tra nghiêm ngặt tại [comment.validation.ts](file:///c:/Users/A.Long/OneDrive/Desktop/Accommodation_Platform/backend/src/comments/comment.validation.ts):
 * Nội dung bình luận (`content`) không được để trống và có độ dài tối đa là **1000 ký tự**.
+* Tham số `parentId` là tuỳ chọn và phải có định dạng chuỗi nếu được gửi lên.
 * Số trang (`page`) và giới hạn (`limit`) được ép kiểu về số nguyên dương (`z.coerce.number()`).
-
+ 
 ---
-
+ 
 ## 4. Tích Hợp Giao Diện Frontend
-
+ 
 ### 4.1. Component [CommentSection.tsx](file:///c:/Users/A.Long/OneDrive/Desktop/Accommodation_Platform/frontend/components/comment/CommentSection.tsx)
 Component chạy ở Client-side xử lý các trạng thái reactive:
 * **Hiển thị Avatar & Viết bình luận:** Nếu người dùng đã đăng nhập, hiển thị khung soạn thảo bình luận cùng avatar cá nhân của họ. Nếu chưa, hiển thị banner yêu cầu đăng nhập.
-* **Giao diện danh sách bình luận:** Sử dụng chia vạch mờ (`divide-y divide-white/5`), hiển thị thời gian theo định dạng chuẩn Việt Nam (`vi-VN`), và gán badge `"Chủ bài đăng"` cho chủ nhân bài viết.
+* **Giao diện danh sách bình luận phân tầng:** 
+  * Sử dụng chia vạch mờ (`divide-y divide-white/5`), hiển thị thời gian theo định dạng chuẩn Việt Nam (`vi-VN`), và gán badge `"Chủ bài đăng"` cho chủ nhân bài viết.
+  * Hiển thị nút **Trả lời** dưới mỗi bình luận. Khi click sẽ hiển thị khung nhập phản hồi trực tiếp.
+  * Các phản hồi (`replies`) được hiển thị lồng nhau phía dưới bình luận gốc, thụt đầu dòng (indent) kèm theo đường viền mờ bên trái làm chỉ dấu phân tách đẹp mắt.
 * **Xử lý bất đồng bộ:** Tích hợp chỉ báo quay vòng (spinner loader) khi đang gửi hoặc đang xóa bình luận.
-* **Phân trang "Xem thêm":** Nút "Xem thêm bình luận" sẽ xuất hiện nếu thuộc tính `hasMore` từ API trả về true, cho phép tải thêm dữ liệu mà không cần tải lại trang.
-
+* **Phân trang "Xem thêm":** Nút "Xem thêm bình luận" sẽ xuất hiện nếu thuộc tính `hasMore` từ API trả về true, cho phép tải thêm dữ liệu bình luận gốc mà không cần tải lại trang.
+ 
 ### 4.2. Tích Hợp Vào Trang Chi Tiết
 Component được gắn kết dưới chân khu vực Bản đồ trong [page.tsx](file:///c:/Users/A.Long/OneDrive/Desktop/Accommodation_Platform/frontend/app/posts/[id]/page.tsx):
 ```tsx
 import CommentSection from "@/components/comment/CommentSection";
-
+ 
 // ...
 <CommentSection postId={post.id} postAuthorId={post.author.id} />
 ```

@@ -11,8 +11,8 @@ export const createCommentController: RequestHandler = async (req, res, next) =>
       return;
     }
 
-    const { postId, content } = req.body;
-    const result = await createComment(postId, actor.id, content);
+    const { postId, content, parentId } = req.body;
+    const result = await createComment(postId, actor.id, content, parentId);
 
     sendSuccess(res, result, "Comment created successfully.", 201);
   } catch (error) {
