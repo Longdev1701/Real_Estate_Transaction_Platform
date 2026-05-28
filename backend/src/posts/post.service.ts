@@ -615,12 +615,6 @@ export const deletePostImage = async (
           authorId: true,
         },
       },
-      id: true,
-      postId: true,
-      imageUrl: true,
-      caption: true,
-      order: true,
-      createdAt: true,
     },
   });
 
