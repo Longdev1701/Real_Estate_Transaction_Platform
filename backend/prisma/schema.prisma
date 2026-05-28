@@ -142,6 +142,7 @@ model Conversation {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  deletedByIds String[] @default([])
 }
 
 model Message {
@@ -157,8 +158,10 @@ model Message {
   messageType MessageType @default(TEXT)
 
   isRead Boolean @default(false)
+  isEdited Boolean @default(false)
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 }
 
 model Notification {
