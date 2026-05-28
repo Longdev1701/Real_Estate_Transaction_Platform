@@ -117,3 +117,9 @@ Do máy chủ cơ sở dữ liệu được đặt tại Sydney, Úc (`ap-southe
 
 2. **Xử lý bất đồng bộ song song (Parallelization)**:
    Sử dụng giao dịch kết hợp trong Prisma (`prisma.$transaction`) và `Promise.all` tại backend khi cần xử lý nhiều truy vấn độc lập, giảm thiểu số lượng roundtrip tuần tự qua đường cáp biển quốc tế.
+
+3. **Sử dụng Session Mode thay vì Transaction Mode (Cổng 5432)**:
+   Thay thế cổng kết nối `DATABASE_URL` từ cổng `6543` sang `5432` tại [backend/.env](file:///c:/Users/A.Long/OneDrive/Desktop/Accommodation_Platform/backend/.env). Do server Node.js/Express hoạt động liên tục (long-lived), việc kết nối qua Session Mode cho phép Prisma sử dụng Prepared Statements và tái sử dụng connection pool, giảm thời gian thực thi của mỗi query từ ~1.5s xuống còn ~0.5s.
+
+4. **Tối ưu hóa phân rã câu lệnh (Query Decomposition Optimization)**:
+   Tại hàm `getPostById` trong [post.service.ts](file:///c:/Users/A.Long/OneDrive/Desktop/Accommodation_Platform/backend/src/posts/post.service.ts), thay thế việc gọi `postListSelect` nặng nề bằng bộ lọc rút gọn `relatedPostSelect` cho phần bài viết liên quan (chỉ lấy `title`, `price`, `area`, `address` và 1 ảnh đầu tiên). Bằng cách loại bỏ các liên kết thừa (như thông tin người đăng và kiểm tra isSaved cho các bài liên quan), ta giảm số lượng network roundtrips từ 7-10 lần xuống còn 3-4 lần, tăng tốc độ phản hồi của API chi tiết bài đăng từ **4.73 giây** xuống còn **1.13 giây**.
