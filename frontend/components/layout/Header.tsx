@@ -1,8 +1,17 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { UserMenu } from "./UserMenu";
 import { Bell, Heart, MessageSquare } from "lucide-react";
 
 export function Header() {
+  const pathname = usePathname();
+
+  if (pathname?.startsWith("/messages")) {
+    return null;
+  }
+
   return (
     <header className="fixed top-0 z-40 w-full glass-panel">
       <div className="container mx-auto flex h-20 items-center justify-between px-4 lg:px-8">

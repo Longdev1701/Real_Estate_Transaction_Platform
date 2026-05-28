@@ -1,13 +1,24 @@
 "use client";
 
-import { useAuthStore } from "@/stores/auth.store";
-import { useSocketStore } from "@/stores/socket.store";
-import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Search, User as UserIcon, CheckCircle2, MoreVertical, Trash2 } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  Bell,
+  FileText,
+  Home,
+  MessageSquare,
+  MoreVertical,
+  Scale,
+  Search,
+  Settings,
+  SlidersHorizontal,
+  Trash2,
+} from "lucide-react";
+
 import { api } from "@/lib/api";
-import { formatDistanceToNow } from "next/dist/compiled/date-fns";
+import { useAuthStore } from "@/stores/auth.store";
+import { useSocketStore } from "@/stores/socket.store";
 
 export interface ConversationListItem {
   id: string;
@@ -18,22 +29,60 @@ export interface ConversationListItem {
   _count: { messages: number };
 }
 
+const navItems = [
+  { href: "/", label: "Trang chủ", icon: Home },
+  { href: "/posts", label: "Tin đăng", icon: FileText },
+  { href: "/messages", label: "Tin nhắn", icon: MessageSquare },
+  { href: "/compare", label: "So sánh", icon: Scale },
+];
+
+function formatConversationTime(value?: string) {
+  if (!value) return "";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const now = new Date();
+  const sameDay = now.toDateString() === date.toDateString();
+  if (sameDay) {
+    return date.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  const diff = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diff / (1000 * 60 * 60 * 24));
+  if (diffDays === 1) return "Hôm qua";
+  if (diffDays < 7) {
+    return date.toLocaleDateString("vi-VN", { weekday: "short" });
+  }
+
+  return date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" });
+}
+
+function formatConversationPreview(message?: ConversationListItem["messages"][number]) {
+  if (!message) return "Bắt đầu cuộc trò chuyện";
+  if (message.messageType === "IMAGE") return "Đã gửi hình ảnh";
+
+  const plainText = message.content.replace(/\s+/g, " ").trim();
+  return plainText || "Tin nhắn trống";
+}
+
 export default function MessagesLayout({ children }: { children: React.ReactNode }) {
   const { user, hasHydrated } = useAuthStore();
+  const { socket, isConnected } = useSocketStore();
   const router = useRouter();
   const pathname = usePathname();
+
   const [conversations, setConversations] = useState<ConversationListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<"all" | "unread" | "priority">("all");
+  const [activeTab, setActiveTab] = useState<"all" | "unread">("all");
   const [openConvMenuId, setOpenConvMenuId] = useState<string | null>(null);
-  const { socket, isConnected } = useSocketStore();
 
   useEffect(() => {
     if (hasHydrated && !user) {
       router.push("/auth/login");
     }
-  }, [hasHydrated, user, router]);
+  }, [hasHydrated, router, user]);
 
   useEffect(() => {
     const fetchConversations = async () => {
@@ -46,203 +95,311 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
         setLoading(false);
       }
     };
+
     if (user) {
       fetchConversations();
     }
   }, [user]);
 
   useEffect(() => {
-    if (socket && isConnected) {
-      socket.on("receive_message", (message: any) => {
-        setConversations(prev => {
-          return prev.map(conv => {
-            if (conv.id === message.conversationId) {
-              const isOtherUser = message.senderId !== user?.id;
-              return {
-                ...conv,
-                messages: [message],
-                _count: {
-                  messages: isOtherUser ? conv._count.messages + 1 : conv._count.messages
-                }
-              };
+    if (!socket || !isConnected) return;
+
+    const handleReceiveMessage = (message: any) => {
+      setConversations((prev) =>
+        prev
+          .map((conversation) => {
+            if (conversation.id !== message.conversationId) {
+              return conversation;
             }
-            return conv;
-          }).sort((a, b) => {
+
+            const isIncoming = message.senderId !== user?.id;
+            return {
+              ...conversation,
+              messages: [message],
+              _count: {
+                messages: isIncoming ? conversation._count.messages + 1 : conversation._count.messages,
+              },
+            };
+          })
+          .sort((a, b) => {
             const timeA = new Date(a.messages[0]?.createdAt || 0).getTime();
             const timeB = new Date(b.messages[0]?.createdAt || 0).getTime();
             return timeB - timeA;
-          });
-        });
-      });
+          }),
+      );
+    };
 
-      return () => {
-        socket.off("receive_message");
-      };
-    }
-  }, [socket, isConnected, user]);
+    socket.on("receive_message", handleReceiveMessage);
+
+    return () => {
+      socket.off("receive_message", handleReceiveMessage);
+    };
+  }, [isConnected, socket, user]);
 
   useEffect(() => {
-    if (pathname && pathname.startsWith("/messages/")) {
-      const convId = pathname.split("/messages/")[1];
-      if (convId) {
-        setConversations(prev => prev.map(conv => {
-          if (conv.id === convId && conv._count.messages > 0) {
-            return { ...conv, _count: { messages: 0 } };
-          }
-          return conv;
-        }));
-      }
-    }
+    if (!pathname?.startsWith("/messages/")) return;
+
+    const conversationId = pathname.split("/messages/")[1];
+    if (!conversationId) return;
+
+    setConversations((prev) =>
+      prev.map((conversation) =>
+        conversation.id === conversationId && conversation._count.messages > 0
+          ? { ...conversation, _count: { messages: 0 } }
+          : conversation,
+      ),
+    );
   }, [pathname]);
 
   if (!hasHydrated || !user) return null;
 
-  const filteredConversations = conversations.filter(conv => {
-    const otherUser = conv.buyer.id === user.id ? conv.seller : conv.buyer;
-    const matchesSearch = otherUser.fullName.toLowerCase().includes(searchQuery.toLowerCase()) || conv.post.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesTab = activeTab === "all" || (activeTab === "unread" && conv._count.messages > 0);
+  const filteredConversations = conversations.filter((conversation) => {
+    const otherUser = conversation.buyer.id === user.id ? conversation.seller : conversation.buyer;
+    const matchesSearch =
+      otherUser.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      conversation.post.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesTab = activeTab === "all" || conversation._count.messages > 0;
     return matchesSearch && matchesTab;
   });
 
-  const handleDeleteConversation = async (e: React.MouseEvent, conversationId: string) => {
-    e.preventDefault(); // Prevent link click
-    if (confirm("Bạn có chắc chắn muốn xoá đoạn chat này?")) {
-      try {
-        await api.delete(`/conversations/${conversationId}`);
-        setConversations(prev => prev.filter(c => c.id !== conversationId));
-        if (pathname === `/messages/${conversationId}`) {
-          router.push("/messages");
-        }
-      } catch (error) {
-        console.error("Failed to delete conversation", error);
-      }
+  const isMobileDetailView = pathname !== "/messages";
+
+  const handleDeleteConversation = async (event: React.MouseEvent, conversationId: string) => {
+    event.preventDefault();
+
+    if (!window.confirm("Xóa đoạn chat này?")) {
+      setOpenConvMenuId(null);
+      return;
     }
+
+    try {
+      await api.delete(`/conversations/${conversationId}`);
+      setConversations((prev) => prev.filter((conversation) => conversation.id !== conversationId));
+      if (pathname === `/messages/${conversationId}`) {
+        router.push("/messages");
+      }
+    } catch (error) {
+      console.error("Failed to delete conversation", error);
+    }
+
     setOpenConvMenuId(null);
   };
 
-  const isMobileDetailView = pathname !== "/messages";
-
   return (
-    <div className="flex h-[calc(100vh-80px)] w-full max-w-7xl mx-auto border-t border-white/10 lg:border-t-0 overflow-hidden">
-      {/* LEFT SIDEBAR (Hidden on mobile if viewing a chat) */}
-      <div className={`w-full lg:w-[360px] flex-shrink-0 flex flex-col border-r border-white/10 bg-slate-900/50 ${isMobileDetailView ? "hidden lg:flex" : "flex"}`}>
-        <div className="p-4 border-b border-white/10">
-          <div className="flex justify-between items-center mb-4">
-            <h1 className="text-xl font-bold text-white">Tin nhắn</h1>
-            <button className="text-gray-400 hover:text-white transition">
-              {/* Note Icon */}
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-            </button>
-          </div>
-          
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-            <input 
-              type="text" 
-              placeholder="Tìm kiếm cuộc trò chuyện..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#0f172a] border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition"
-            />
-          </div>
-
-          <div className="flex gap-2 text-sm">
-            <button 
-              onClick={() => setActiveTab("all")}
-              className={`px-4 py-1.5 rounded-full transition ${activeTab === "all" ? "bg-blue-600 text-white font-medium" : "text-gray-400 hover:text-white"}`}
-            >
-              Tất cả
-            </button>
-            <button 
-              onClick={() => setActiveTab("unread")}
-              className={`px-4 py-1.5 rounded-full transition ${activeTab === "unread" ? "bg-blue-600 text-white font-medium" : "text-gray-400 hover:text-white"}`}
-            >
-              Chưa đọc
-            </button>
-            <button 
-              onClick={() => setActiveTab("priority")}
-              className={`px-4 py-1.5 rounded-full transition ${activeTab === "priority" ? "bg-blue-600 text-white font-medium" : "text-gray-400 hover:text-white"}`}
-            >
-              Ưu tiên
-            </button>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto no-scrollbar">
-          {loading ? (
-            <div className="p-6 flex justify-center"><div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>
-          ) : filteredConversations.length === 0 ? (
-            <div className="p-6 text-center text-sm text-gray-500">Không có cuộc trò chuyện nào</div>
-          ) : (
-            filteredConversations.map(conv => {
-              const otherUser = conv.buyer.id === user.id ? conv.seller : conv.buyer;
-              const lastMessage = conv.messages[0];
-              const isActive = pathname === `/messages/${conv.id}`;
-              const hasUnread = conv._count.messages > 0;
+    <div className="mx-auto h-full max-w-[1520px] p-2.5 lg:p-4">
+      <div className="flex h-full overflow-hidden rounded-[26px] border border-blue-400/20 bg-[#061126] shadow-[0_20px_70px_rgba(2,6,23,0.58)]">
+        <aside className="hidden w-[84px] flex-col justify-between border-r border-white/10 bg-[linear-gradient(180deg,rgba(12,23,49,0.98),rgba(5,14,31,0.98))] px-3 py-5 md:flex">
+          <div className="space-y-2.5">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive =
+                item.href === "/messages" ? pathname?.startsWith("/messages") : pathname === item.href;
 
               return (
-                <Link 
-                  href={`/messages/${conv.id}`} 
-                  key={conv.id}
-                  className={`block p-4 border-b border-white/5 hover:bg-white/5 transition relative group/conv ${isActive ? "bg-white/5" : ""}`}
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`group relative flex items-center justify-center rounded-[20px] px-2 py-3 transition ${
+                    isActive
+                      ? "bg-[linear-gradient(135deg,rgba(64,86,255,0.24),rgba(130,91,255,0.2))] text-white shadow-[0_0_0_1px_rgba(129,140,248,0.45),0_16px_40px_rgba(79,70,229,0.25)]"
+                      : "text-slate-400 hover:bg-white/5 hover:text-white"
+                  }`}
+                  aria-label={item.label}
+                  title={item.label}
                 >
-                  <div className="flex gap-3 items-center">
-                    <div className="w-12 h-12 rounded-full bg-slate-800 overflow-hidden flex-shrink-0 flex items-center justify-center border border-white/10 relative">
-                      {otherUser.avatarUrl ? (
-                        <img src={otherUser.avatarUrl} alt={otherUser.fullName} className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-gray-400 font-medium">{otherUser.fullName.charAt(0)}</span>
-                      )}
-                      {hasUnread && <span className="absolute top-0 right-0 w-3 h-3 bg-blue-500 border-2 border-[#0f172a] rounded-full"></span>}
-                    </div>
-                    <div className="flex-1 min-w-0 pr-6">
-                      <div className="flex justify-between items-center mb-1">
-                        <h3 className={`text-sm truncate ${hasUnread ? "text-white font-semibold" : "text-gray-200 font-medium"}`}>{otherUser.fullName}</h3>
-                        <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
-                          {lastMessage ? new Date(lastMessage.createdAt).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'}) : ""}
-                        </span>
-                      </div>
-                      <p className={`text-xs truncate ${hasUnread ? "text-blue-400 font-medium" : "text-gray-500"}`}>
-                        {lastMessage ? (lastMessage.messageType === "IMAGE" ? "Đã gửi hình ảnh" : lastMessage.content) : "Bắt đầu cuộc trò chuyện"}
-                      </p>
-                    </div>
-
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover/conv:opacity-100 transition-opacity">
-                      <button 
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setOpenConvMenuId(openConvMenuId === conv.id ? null : conv.id);
-                        }}
-                        className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded-full transition"
-                      >
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
-                      
-                      {openConvMenuId === conv.id && (
-                        <div 
-                          className="absolute right-0 top-full mt-1 w-40 bg-[#1e293b] border border-white/10 rounded-lg shadow-xl z-50 overflow-hidden py-1"
-                          onClick={(e) => e.preventDefault()}
-                        >
-                          <button 
-                            onClick={(e) => handleDeleteConversation(e, conv.id)}
-                            className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center gap-2"
-                          >
-                            <Trash2 className="w-4 h-4" /> Xoá đoạn chat
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  <span
+                    className={`flex h-11 w-11 items-center justify-center rounded-[16px] border ${
+                      isActive ? "border-blue-300/40 bg-white/10" : "border-white/10 bg-white/[0.03]"
+                    }`}
+                  >
+                    <Icon className="h-[18px] w-[18px]" />
+                  </span>
+                  <span className="pointer-events-none absolute left-full z-20 ml-3 whitespace-nowrap rounded-xl border border-white/10 bg-[#13213b] px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-xl transition group-hover:opacity-100">
+                    {item.label}
+                  </span>
                 </Link>
               );
-            })
-          )}
-        </div>
-      </div>
+            })}
+          </div>
 
-      {/* RIGHT CHAT AREA */}
-      <div className={`flex-1 flex flex-col bg-[#0b1120] relative ${!isMobileDetailView ? "hidden lg:flex" : "flex"}`}>
-        {children}
+          <div className="space-y-2.5">
+            <button
+              className="group relative flex w-full items-center justify-center rounded-[20px] px-2 py-3 text-slate-400 transition hover:bg-white/5 hover:text-white"
+              aria-label="Thông báo"
+              title="Thông báo"
+            >
+              <span className="flex h-11 w-11 items-center justify-center rounded-[16px] border border-white/10 bg-white/[0.03]">
+                <Bell className="h-[18px] w-[18px]" />
+              </span>
+              <span className="pointer-events-none absolute left-full z-20 ml-3 whitespace-nowrap rounded-xl border border-white/10 bg-[#13213b] px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-xl transition group-hover:opacity-100">
+                Thông báo
+              </span>
+            </button>
+            <button
+              className="group relative flex w-full items-center justify-center rounded-[20px] px-2 py-3 text-slate-400 transition hover:bg-white/5 hover:text-white"
+              aria-label="Cài đặt"
+              title="Cài đặt"
+            >
+              <span className="flex h-11 w-11 items-center justify-center rounded-[16px] border border-white/10 bg-white/[0.03]">
+                <Settings className="h-[18px] w-[18px]" />
+              </span>
+              <span className="pointer-events-none absolute left-full z-20 ml-3 whitespace-nowrap rounded-xl border border-white/10 bg-[#13213b] px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-xl transition group-hover:opacity-100">
+                Cài đặt
+              </span>
+            </button>
+          </div>
+        </aside>
+
+        <section
+          className={`min-h-0 w-full shrink-0 border-r border-white/10 bg-[linear-gradient(180deg,rgba(10,22,44,0.96),rgba(6,18,37,0.98))] md:w-[350px] ${
+            isMobileDetailView ? "hidden lg:flex" : "flex"
+          } flex-col`}
+        >
+          <div className="border-b border-white/10 px-4 py-4">
+            <div className="mb-4">
+              <h1 className="text-[2rem] font-semibold tracking-tight text-white">Tin nhắn</h1>
+              <p className="mt-1 text-sm text-slate-400">Theo dõi khách hàng và bất động sản đang trao đổi.</p>
+            </div>
+
+            <div className="mb-3 flex items-center gap-2.5">
+              <label className="relative flex-1">
+                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Tìm kiếm tin nhắn, người, BĐS..."
+                  className="w-full rounded-[18px] border border-white/10 bg-white/[0.04] py-2.5 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-blue-400/40 focus:bg-white/[0.06]"
+                />
+              </label>
+              <button className="flex h-11 w-11 items-center justify-center rounded-[18px] border border-white/10 bg-white/[0.04] text-slate-300 transition hover:bg-white/[0.08] hover:text-white">
+                <SlidersHorizontal className="h-[18px] w-[18px]" />
+              </button>
+            </div>
+
+            <div className="flex gap-1.5 rounded-[18px] border border-white/10 bg-[#09172f] p-1">
+              <button
+                type="button"
+                onClick={() => setActiveTab("all")}
+                className={`flex-1 rounded-[14px] px-4 py-2 text-sm transition ${
+                  activeTab === "all" ? "bg-white/10 text-white" : "text-slate-400 hover:text-white"
+                }`}
+              >
+                Tất cả
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("unread")}
+                className={`flex-1 rounded-[14px] px-4 py-2 text-sm transition ${
+                  activeTab === "unread" ? "bg-white/10 text-white" : "text-slate-400 hover:text-white"
+                }`}
+              >
+                Chưa đọc
+              </button>
+            </div>
+          </div>
+
+          <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-3 py-2.5">
+            {loading ? (
+              <div className="space-y-3 px-2 py-2">
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <div key={index} className="h-24 animate-pulse rounded-[24px] border border-white/8 bg-white/[0.03]" />
+                ))}
+              </div>
+            ) : filteredConversations.length === 0 ? (
+              <div className="flex h-full min-h-[280px] items-center justify-center px-4">
+                <div className="max-w-xs text-center">
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-[22px] border border-white/10 bg-white/[0.04]">
+                    <MessageSquare className="h-7 w-7 text-slate-400" />
+                  </div>
+                  <p className="text-base font-medium text-white">Không có cuộc trò chuyện phù hợp</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-500">
+                    Thử tìm theo tên người dùng hoặc tiêu đề bất động sản.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              filteredConversations.map((conversation) => {
+                const otherUser = conversation.buyer.id === user.id ? conversation.seller : conversation.buyer;
+                const lastMessage = conversation.messages[0];
+                const isActive = pathname === `/messages/${conversation.id}`;
+                const unreadCount = conversation._count.messages;
+
+                return (
+                  <Link
+                    key={conversation.id}
+                    href={`/messages/${conversation.id}`}
+                    className={`group relative mb-2.5 block overflow-hidden rounded-[20px] border px-3.5 py-3.5 transition ${
+                      isActive
+                        ? "border-blue-400/50 bg-[linear-gradient(135deg,rgba(41,78,220,0.22),rgba(122,77,255,0.16))] shadow-[0_12px_40px_rgba(59,130,246,0.18)]"
+                        : "border-white/[0.06] bg-white/[0.03] hover:border-white/[0.12] hover:bg-white/[0.05]"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="relative mt-0.5 h-12 w-12 shrink-0 overflow-hidden rounded-full border border-white/10 bg-slate-800">
+                        {otherUser.avatarUrl ? (
+                          <img src={otherUser.avatarUrl} alt={otherUser.fullName} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-slate-300">
+                            {otherUser.fullName.charAt(0)}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1 pr-8">
+                        <div className="mb-1 flex items-start justify-between gap-3">
+                          <h3 className="truncate text-[15px] font-semibold text-white">{otherUser.fullName}</h3>
+                          <span className="shrink-0 text-xs text-slate-400">
+                            {formatConversationTime(lastMessage?.createdAt)}
+                          </span>
+                        </div>
+
+                        <p className="truncate text-[14px] text-slate-300">{formatConversationPreview(lastMessage)}</p>
+                        <p className="mt-1 truncate text-xs text-slate-500">{conversation.post.title}</p>
+                      </div>
+
+                      {unreadCount > 0 && (
+                        <span className="absolute bottom-4 right-4 flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-blue-500 px-1.5 text-xs font-semibold text-white">
+                          {unreadCount > 9 ? "9+" : unreadCount}
+                        </span>
+                      )}
+
+                      <div className="absolute right-3 top-3 opacity-0 transition group-hover:opacity-100">
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            setOpenConvMenuId(openConvMenuId === conversation.id ? null : conversation.id);
+                          }}
+                          className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-slate-400 transition hover:text-white"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+
+                        {openConvMenuId === conversation.id && (
+                          <div className="absolute right-0 top-10 z-20 w-40 overflow-hidden rounded-2xl border border-white/10 bg-[#13213b] p-1 shadow-2xl">
+                            <button
+                              type="button"
+                              onClick={(event) => handleDeleteConversation(event, conversation.id)}
+                              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-red-300 transition hover:bg-red-500/10"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Xóa đoạn chat
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })
+            )}
+          </div>
+        </section>
+
+        <section className={`min-w-0 flex-1 ${!isMobileDetailView ? "hidden lg:flex" : "flex"} flex-col`}>
+          {children}
+        </section>
       </div>
     </div>
   );

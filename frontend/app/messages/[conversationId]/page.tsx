@@ -1,29 +1,38 @@
 "use client";
 
-import { useEffect, useState, useRef, use } from "react";
-import { useRouter } from "next/navigation";
-import { useAuthStore } from "@/stores/auth.store";
-import { useSocketStore } from "@/stores/socket.store";
-import { api } from "@/lib/api";
+import { useEffect, useRef, useState, use } from "react";
 import Link from "next/link";
-import { ArrowLeft, Image as ImageIcon, Send, Phone, Video, Info, X, Smile, ChevronLeft, ChevronRight, Trash2, MoreVertical, Edit2, Check } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
+import {
+  ArrowLeft,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Edit2,
+  Image as ImageIcon,
+  Info,
+  MapPin,
+  Mic,
+  MoreVertical,
+  Phone,
+  Send,
+  Smile,
+  Trash2,
+  Video,
+  X,
+} from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
 import { format, isToday, isYesterday } from "date-fns";
 import { vi } from "date-fns/locale";
 import EmojiPicker, { Theme } from "emoji-picker-react";
+
+import { api } from "@/lib/api";
 import { useSound } from "@/hooks/useSound";
+import { useAuthStore } from "@/stores/auth.store";
+import { useSocketStore } from "@/stores/socket.store";
 
-const parseImages = (content: string): string[] => {
-  try {
-    const parsed = JSON.parse(content);
-    if (Array.isArray(parsed)) return parsed;
-    return [content];
-  } catch {
-    return [content];
-  }
-};
-
-interface Message {
+type Message = {
   id: string;
   senderId: string;
   content: string;
@@ -31,9 +40,9 @@ interface Message {
   createdAt: string;
   isRead?: boolean;
   isEdited?: boolean;
-}
+};
 
-interface ConversationData {
+type ConversationData = {
   id: string;
   buyer: { id: string; fullName: string; avatarUrl: string | null };
   seller: { id: string; fullName: string; avatarUrl: string | null };
@@ -46,15 +55,121 @@ interface ConversationData {
     city: string;
     images: { imageUrl: string }[];
   };
+};
+
+type SharedAsset = {
+  id: string;
+  url: string;
+  createdAt: string;
+};
+
+const parseImages = (content: string): string[] => {
+  try {
+    const parsed = JSON.parse(content);
+    return Array.isArray(parsed) ? parsed : [content];
+  } catch {
+    return [content];
+  }
+};
+
+function formatPrice(value: number) {
+  if (value >= 1000) return `${(value / 1000).toFixed(1)} tỷ`;
+  return `${value} triệu`;
+}
+
+function formatMessageDayLabel(value: string) {
+  const date = new Date(value);
+  if (isToday(date)) return `Hôm nay, ${format(date, "dd/MM", { locale: vi })}`;
+  if (isYesterday(date)) return `Hôm qua, ${format(date, "dd/MM", { locale: vi })}`;
+  return format(date, "dd/MM/yyyy", { locale: vi });
+}
+
+function formatMessageTime(value: string) {
+  return format(new Date(value), "HH:mm");
+}
+
+function getFileLabel(index: number) {
+  return `Hình ảnh ${String(index + 1).padStart(2, "0")}`;
+}
+
+function FallbackMedia({
+  src,
+  alt,
+  className,
+  wrapperClassName,
+}: {
+  src?: string | null;
+  alt: string;
+  className: string;
+  wrapperClassName: string;
+}) {
+  const [hasError, setHasError] = useState(false);
+
+  if (!src || hasError) {
+    return (
+      <div className={`flex items-center justify-center bg-slate-900 text-slate-500 ${wrapperClassName}`}>
+        <ImageIcon className="h-8 w-8" />
+      </div>
+    );
+  }
+
+  return <img src={src} alt={alt} className={className} onError={() => setHasError(true)} />;
+}
+
+function clampAspectRatio(value: number) {
+  return Math.min(1.8, Math.max(0.72, value));
+}
+
+function ChatImageTile({
+  src,
+  alt,
+  onClick,
+  className,
+  wrapperClassName,
+}: {
+  src: string;
+  alt: string;
+  onClick: () => void;
+  className: string;
+  wrapperClassName: string;
+}) {
+  const [aspectRatio, setAspectRatio] = useState<number>(1);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const image = new window.Image();
+    image.onload = () => {
+      if (cancelled || !image.naturalWidth || !image.naturalHeight) return;
+      setAspectRatio(clampAspectRatio(image.naturalWidth / image.naturalHeight));
+    };
+    image.src = src;
+
+    return () => {
+      cancelled = true;
+    };
+  }, [src]);
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={wrapperClassName}
+      style={{ aspectRatio }}
+    >
+      <FallbackMedia src={src} alt={alt} className={className} wrapperClassName="h-full w-full" />
+    </button>
+  );
 }
 
 export default function ChatWindow({ params }: { params: Promise<{ conversationId: string }> }) {
   const resolvedParams = use(params);
   const conversationId = resolvedParams.conversationId;
   const { user, hasHydrated } = useAuthStore();
-  const router = useRouter();
   const { socket, isConnected } = useSocketStore();
   const { playPop, playDing } = useSound();
+  const router = useRouter();
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversation, setConversation] = useState<ConversationData | null>(null);
   const [inputValue, setInputValue] = useState("");
@@ -67,12 +182,16 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [canScroll, setCanScroll] = useState(false);
+  const [canScrollPreview, setCanScrollPreview] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(false);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const previewScrollRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -83,163 +202,191 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
         setShowEmojiPicker(false);
       }
     };
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   useEffect(() => {
-    const checkScroll = () => {
-      if (previewScrollRef.current) {
-        const { scrollWidth, clientWidth } = previewScrollRef.current;
-        setCanScroll(scrollWidth > clientWidth);
-      }
+    const checkScrollablePreview = () => {
+      if (!previewScrollRef.current) return;
+      const { scrollWidth, clientWidth } = previewScrollRef.current;
+      setCanScrollPreview(scrollWidth > clientWidth);
     };
-    checkScroll();
-    window.addEventListener('resize', checkScroll);
-    return () => window.removeEventListener('resize', checkScroll);
+
+    checkScrollablePreview();
+    window.addEventListener("resize", checkScrollablePreview);
+    return () => window.removeEventListener("resize", checkScrollablePreview);
   }, [imagePreviewUrls]);
 
   useEffect(() => {
     if (hasHydrated && !user) {
       router.push("/auth/login");
     }
-  }, [hasHydrated, user, router]);
+  }, [hasHydrated, router, user]);
 
   useEffect(() => {
     setSelectedImages([]);
     setImagePreviewUrls([]);
+    setInputValue("");
+    setEditingMessageId(null);
+    setOpenMenuId(null);
+    setIsDetailsPanelOpen(false);
   }, [conversationId]);
+
+  useEffect(() => {
+    return () => {
+      imagePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [imagePreviewUrls]);
 
   useEffect(() => {
     const fetchMessages = async () => {
       try {
+        setLoadError(null);
         const { data } = await api.get(`/conversations/${conversationId}/messages`);
         setMessages(data.data.messages);
         setConversation(data.data.conversation);
-        
-        // Mark as read
+
         await api.patch(`/conversations/${conversationId}/read`);
         if (socket && isConnected) {
           socket.emit("mark_read", { conversationId });
         }
       } catch (error) {
         console.error("Failed to fetch messages", error);
+        setLoadError("Không thể tải cuộc trò chuyện này.");
       }
     };
+
     if (user) {
       fetchMessages();
     }
-  }, [conversationId, user]);
+  }, [conversationId, isConnected, socket, user]);
 
   useEffect(() => {
-    if (socket && isConnected && conversation && user) {
-      const otherUserId = conversation.buyer.id === user.id ? conversation.seller.id : conversation.buyer.id;
+    if (!socket || !isConnected || !conversation || !user) return;
 
-      socket.emit("join_room", conversationId);
-      socket.emit("check_online_status", otherUserId);
+    const otherUserId = conversation.buyer.id === user.id ? conversation.seller.id : conversation.buyer.id;
 
-      socket.on("online_status_result", (data) => {
-        if (data.userId === otherUserId) setIsOtherUserOnline(data.isOnline);
-      });
+    const handleOnlineStatusResult = (data: { userId: string; isOnline: boolean }) => {
+      if (data.userId === otherUserId) setIsOtherUserOnline(data.isOnline);
+    };
 
-      socket.on("user_online", (userId) => {
-        if (userId === otherUserId) setIsOtherUserOnline(true);
-      });
+    const handleUserOnline = (userId: string) => {
+      if (userId === otherUserId) setIsOtherUserOnline(true);
+    };
 
-      socket.on("user_offline", (userId) => {
-        if (userId === otherUserId) setIsOtherUserOnline(false);
-      });
+    const handleUserOffline = (userId: string) => {
+      if (userId === otherUserId) setIsOtherUserOnline(false);
+    };
 
-      socket.on("user_typing", (data) => {
-        if (data.conversationId === conversationId && data.userId !== user?.id) {
-          setOtherUserTyping(true);
-        }
-      });
+    const handleUserTyping = (data: { conversationId: string; userId: string }) => {
+      if (data.conversationId === conversationId && data.userId !== user.id) {
+        setOtherUserTyping(true);
+      }
+    };
 
-      socket.on("user_stop_typing", (data) => {
-        if (data.conversationId === conversationId && data.userId !== user?.id) {
-          setOtherUserTyping(false);
-        }
-      });
-      
-      socket.on("messages_read", (data) => {
-        if (data.conversationId === conversationId && data.userId !== user?.id) {
-          setMessages(prev => prev.map(m => ({ ...m, isRead: true })));
-        }
-      });
-
-      socket.on("receive_message", (message: Message) => {
+    const handleUserStopTyping = (data: { conversationId: string; userId: string }) => {
+      if (data.conversationId === conversationId && data.userId !== user.id) {
         setOtherUserTyping(false);
-        setMessages((prev) => {
-          if (prev.find(m => m.id === message.id)) return prev;
-          
-          if (message.senderId === user?.id) {
-            const hasTemp = prev.find(m => m.id.startsWith("temp_") && m.content === message.content);
-            if (hasTemp) {
-              return prev.map(m => m === hasTemp ? message : m);
-            }
-          } else {
-            // Play notification sound for incoming message
-            playDing();
+      }
+    };
+
+    const handleMessagesRead = (data: { conversationId: string; userId: string }) => {
+      if (data.conversationId === conversationId && data.userId !== user.id) {
+        setMessages((prev) => prev.map((message) => ({ ...message, isRead: true })));
+      }
+    };
+
+    const handleReceiveMessage = (message: Message) => {
+      setOtherUserTyping(false);
+      setMessages((prev) => {
+        if (prev.some((item) => item.id === message.id)) return prev;
+
+        if (message.senderId === user.id) {
+          const tempMessage = prev.find((item) => item.id.startsWith("temp_") && item.content === message.content);
+          if (tempMessage) {
+            return prev.map((item) => (item.id === tempMessage.id ? message : item));
           }
-          return [...prev, message];
-        });
-
-        const isAtBottom = messagesContainerRef.current 
-          ? messagesContainerRef.current.scrollHeight - messagesContainerRef.current.scrollTop - messagesContainerRef.current.clientHeight < 100
-          : true;
-
-        if (message.senderId !== user?.id && !isAtBottom) {
-          setUnreadCount(prev => prev + 1);
         } else {
-          api.patch(`/conversations/${conversationId}/read`).catch(console.error);
-          socket.emit("mark_read", { conversationId });
+          playDing();
         }
+
+        return [...prev, message];
       });
 
-      socket.on("message_edited", (updatedMessage: Message) => {
-        setMessages(prev => prev.map(m => m.id === updatedMessage.id ? updatedMessage : m));
-      });
+      const isAtBottom = messagesContainerRef.current
+        ? messagesContainerRef.current.scrollHeight -
+            messagesContainerRef.current.scrollTop -
+            messagesContainerRef.current.clientHeight <
+          120
+        : true;
 
-      socket.on("message_deleted", (data: { messageId: string, conversationId: string }) => {
-        if (data.conversationId === conversationId) {
-          setMessages(prev => prev.filter(m => m.id !== data.messageId));
-        }
-      });
+      if (message.senderId !== user.id && !isAtBottom) {
+        setUnreadCount((prev) => prev + 1);
+      } else {
+        api.patch(`/conversations/${conversationId}/read`).catch(console.error);
+        socket.emit("mark_read", { conversationId });
+      }
+    };
 
-      socket.on("conversation_deleted", (data: { conversationId: string }) => {
-        if (data.conversationId === conversationId) {
-          router.push("/messages");
-        }
-      });
+    const handleMessageEdited = (updatedMessage: Message) => {
+      setMessages((prev) => prev.map((message) => (message.id === updatedMessage.id ? updatedMessage : message)));
+    };
 
-      return () => {
-        socket.off("online_status_result");
-        socket.off("user_online");
-        socket.off("user_offline");
-        socket.off("user_typing");
-        socket.off("user_stop_typing");
-        socket.off("messages_read");
-        socket.off("receive_message");
-        socket.off("message_edited");
-        socket.off("message_deleted");
-        socket.off("conversation_deleted");
-      };
-    }
-  }, [socket, isConnected, conversationId, user, conversation, router]);
+    const handleMessageDeleted = (data: { messageId: string; conversationId: string }) => {
+      if (data.conversationId === conversationId) {
+        setMessages((prev) => prev.filter((message) => message.id !== data.messageId));
+      }
+    };
+
+    const handleConversationDeleted = (data: { conversationId: string }) => {
+      if (data.conversationId === conversationId) {
+        router.push("/messages");
+      }
+    };
+
+    socket.emit("join_room", conversationId);
+    socket.emit("check_online_status", otherUserId);
+
+    socket.on("online_status_result", handleOnlineStatusResult);
+    socket.on("user_online", handleUserOnline);
+    socket.on("user_offline", handleUserOffline);
+    socket.on("user_typing", handleUserTyping);
+    socket.on("user_stop_typing", handleUserStopTyping);
+    socket.on("messages_read", handleMessagesRead);
+    socket.on("receive_message", handleReceiveMessage);
+    socket.on("message_edited", handleMessageEdited);
+    socket.on("message_deleted", handleMessageDeleted);
+    socket.on("conversation_deleted", handleConversationDeleted);
+
+    return () => {
+      socket.off("online_status_result", handleOnlineStatusResult);
+      socket.off("user_online", handleUserOnline);
+      socket.off("user_offline", handleUserOffline);
+      socket.off("user_typing", handleUserTyping);
+      socket.off("user_stop_typing", handleUserStopTyping);
+      socket.off("messages_read", handleMessagesRead);
+      socket.off("receive_message", handleReceiveMessage);
+      socket.off("message_edited", handleMessageEdited);
+      socket.off("message_deleted", handleMessageDeleted);
+      socket.off("conversation_deleted", handleConversationDeleted);
+    };
+  }, [conversation, conversationId, isConnected, playDing, router, socket, user]);
 
   useEffect(() => {
     if (!showScrollButton) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages, otherUserTyping]);
+  }, [messages, otherUserTyping, showScrollButton]);
 
   const handleScroll = () => {
     if (!messagesContainerRef.current) return;
+
     const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
-    const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
-    
+    const isAtBottom = scrollHeight - scrollTop - clientHeight < 120;
     setShowScrollButton(!isAtBottom);
+
     if (isAtBottom) {
       setUnreadCount(0);
       api.patch(`/conversations/${conversationId}/read`).catch(console.error);
@@ -255,44 +402,45 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
     setUnreadCount(0);
   };
 
-  if (!hasHydrated || !user || !conversation) return null;
-
-  const otherUser = conversation.buyer.id === user.id ? conversation.seller : conversation.buyer;
-
-  const handleEditMessage = (msg: Message) => {
-    setEditingMessageId(msg.id);
-    setInputValue(msg.content);
+  const handleEditMessage = (message: Message) => {
+    setEditingMessageId(message.id);
+    setInputValue(message.content);
     setOpenMenuId(null);
-    fileInputRef.current?.focus();
+    textInputRef.current?.focus();
   };
 
-  const handleDeleteMessage = (msgId: string) => {
-    if (confirm("Bạn có chắc chắn muốn thu hồi tin nhắn này không?")) {
-      socket?.emit("delete_message", { messageId: msgId, conversationId });
-      setMessages(prev => prev.filter(m => m.id !== msgId));
+  const handleDeleteMessage = (messageId: string) => {
+    if (window.confirm("Thu hồi tin nhắn này?")) {
+      socket?.emit("delete_message", { messageId, conversationId });
+      setMessages((prev) => prev.filter((message) => message.id !== messageId));
     }
+
     setOpenMenuId(null);
   };
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if ((!inputValue.trim() && !selectedImages.length) || !socket) return;
+  const handleSendMessage = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if ((!inputValue.trim() && selectedImages.length === 0) || !socket) return;
 
     const textContent = inputValue.trim();
-    
-    // Clear typing timeout
+
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     socket.emit("stop_typing", { conversationId });
 
     if (editingMessageId) {
-      // Optimistic UI for edit
-      setMessages(prev => prev.map(m => m.id === editingMessageId ? { ...m, content: textContent, isEdited: true } : m));
-      
+      setMessages((prev) =>
+        prev.map((message) =>
+          message.id === editingMessageId ? { ...message, content: textContent, isEdited: true } : message,
+        ),
+      );
+
       socket.emit("edit_message", {
         messageId: editingMessageId,
         conversationId,
-        content: textContent
+        content: textContent,
       });
+
       setEditingMessageId(null);
       setInputValue("");
       return;
@@ -300,608 +448,786 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
 
     if (selectedImages.length > 0) {
       setIsUploading(true);
+
       try {
         const uploadPromises = selectedImages.map(async (file) => {
           const formData = new FormData();
           formData.append("image", file);
 
           const { data } = await api.post(`/conversations/${conversationId}/images`, formData, {
-            headers: { "Content-Type": "multipart/form-data" }
+            headers: { "Content-Type": "multipart/form-data" },
           });
-          
+
           return data.data.imageUrl as string;
         });
 
         const imageUrls = await Promise.all(uploadPromises);
-        const contentStr = JSON.stringify(imageUrls);
-
-        // Optimistic UI for image
+        const content = JSON.stringify(imageUrls);
         const tempId = `temp_${Date.now()}_${Math.random()}`;
-        const tempMsg: Message = {
-          id: tempId,
-          senderId: user.id,
-          content: contentStr,
-          messageType: "IMAGE",
-          createdAt: new Date().toISOString()
-        };
-        setMessages(prev => [...prev, tempMsg]);
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: tempId,
+            senderId: user!.id,
+            content,
+            messageType: "IMAGE",
+            createdAt: new Date().toISOString(),
+          },
+        ]);
 
         socket.emit("send_message", {
           conversationId,
-          content: contentStr,
-          messageType: "IMAGE"
+          content,
+          messageType: "IMAGE",
         });
-        
+
         setSelectedImages([]);
         setImagePreviewUrls([]);
       } catch (error) {
         console.error("Upload failed", error);
-        alert("Tải ảnh thất bại. Vui lòng thử lại.");
+        window.alert("Tải ảnh thất bại. Vui lòng thử lại.");
       } finally {
         setIsUploading(false);
       }
     }
 
     if (textContent) {
-      // Optimistic UI for text
       const tempId = `temp_${Date.now() + 1}`;
-      const tempMsg: Message = {
-        id: tempId,
-        senderId: user.id,
-        content: textContent,
-        messageType: "TEXT",
-        createdAt: new Date().toISOString()
-      };
-      setMessages(prev => [...prev, tempMsg]);
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: tempId,
+          senderId: user!.id,
+          content: textContent,
+          messageType: "TEXT",
+          createdAt: new Date().toISOString(),
+        },
+      ]);
 
       socket.emit("send_message", {
         conversationId,
         content: textContent,
-        messageType: "TEXT"
+        messageType: "TEXT",
       });
     }
 
-    // Reset states
     setInputValue("");
     setShowEmojiPicker(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
-    
-    // Play send sound
     playPop();
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(e.target.value);
-    
-    if (socket && isConnected) {
-      socket.emit("typing", { conversationId });
-      
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      
-      typingTimeoutRef.current = setTimeout(() => {
-        socket.emit("stop_typing", { conversationId });
-      }, 2000);
-    }
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(event.target.value);
+
+    if (!socket || !isConnected) return;
+
+    socket.emit("typing", { conversationId });
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+
+    typingTimeoutRef.current = setTimeout(() => {
+      socket.emit("stop_typing", { conversationId });
+    }, 2000);
   };
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
-    
-    const validFiles = files.filter(f => f.size <= 5 * 1024 * 1024);
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
+
+    const validFiles = files.filter((file) => file.size <= 5 * 1024 * 1024);
     if (validFiles.length < files.length) {
-      alert("Một số ảnh bị bỏ qua do vượt quá 5MB.");
+      window.alert("Một số ảnh bị bỏ qua do vượt quá 5MB.");
     }
-    
+
     if (validFiles.length > 0) {
-      setSelectedImages(prev => [...prev, ...validFiles]);
-      setImagePreviewUrls(prev => [...prev, ...validFiles.map(f => URL.createObjectURL(f))]);
+      setSelectedImages((prev) => [...prev, ...validFiles]);
+      setImagePreviewUrls((prev) => [...prev, ...validFiles.map((file) => URL.createObjectURL(file))]);
     }
-    
+
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const removeSelectedImage = (indexToRemove: number) => {
-    setSelectedImages(prev => prev.filter((_, idx) => idx !== indexToRemove));
-    setImagePreviewUrls(prev => prev.filter((_, idx) => idx !== indexToRemove));
+  const removeSelectedImage = (index: number) => {
+    const removed = imagePreviewUrls[index];
+    if (removed) URL.revokeObjectURL(removed);
+
+    setSelectedImages((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+    setImagePreviewUrls((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
   };
 
-  const onEmojiClick = (emojiObject: any) => {
-    setInputValue(prev => prev + emojiObject.emoji);
+  const scrollPreview = (direction: "left" | "right") => {
+    previewScrollRef.current?.scrollBy({
+      left: direction === "left" ? -220 : 220,
+      behavior: "smooth",
+    });
   };
 
-  const scrollPreview = (direction: 'left' | 'right') => {
-    if (previewScrollRef.current) {
-      const scrollAmount = 200;
-      previewScrollRef.current.scrollBy({ left: direction === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
+  if (!hasHydrated || !user || !conversation) {
+    if (hasHydrated && user && loadError) {
+      return (
+        <div className="flex h-full min-h-0 flex-1 items-center justify-center bg-[radial-gradient(circle_at_top,rgba(37,99,235,0.12),transparent_34%),linear-gradient(180deg,#071326_0%,#06101f_100%)] p-6">
+          <div className="max-w-md rounded-[28px] border border-red-500/20 bg-red-500/10 p-6 text-center">
+            <p className="text-base text-red-100">{loadError}</p>
+            <Link
+              href="/messages"
+              className="mt-4 inline-flex items-center justify-center rounded-2xl border border-white/10 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10"
+            >
+              Quay lại danh sách chat
+            </Link>
+          </div>
+        </div>
+      );
     }
-  };
 
-  const formatPrice = (price: number) => {
-    if (price >= 1000) return `${(price / 1000).toFixed(1)} tỷ`;
-    return `${price} triệu`;
-  };
+    return null;
+  }
+
+  const otherUser = conversation.buyer.id === user.id ? conversation.seller : conversation.buyer;
+  const sharedAssets: SharedAsset[] = messages
+    .filter((message) => message.messageType === "IMAGE")
+    .flatMap((message) =>
+      parseImages(message.content).map((url, index) => ({
+        id: `${message.id}-${index}`,
+        url,
+        createdAt: message.createdAt,
+      })),
+    )
+    .slice()
+    .reverse();
 
   return (
-    <div className="flex flex-col h-full bg-[#0b1120]">
-      {/* HEADER */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-white/10 shrink-0 bg-[#0f172a]">
-        <div className="flex items-center gap-3">
-          <Link href="/messages" className="lg:hidden p-2 -ml-2 text-gray-400 hover:text-white">
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div className="relative">
-            <div className="w-10 h-10 rounded-full bg-slate-800 border border-white/10 overflow-hidden flex items-center justify-center">
+    <div className="relative flex h-full min-h-0 flex-1 overflow-hidden rounded-[26px] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(37,99,235,0.12),transparent_34%),linear-gradient(180deg,#071326_0%,#06101f_100%)] shadow-[0_22px_60px_rgba(2,6,23,0.28)]">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex h-[78px] shrink-0 items-center justify-between border-b border-white/10 bg-white/[0.03] px-5 lg:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <Link
+              href="/messages"
+              className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] text-slate-300 transition hover:bg-white/[0.08] hover:text-white lg:hidden"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+
+            <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-white/10 bg-slate-800">
               {otherUser.avatarUrl ? (
-                <img src={otherUser.avatarUrl} alt={otherUser.fullName} className="w-full h-full object-cover" />
+                <img src={otherUser.avatarUrl} alt={otherUser.fullName} className="h-full w-full object-cover" />
               ) : (
-                <span className="text-gray-400 font-medium">{otherUser.fullName.charAt(0)}</span>
+                <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-slate-300">
+                  {otherUser.fullName.charAt(0)}
+                </div>
               )}
+              <span
+                className={`absolute bottom-1 right-1 h-3.5 w-3.5 rounded-full border-2 border-[#09172d] ${
+                  isOtherUserOnline ? "bg-emerald-400" : "bg-slate-500"
+                }`}
+              />
             </div>
-            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-[#0f172a] rounded-full"></span>
-          </div>
-          <div>
-            <h2 className="text-white font-semibold">{otherUser.fullName}</h2>
-            {isOtherUserOnline ? (
-              <p className="text-xs text-emerald-500 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Online
-              </p>
-            ) : (
-              <p className="text-xs text-gray-500 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-gray-500"></span> Ngoại tuyến
-              </p>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center gap-4 text-gray-400">
-          <button className="hover:text-white transition"><Phone className="w-5 h-5" /></button>
-          <button className="hover:text-white transition"><Video className="w-5 h-5" /></button>
-          <button className="hover:text-white transition"><Info className="w-5 h-5" /></button>
-        </div>
-      </div>
 
-      {/* PROPERTY CARD */}
-      <div className={`border-b border-white/10 shrink-0 bg-[#0f172a]/80 backdrop-blur-md sticky top-0 z-30 transition-all duration-300 ${showScrollButton ? "p-2 shadow-md" : "p-4"}`}>
-        <div className={`flex items-center gap-4 max-w-2xl mx-auto bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors cursor-pointer ${showScrollButton ? "p-2" : "p-3"}`}>
-          <div className={`rounded-lg overflow-hidden shrink-0 transition-all duration-300 ${showScrollButton ? "w-12 h-8" : "w-20 h-14"}`}>
-            {conversation.post.images[0] ? (
-              <img src={conversation.post.images[0].imageUrl} alt="Property" className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full bg-slate-800 flex items-center justify-center">
-                <ImageIcon className="w-5 h-5 text-gray-500" />
+            <div className="min-w-0">
+              <h2 className="truncate text-[1.55rem] font-semibold tracking-tight text-white">{otherUser.fullName}</h2>
+              <div className="mt-0.5 flex items-center gap-2 text-sm text-slate-400">
+                <span className={`h-2 w-2 rounded-full ${isOtherUserOnline ? "bg-emerald-400" : "bg-slate-500"}`} />
+                <span>{isOtherUserOnline ? "online" : "offline"}</span>
               </div>
-            )}
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <h3 className={`text-white font-medium truncate transition-all duration-300 ${showScrollButton ? "text-xs" : "text-sm"}`}>{conversation.post.title}</h3>
-            {!showScrollButton && (
-              <p className="text-xs text-gray-400 mt-1 truncate">
-                {conversation.post.city} • {conversation.post.area} m²
-              </p>
-            )}
+
+          <div className="flex items-center gap-2">
+            <button className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-slate-300 transition hover:bg-white/[0.08] hover:text-white">
+              <Phone className="h-5 w-5" />
+            </button>
+            <button className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-slate-300 transition hover:bg-white/[0.08] hover:text-white">
+              <Video className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsDetailsPanelOpen(true)}
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-base font-semibold text-slate-300 transition hover:bg-white/[0.08] hover:text-white"
+            >
+              !
+            </button>
           </div>
-          <div className="text-right shrink-0">
-            <p className={`text-blue-400 font-semibold transition-all duration-300 ${showScrollButton ? "text-xs" : "text-sm"}`}>{formatPrice(conversation.post.price)}</p>
-            {!showScrollButton && (
-              <Link href={`/posts/${conversation.post.id}`} className="inline-block mt-1 text-xs px-3 py-1 rounded-full border border-blue-500/30 text-blue-300 hover:bg-blue-500/10 transition">
-                Xem chi tiết
-              </Link>
-            )}
-          </div>
-        </div>
-      </div>
+        </header>
 
-      {/* MESSAGES LIST */}
-      <div 
-        className="flex-1 overflow-y-auto p-4 no-scrollbar relative"
-        ref={messagesContainerRef}
-        onScroll={handleScroll}
-        onClick={() => {
-          setSelectedImages([]);
-          setImagePreviewUrls([]);
-        }}
-      >
-        <div className="text-center text-xs text-gray-500 my-4">
-          Bắt đầu cuộc trò chuyện
-        </div>
-        
-        <AnimatePresence initial={false}>
-          {messages.map((msg, idx) => {
-            const isMe = msg.senderId === user.id;
-            
-            const msgDate = new Date(msg.createdAt);
-            const messageTime = format(msgDate, "HH:mm");
-            const prevMsg = messages[idx - 1];
-            const nextMsg = messages[idx + 1];
-            
-            // 1. Time Divider Logic (> 30 mins or different day)
-            let showDateDivider = false;
-            let dateText = "";
-            
-            if (!prevMsg) {
-              showDateDivider = true;
-            } else {
-              const prevMsgDate = new Date(prevMsg.createdAt);
-              if (msgDate.getTime() - prevMsgDate.getTime() > 30 * 60 * 1000 || msgDate.getDate() !== prevMsgDate.getDate() || msgDate.getMonth() !== prevMsgDate.getMonth() || msgDate.getFullYear() !== prevMsgDate.getFullYear()) {
-                showDateDivider = true;
-              }
-            }
+        <div className="relative flex min-h-0 flex-1 flex-col">
+          <div
+            ref={messagesContainerRef}
+            onScroll={handleScroll}
+            className="no-scrollbar flex-1 overflow-y-auto px-3 py-5 lg:px-4"
+          >
+            <div className="mx-auto w-full max-w-5xl">
+              <div className="mb-6 flex items-center gap-4 text-xs font-medium text-slate-500">
+                <span className="h-px flex-1 bg-white/10" />
+                <span>{formatMessageDayLabel(new Date().toISOString())}</span>
+                <span className="h-px flex-1 bg-white/10" />
+              </div>
 
-            if (showDateDivider) {
-              if (isToday(msgDate)) {
-                dateText = "Hôm nay, " + format(msgDate, "HH:mm");
-              } else if (isYesterday(msgDate)) {
-                dateText = "Hôm qua, " + format(msgDate, "HH:mm");
-              } else {
-                dateText = format(msgDate, "dd Thg MM, yyyy - HH:mm", { locale: vi });
-              }
-            }
-
-            // 2. Grouping Logic
-            let nextHasDateDivider = false;
-            if (nextMsg) {
-              const nextMsgDate = new Date(nextMsg.createdAt);
-              if (nextMsgDate.getTime() - msgDate.getTime() > 30 * 60 * 1000 || nextMsgDate.getDate() !== msgDate.getDate()) {
-                nextHasDateDivider = true;
-              }
-            }
-
-            const isGroupedWithPrev = prevMsg && prevMsg.senderId === msg.senderId && !showDateDivider;
-            const isGroupedWithNext = nextMsg && nextMsg.senderId === msg.senderId && !nextHasDateDivider;
-
-            // Avatar shows only on the LAST message of the group
-            const showAvatar = !isMe && !isGroupedWithNext;
-            
-            // 3. Smart Border Radius
-            let borderRadiusClass = "rounded-2xl";
-            if (isMe) {
-              if (isGroupedWithPrev && isGroupedWithNext) borderRadiusClass = "rounded-2xl rounded-tr-sm rounded-br-sm";
-              else if (isGroupedWithPrev) borderRadiusClass = "rounded-2xl rounded-tr-sm";
-              else if (isGroupedWithNext) borderRadiusClass = "rounded-2xl rounded-br-sm";
-              else borderRadiusClass = "rounded-2xl rounded-br-sm";
-            } else {
-              if (isGroupedWithPrev && isGroupedWithNext) borderRadiusClass = "rounded-2xl rounded-tl-sm rounded-bl-sm";
-              else if (isGroupedWithPrev) borderRadiusClass = "rounded-2xl rounded-tl-sm";
-              else if (isGroupedWithNext) borderRadiusClass = "rounded-2xl rounded-bl-sm";
-              else borderRadiusClass = "rounded-2xl rounded-bl-sm";
-            }
-
-            const mb = isGroupedWithNext ? "mb-1" : "mb-4";
-
-            return (
-              <div key={msg.id}>
-                {showDateDivider && (
-                  <div className="flex justify-center my-6">
-                    <span className="text-xs font-medium text-gray-500 bg-white/5 px-3 py-1 rounded-full border border-white/10">
-                      {dateText}
-                    </span>
+              <div className="mb-6 overflow-hidden rounded-[22px] border border-white/10 bg-white/[0.04] shadow-[0_20px_60px_rgba(2,6,23,0.25)]">
+                <div className="flex flex-col gap-4 p-4 md:flex-row">
+                  <div className="h-36 w-full overflow-hidden rounded-[18px] bg-slate-900 md:h-40 md:w-[220px]">
+                    <FallbackMedia
+                      src={conversation.post.images[0]?.imageUrl}
+                      alt={conversation.post.title}
+                      className="h-full w-full object-cover"
+                      wrapperClassName="h-full w-full"
+                    />
                   </div>
-                )}
-                
-                <motion.div 
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`w-full flex ${isMe ? "justify-end" : "justify-start"} ${mb} group/msg`}
-                >
-                  <div className={`flex gap-2 max-w-[70%] ${isMe ? "flex-row-reverse" : "flex-row"} items-end`}>
-                    
-                    {/* Avatar for other user */}
-                    {!isMe && (
-                      <div className="w-8 flex-shrink-0 flex items-end justify-center self-end">
-                        {showAvatar ? (
-                          <div className="w-8 h-8 rounded-full bg-slate-800 overflow-hidden">
-                            {otherUser.avatarUrl ? (
-                              <img src={otherUser.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center">
-                                <span className="text-xs text-gray-400 font-medium">{otherUser.fullName.charAt(0)}</span>
-                              </div>
-                            )}
-                          </div>
-                        ) : null}
-                      </div>
-                    )}
 
-                    <div className={`flex flex-col ${isMe ? "items-end" : "items-start"} min-w-0`}>
-                      <div className={`flex items-center gap-2 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
-                        
-                        <div className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}>
-                          {msg.isEdited && msg.messageType === "TEXT" && (
-                            <span className={`text-[10px] text-gray-500 italic mb-0.5 ${isMe ? 'mr-1' : 'ml-1'}`}>
-                              đã chỉnh sửa
-                            </span>
+                  <div className="flex min-w-0 flex-1 flex-col justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-blue-300">Bat dong san dang trao doi</p>
+                      <h3 className="mt-1.5 text-[1.25rem] font-semibold leading-tight text-white">{conversation.post.title}</h3>
+                      <p className="mt-2 text-[1.5rem] font-semibold text-blue-400">{formatPrice(conversation.post.price)}</p>
+                    </div>
+
+                    <div className="grid gap-3 text-sm text-slate-300 sm:grid-cols-2">
+                      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3">
+                        {conversation.post.propertyType}
+                      </div>
+                      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3">
+                        {conversation.post.area} m²
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                      <div className="flex items-center gap-2 text-sm text-slate-400">
+                        <MapPin className="h-4 w-4" />
+                        <span>{conversation.post.city}</span>
+                      </div>
+
+                      <Link
+                        href={`/posts/${conversation.post.id}`}
+                        className="inline-flex items-center justify-center rounded-[18px] border border-blue-400/40 px-4 py-2.5 text-sm font-medium text-blue-300 transition hover:bg-blue-500/10 hover:text-white"
+                      >
+                        Xem chi tiet
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <AnimatePresence initial={false}>
+                {messages.map((message, index) => {
+                  const isMine = message.senderId === user.id;
+                  const previousMessage = messages[index - 1];
+                  const nextMessage = messages[index + 1];
+                  const imageUrls = message.messageType === "IMAGE" ? parseImages(message.content) : [];
+
+                  const showDateDivider =
+                    !previousMessage ||
+                    new Date(message.createdAt).toDateString() !== new Date(previousMessage.createdAt).toDateString();
+                  const isGroupedWithPrevious =
+                    previousMessage &&
+                    previousMessage.senderId === message.senderId &&
+                    !showDateDivider;
+                  const isGroupedWithNext =
+                    nextMessage &&
+                    nextMessage.senderId === message.senderId &&
+                    new Date(nextMessage.createdAt).toDateString() === new Date(message.createdAt).toDateString();
+
+                  return (
+                    <div key={message.id}>
+                      {showDateDivider && index !== 0 && (
+                        <div className="my-6 flex items-center gap-4 text-xs font-medium text-slate-500">
+                          <span className="h-px flex-1 bg-white/10" />
+                          <span>{formatMessageDayLabel(message.createdAt)}</span>
+                          <span className="h-px flex-1 bg-white/10" />
+                        </div>
+                      )}
+
+                      <motion.div
+                        initial={{ opacity: 0, y: 14 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={`group/message flex w-full ${isMine ? "justify-end" : "justify-start"} ${
+                          isGroupedWithNext ? "mb-2" : "mb-5"
+                        }`}
+                      >
+                        <div className={`flex max-w-[99%] items-end gap-2 ${isMine ? "flex-row-reverse" : "flex-row"} lg:max-w-[88%]`}>
+                          {!isMine && (
+                            <div className="flex h-10 w-10 shrink-0 items-end justify-center">
+                              {!isGroupedWithNext && (
+                                <div className="h-9 w-9 overflow-hidden rounded-full border border-white/10 bg-slate-800">
+                                  {otherUser.avatarUrl ? (
+                                    <img src={otherUser.avatarUrl} alt={otherUser.fullName} className="h-full w-full object-cover" />
+                                  ) : (
+                                    <div className="flex h-full w-full items-center justify-center text-sm font-medium text-slate-300">
+                                      {otherUser.fullName.charAt(0)}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           )}
 
-                          <div className={`relative text-sm overflow-hidden ${borderRadiusClass} ${
-                            msg.messageType === "IMAGE"
-                              ? "bg-transparent p-0 shadow-none"
-                              : isMe 
-                                ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-sm px-4 py-2.5" 
-                                : "bg-[#1e293b] text-gray-100 shadow-sm px-4 py-2.5"
-                          }`}>
-
-                            {msg.messageType === "IMAGE" ? (
-                              (() => {
-                                const urls = parseImages(msg.content);
-                                if (urls.length === 1) {
-                                  return (
-                                    <div 
-                                      className="relative max-w-sm rounded-xl overflow-hidden cursor-pointer"
-                                      onClick={() => setLightboxImage(urls[0])}
-                                    >
-                                      <img src={urls[0]} alt="Attachment" className="max-h-64 object-cover hover:opacity-90 transition" />
-                                    </div>
-                                  );
-                                }
-                                return (
-                                  <div className={`grid gap-1 max-w-sm ${urls.length === 2 ? 'grid-cols-2' : urls.length >= 3 ? 'grid-cols-2' : ''}`}>
-                                    {urls.map((url, i) => (
-                                      <div 
-                                        key={i}
-                                        className={`relative overflow-hidden cursor-pointer rounded-xl ${urls.length === 3 && i === 0 ? 'col-span-2 aspect-[2/1]' : 'aspect-square'} ${urls.length > 3 && i === 3 && urls.length > 4 ? 'relative' : ''}`}
-                                        onClick={() => setLightboxImage(url)}
-                                      >
-                                        <img 
-                                          src={url} 
-                                          alt="Attachment" 
-                                          className="w-full h-full object-cover hover:opacity-90 transition" 
-                                        />
-                                        {urls.length > 4 && i === 3 && (
-                                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white font-semibold text-lg">
-                                            +{urls.length - 4}
-                                          </div>
-                                        )}
+                          <div className={`flex flex-col ${isMine ? "items-end" : "items-start"}`}>
+                            <div className={`flex items-center gap-2 ${isMine ? "flex-row-reverse" : "flex-row"}`}>
+                              <div
+                                className={`relative overflow-hidden ${
+                                  message.messageType === "IMAGE"
+                                  ? ""
+                                  : `px-4 py-3.5 ${
+                                        isMine
+                                          ? "bg-[linear-gradient(135deg,#6366f1,#8b5cf6)] text-white"
+                                          : "bg-white/[0.08] text-slate-100"
+                                      }`
+                                } ${
+                                  isMine
+                                    ? isGroupedWithPrevious
+                                      ? "rounded-[26px] rounded-tr-lg"
+                                      : "rounded-[26px] rounded-br-lg"
+                                    : isGroupedWithPrevious
+                                      ? "rounded-[26px] rounded-tl-lg"
+                                      : "rounded-[26px] rounded-bl-lg"
+                                } shadow-[0_16px_40px_rgba(2,6,23,0.15)]`}
+                              >
+                                {message.messageType === "IMAGE" ? (
+                                  <div
+                                    className={`overflow-hidden rounded-[24px] ${
+                                      imageUrls.length === 1
+                                        ? "w-[min(360px,76vw)] md:w-[400px]"
+                                        : "w-[min(340px,74vw)] md:w-[390px]"
+                                    }`}
+                                  >
+                                    {imageUrls.length === 1 ? (
+                                      <ChatImageTile
+                                        src={imageUrls[0]}
+                                        alt="Anh da gui"
+                                        onClick={() => setLightboxImage(imageUrls[0])}
+                                        wrapperClassName="relative block w-full overflow-hidden rounded-[24px] bg-slate-900"
+                                        className="h-full w-full object-cover transition hover:scale-[1.01]"
+                                      />
+                                    ) : (
+                                      <div className="grid grid-cols-2 gap-1">
+                                        {imageUrls.slice(0, 4).map((url, imageIndex) => (
+                                          <button
+                                            key={url + imageIndex}
+                                            type="button"
+                                            onClick={() => setLightboxImage(url)}
+                                            className={`relative overflow-hidden bg-slate-900 ${
+                                              imageUrls.length === 3 && imageIndex === 0 ? "col-span-2 aspect-[2.2/1]" : "aspect-[1/1]"
+                                            }`}
+                                          >
+                                            <FallbackMedia
+                                              src={url}
+                                              alt="Anh da gui"
+                                              className="h-full w-full object-cover transition hover:scale-[1.01]"
+                                              wrapperClassName="h-full w-full"
+                                            />
+                                            {imageUrls.length > 4 && imageIndex === 3 && (
+                                              <div className="absolute inset-0 flex items-center justify-center bg-black/55 text-lg font-semibold text-white">
+                                                +{imageUrls.length - 4}
+                                              </div>
+                                            )}
+                                          </button>
+                                        ))}
                                       </div>
-                                    )).slice(0, 4)}
+                                    )}
                                   </div>
-                                );
-                              })()
-                            ) : (
-                              <div className="break-words">
-                                {msg.content}
+                                ) : (
+                                  <div className="space-y-2">
+                                    {message.isEdited && (
+                                      <p className={`text-[11px] ${isMine ? "text-blue-100/80" : "text-slate-400"}`}>
+                                        Da chinh sua
+                                      </p>
+                                    )}
+                                    <p className="whitespace-pre-wrap break-words text-[14px] leading-6">{message.content}</p>
+                                  </div>
+                                )}
                               </div>
-                            )}
+
+                              {isMine && !message.id.startsWith("temp_") && (
+                                <div className="relative opacity-0 transition group-hover/message:opacity-100">
+                                  <button
+                                    type="button"
+                                    onClick={() => setOpenMenuId(openMenuId === message.id ? null : message.id)}
+                                    className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-slate-400 transition hover:text-white"
+                                  >
+                                    <MoreVertical className="h-4 w-4" />
+                                  </button>
+
+                                  {openMenuId === message.id && (
+                                    <div className="absolute bottom-10 right-0 z-20 w-40 overflow-hidden rounded-2xl border border-white/10 bg-[#13213b] p-1 shadow-2xl">
+                                      {message.messageType === "TEXT" && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleEditMessage(message)}
+                                          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-slate-200 transition hover:bg-white/5"
+                                        >
+                                          <Edit2 className="h-4 w-4" />
+                                          Chinh sua
+                                        </button>
+                                      )}
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteMessage(message.id)}
+                                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-red-300 transition hover:bg-red-500/10"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                        Thu hoi
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className={`mt-2 flex items-center gap-2 px-1 text-xs ${isMine ? "justify-end" : "justify-start"} text-slate-500`}>
+                              <span>{formatMessageTime(message.createdAt)}</span>
+                              {isMine && index === messages.length - 1 && message.isRead && <span className="text-blue-300">Da xem</span>}
+                            </div>
                           </div>
                         </div>
+                      </motion.div>
+                    </div>
+                  );
+                })}
+              </AnimatePresence>
 
-                        {/* Options Menu - visual left for isMe due to flex-row-reverse */}
-                        {isMe && !msg.id.startsWith("temp_") && (
-                          <div className="opacity-0 group-hover/msg:opacity-100 transition-opacity relative shrink-0">
-                            <button 
-                              onClick={() => setOpenMenuId(openMenuId === msg.id ? null : msg.id)}
-                              className="p-1 text-gray-400 hover:text-white rounded-full hover:bg-white/5 transition"
-                            >
-                              <MoreVertical className="w-4 h-4" />
-                            </button>
-                            {openMenuId === msg.id && (
-                              <div className="absolute bottom-full right-0 mb-1 w-36 bg-[#1e293b] border border-white/10 rounded-lg shadow-xl z-50 overflow-hidden py-1">
-                                {msg.messageType === "TEXT" && (
-                                  <button 
-                                    onClick={() => handleEditMessage(msg)}
-                                    className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-white/5 hover:text-white flex items-center gap-2"
-                                  >
-                                    <Edit2 className="w-4 h-4" /> Sửa
-                                  </button>
-                                )}
-                                <button 
-                                  onClick={() => handleDeleteMessage(msg.id)}
-                                  className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 flex items-center gap-2"
-                                >
-                                  <Trash2 className="w-4 h-4" /> Thu hồi
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Hover time next to bubble */}
-                        <span className={`text-[10px] text-gray-500 opacity-0 group-hover/msg:opacity-100 transition-opacity whitespace-nowrap select-none ${isMe ? 'mr-1' : 'ml-1'}`}>
-                          {messageTime}
-                        </span>
-                      </div>
-                      
-                      {/* Read Receipt below bubble (only takes space when rendered) */}
-                      {isMe && msg.isRead && idx === messages.length - 1 && (
-                        <div className="flex items-center gap-1 mt-1 justify-end w-full">
-                          <div className="w-3.5 h-3.5 rounded-full bg-slate-800 overflow-hidden flex items-center justify-center">
-                            {otherUser.avatarUrl ? (
-                              <img src={otherUser.avatarUrl} alt="read" className="w-full h-full object-cover" />
-                            ) : (
-                              <span className="text-[8px] text-gray-400 font-medium">{otherUser.fullName.charAt(0)}</span>
-                            )}
-                          </div>
+              {otherUserTyping && (
+                <div className="mb-5 flex justify-start">
+                  <div className="flex items-end gap-3">
+                    <div className="h-10 w-10 overflow-hidden rounded-full border border-white/10 bg-slate-800">
+                      {otherUser.avatarUrl ? (
+                        <img src={otherUser.avatarUrl} alt={otherUser.fullName} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-sm font-medium text-slate-300">
+                          {otherUser.fullName.charAt(0)}
                         </div>
                       )}
                     </div>
+                    <div className="flex items-center gap-1 rounded-[24px] rounded-bl-lg bg-white/[0.08] px-5 py-4">
+                      <span className="h-2 w-2 animate-bounce rounded-full bg-slate-300 [animation-delay:0ms]" />
+                      <span className="h-2 w-2 animate-bounce rounded-full bg-slate-300 [animation-delay:120ms]" />
+                      <span className="h-2 w-2 animate-bounce rounded-full bg-slate-300 [animation-delay:240ms]" />
+                    </div>
                   </div>
-                </motion.div>
-              </div>
-            );
-          })}
-        </AnimatePresence>
+                </div>
+              )}
 
-        {otherUserTyping && (
-          <div className="flex justify-start">
-            <div className="flex gap-2 max-w-[70%]">
-              <div className="w-8 h-8 rounded-full flex-shrink-0 bg-slate-800 overflow-hidden flex items-center justify-center self-end">
-                {otherUser.avatarUrl ? (
-                  <img src={otherUser.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-xs text-gray-400 font-medium">{otherUser.fullName.charAt(0)}</span>
-                )}
-              </div>
-              <div className="px-4 py-3 rounded-2xl bg-[#1e293b] text-gray-100 rounded-bl-sm flex items-center gap-1">
-                <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
-              </div>
+              <div ref={messagesEndRef} />
             </div>
           </div>
-        )}
 
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* SCROLL TO BOTTOM BUTTON */}
-      <AnimatePresence>
-        {showScrollButton && (
-          <motion.button
-            initial={{ opacity: 0, y: 10, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 10, scale: 0.9 }}
-            onClick={scrollToBottom}
-            className="absolute bottom-24 right-6 w-10 h-10 bg-[#1e293b] border border-white/10 rounded-full flex items-center justify-center shadow-xl text-gray-300 hover:text-white transition z-10"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-            {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-sm">
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </span>
-            )}
-          </motion.button>
-        )}
-      </AnimatePresence>
-
-      {/* INPUT AREA */}
-      <div className="p-4 bg-[#0f172a]/80 backdrop-blur-xl border-t border-white/10 shrink-0 relative z-30">
-        {/* Preview Image Area */}
-        <AnimatePresence>
-          {imagePreviewUrls.length > 0 && (
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="absolute bottom-full left-4 mb-2 p-2 bg-[#1e293b] border border-white/10 rounded-xl shadow-2xl z-20 max-w-[calc(100%-2rem)] flex items-center gap-2 group"
-            >
-              {canScroll && (
-                <button 
-                  type="button"
-                  onClick={() => scrollPreview('left')}
-                  className="absolute left-2 z-30 p-1 bg-black/50 hover:bg-black/80 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-              )}
-
-              <div 
-                ref={previewScrollRef}
-                className="overflow-x-auto no-scrollbar flex gap-3 scroll-smooth items-center flex-1"
+          <AnimatePresence>
+            {showScrollButton && (
+              <motion.button
+                initial={{ opacity: 0, y: 8, scale: 0.94 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 8, scale: 0.94 }}
+                type="button"
+                onClick={scrollToBottom}
+                className="absolute bottom-28 right-5 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-[#12203a] text-slate-200 shadow-xl transition hover:text-white"
               >
-                {imagePreviewUrls.map((url, idx) => (
-                  <div key={idx} className="relative flex-shrink-0">
-                    <img src={url} alt="Preview" className="h-24 w-auto rounded-lg object-cover border border-white/10" />
-                    <button 
-                      type="button"
-                      onClick={() => removeSelectedImage(idx)}
-                      className="absolute top-1 right-1 bg-red-500/90 hover:bg-red-500 text-white rounded-full p-1 shadow-lg transition z-40 backdrop-blur-sm"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
+                <ChevronRight className="h-4 w-4 rotate-90" />
+                {unreadCount > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-semibold text-white">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </motion.button>
+            )}
+          </AnimatePresence>
 
-              {canScroll && (
-                <button 
-                  type="button"
-                  onClick={() => scrollPreview('right')}
-                  className="absolute right-2 z-30 p-1 bg-black/50 hover:bg-black/80 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <form onSubmit={handleSendMessage} className="flex items-center gap-3 relative">
-          <div className="relative" ref={emojiPickerRef}>
-            <button 
-              type="button" 
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className={`p-2 transition rounded-full hover:bg-white/5 ${showEmojiPicker ? "text-blue-500 bg-blue-500/10" : "text-gray-400 hover:text-white"}`}
-            >
-              <Smile className="w-5 h-5" />
-            </button>
+          <div className="shrink-0 border-t border-white/10 bg-white/[0.03] px-4 py-4 lg:px-5">
             <AnimatePresence>
-              {showEmojiPicker && (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                  className="absolute bottom-12 left-0 z-50"
+              {imagePreviewUrls.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="relative mb-3 overflow-hidden rounded-[22px] border border-white/10 bg-[#0b1931] p-3"
                 >
-                  <EmojiPicker onEmojiClick={onEmojiClick} theme={Theme.DARK} />
+                  {canScrollPreview && (
+                    <button
+                      type="button"
+                      onClick={() => scrollPreview("left")}
+                      className="absolute left-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                  )}
+
+                  <div ref={previewScrollRef} className="no-scrollbar flex gap-3 overflow-x-auto px-1">
+                    {imagePreviewUrls.map((url, index) => (
+                      <div key={url + index} className="relative shrink-0">
+                        <img src={url} alt="Preview" className="h-24 w-24 rounded-2xl object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removeSelectedImage(index)}
+                          className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {canScrollPreview && (
+                    <button
+                      type="button"
+                      onClick={() => scrollPreview("right")}
+                      className="absolute right-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>
 
-          <input 
-            type="file" 
-            accept="image/jpeg,image/png,image/webp,image/jpg" 
-            multiple
-            ref={fileInputRef} 
-            onChange={handleImageSelect} 
-            className="hidden" 
-          />
-          <button 
-            type="button" 
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
-            className={`p-2 transition rounded-full hover:bg-white/5 disabled:opacity-50 ${selectedImages.length > 0 ? "text-blue-500 bg-blue-500/10" : "text-gray-400 hover:text-white"}`}
-          >
-            <ImageIcon className="w-5 h-5" />
-          </button>
-          
-          <div className="flex-1 relative">
-            <input 
-              type="text" 
-              value={inputValue}
-              onChange={handleInputChange}
-              placeholder={isUploading ? "Đang tải ảnh lên..." : "Nhập tin nhắn..."} 
-              disabled={isUploading}
-              className={`w-full bg-[#1e293b]/80 border border-white/10 rounded-full pl-5 pr-12 py-3 text-sm text-gray-100 placeholder-gray-500 outline-none transition-all duration-300 focus:bg-[#1e293b] focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 shadow-inner ${editingMessageId ? "pr-10" : ""}`}           />
-            <button 
-              type="submit" 
-              disabled={(!inputValue.trim() && selectedImages.length === 0 && !editingMessageId) || isUploading}
-              className="absolute right-1 top-1 bottom-1 w-8 flex items-center justify-center bg-blue-600 text-white rounded-full disabled:opacity-50 disabled:bg-blue-600/50 transition hover:bg-blue-700"
-            >
-              {isUploading ? (
-                <div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" />
-              ) : editingMessageId ? (
-                <Check className="w-4 h-4" />
-              ) : (
-                <Send className="w-4 h-4 ml-0.5" />
-              )}
-            </button>
+            <form onSubmit={handleSendMessage} className="rounded-[24px] border border-white/10 bg-[#0b1931] px-4 py-3 shadow-[0_8px_18px_rgba(2,6,23,0.18)]">
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  className="hidden h-10 w-10 items-center justify-center rounded-full text-slate-400 sm:flex"
+                >
+                  <Mic className="h-5 w-5" />
+                </button>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/jpg"
+                  multiple
+                  className="hidden"
+                  onChange={handleImageSelect}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  className={`flex h-10 w-10 items-center justify-center rounded-full transition ${
+                    selectedImages.length > 0 ? "bg-blue-500/15 text-blue-300" : "bg-white/[0.04] text-slate-400 hover:text-white"
+                  }`}
+                >
+                  <ImageIcon className="h-5 w-5" />
+                </button>
+
+                <div className="relative" ref={emojiPickerRef}>
+                  <button
+                    type="button"
+                    onClick={() => setShowEmojiPicker((prev) => !prev)}
+                  className={`flex h-10 w-10 items-center justify-center rounded-full transition ${
+                      showEmojiPicker ? "bg-blue-500/15 text-blue-300" : "bg-white/[0.04] text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    <Smile className="h-5 w-5" />
+                  </button>
+
+                  <AnimatePresence>
+                    {showEmojiPicker && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 14, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 14, scale: 0.96 }}
+                        className="absolute bottom-14 left-0 z-40"
+                      >
+                        <EmojiPicker onEmojiClick={(emoji) => setInputValue((prev) => prev + emoji.emoji)} theme={Theme.LIGHT} />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                <div className="relative min-w-0 flex-1">
+                  <input
+                    ref={textInputRef}
+                    type="text"
+                    value={inputValue}
+                    onChange={handleInputChange}
+                    disabled={isUploading}
+                    placeholder={isUploading ? "Đang tải ảnh lên..." : "Nhập tin nhắn..."}
+                    className="w-full border-none bg-transparent px-2 py-2.5 text-[14px] text-white outline-none placeholder:text-slate-500"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={(!inputValue.trim() && selectedImages.length === 0 && !editingMessageId) || isUploading}
+                  className="flex h-12 w-12 items-center justify-center rounded-full bg-[linear-gradient(135deg,#5b7cff,#944dff)] text-white shadow-[0_16px_32px_rgba(79,70,229,0.35)] transition disabled:opacity-50"
+                >
+                  {isUploading ? (
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                  ) : editingMessageId ? (
+                    <Check className="h-5 w-5" />
+                  ) : (
+                    <Send className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
-        </form>
+        </div>
       </div>
 
-      {/* LIGHTBOX */}
       <AnimatePresence>
+        {isDetailsPanelOpen && (
+          <>
+            <motion.button
+              type="button"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsDetailsPanelOpen(false)}
+              className="absolute inset-0 z-40 bg-black/45 backdrop-blur-[2px]"
+            />
+
+            <motion.aside
+              initial={{ opacity: 0, x: 32 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 32 }}
+              className="absolute right-0 top-0 z-50 flex h-full w-full max-w-[380px] flex-col overflow-hidden border-l border-white/10 bg-[linear-gradient(180deg,rgba(11,22,42,0.98),rgba(7,16,31,0.99))] p-5 shadow-[-24px_0_60px_rgba(2,6,23,0.45)]"
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-400">Thông tin chat</p>
+                <button
+                  type="button"
+                  onClick={() => setIsDetailsPanelOpen(false)}
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-slate-300 transition hover:bg-white/[0.08] hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto pr-1">
+                <div className="space-y-4 pb-1">
+                  <div className="rounded-[30px] border border-white/10 bg-white/[0.04] p-6 text-center">
+                    <div className="relative mx-auto h-24 w-24 overflow-hidden rounded-full border border-white/10 bg-slate-800">
+                      {otherUser.avatarUrl ? (
+                        <img src={otherUser.avatarUrl} alt={otherUser.fullName} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-3xl font-semibold text-slate-300">
+                          {otherUser.fullName.charAt(0)}
+                        </div>
+                      )}
+                      <span
+                        className={`absolute bottom-2 right-2 h-4 w-4 rounded-full border-2 border-[#0b1931] ${
+                          isOtherUserOnline ? "bg-emerald-400" : "bg-slate-500"
+                        }`}
+                      />
+                    </div>
+
+                    <h3 className="mt-5 text-3xl font-semibold text-white">{otherUser.fullName}</h3>
+                    <p className="mt-2 text-sm text-slate-400">Chủ tin đăng</p>
+
+                    <div className="mt-6 grid grid-cols-3 gap-3">
+                      <button className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-4 text-center text-xs text-slate-300 transition hover:bg-white/[0.06]">
+                        <Phone className="mx-auto mb-2 h-5 w-5" />
+                        Gọi thoại
+                      </button>
+                      <button className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-4 text-center text-xs text-slate-300 transition hover:bg-white/[0.06]">
+                        <Video className="mx-auto mb-2 h-5 w-5" />
+                        Gọi video
+                      </button>
+                      <button className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-4 text-center text-xs text-slate-300 transition hover:bg-white/[0.06]">
+                        <Info className="mx-auto mb-2 h-5 w-5" />
+                        Hồ sơ
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="rounded-[30px] border border-white/10 bg-white/[0.04] p-5">
+                    <p className="text-lg font-semibold text-white">Bất động sản đang trao đổi</p>
+
+                    <div className="mt-4 overflow-hidden rounded-[24px] border border-white/10 bg-[#0d1b33]">
+                      <div className="h-40 overflow-hidden">
+                        <FallbackMedia
+                          src={conversation.post.images[0]?.imageUrl}
+                          alt={conversation.post.title}
+                          className="h-full w-full object-cover"
+                          wrapperClassName="h-full w-full"
+                        />
+                      </div>
+
+                      <div className="space-y-3 p-4">
+                        <h4 className="line-clamp-2 text-lg font-medium text-white">{conversation.post.title}</h4>
+                        <p className="text-2xl font-semibold text-blue-400">{formatPrice(conversation.post.price)}</p>
+                        <p className="text-sm text-slate-400">
+                          {conversation.post.area} m² • {conversation.post.propertyType}
+                        </p>
+                        <p className="flex items-center gap-2 text-sm text-slate-500">
+                          <MapPin className="h-4 w-4" />
+                          <span>{conversation.post.city}</span>
+                        </p>
+                        <Link
+                          href={`/posts/${conversation.post.id}`}
+                          className="inline-flex w-full items-center justify-center rounded-2xl border border-white/10 px-4 py-3 text-sm font-medium text-blue-300 transition hover:bg-white/[0.06] hover:text-white"
+                        >
+                          Xem chi tiết
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-[30px] border border-white/10 bg-white/[0.04] p-5">
+                    <div className="mb-4 flex items-center justify-between">
+                      <p className="text-lg font-semibold text-white">Tệp đã chia sẻ</p>
+                      <span className="text-sm text-slate-500">{sharedAssets.length}</span>
+                    </div>
+
+                    <div className="space-y-3">
+                      {sharedAssets.length === 0 ? (
+                        <div className="rounded-[22px] border border-dashed border-white/10 bg-white/[0.02] p-4 text-sm leading-6 text-slate-500">
+                          Chưa có tệp nào được chia sẻ trong hội thoại này.
+                        </div>
+                      ) : (
+                        sharedAssets.map((asset, index) => (
+                          <div key={asset.id} className="flex items-center gap-3 rounded-[22px] border border-white/[0.08] bg-white/[0.03] p-3">
+                            <div className="h-16 w-16 overflow-hidden rounded-2xl">
+                              <FallbackMedia
+                                src={asset.url}
+                                alt={getFileLabel(index)}
+                                className="h-full w-full object-cover"
+                                wrapperClassName="h-full w-full"
+                              />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-medium text-white">{getFileLabel(index)}</p>
+                              <p className="mt-1 text-xs text-slate-500">{format(new Date(asset.createdAt), "dd/MM/yyyy HH:mm")}</p>
+                            </div>
+                            <a
+                              href={asset.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.05] text-slate-300 transition hover:bg-white/[0.08] hover:text-white"
+                            >
+                              <Download className="h-4 w-4" />
+                            </a>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.aside>
+          </>
+        )}
+
         {lightboxImage && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setLightboxImage(null)}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4 cursor-pointer"
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
           >
-            <motion.img 
-              initial={{ scale: 0.95 }}
+            <motion.img
+              initial={{ scale: 0.96 }}
               animate={{ scale: 1 }}
-              exit={{ scale: 0.95 }}
-              src={lightboxImage} 
-              alt="Fullscreen" 
-              className="max-w-full max-h-full object-contain" 
+              exit={{ scale: 0.96 }}
+              src={lightboxImage}
+              alt="Xem ảnh"
+              className="max-h-full max-w-full rounded-2xl object-contain"
             />
-            <button 
+            <button
+              type="button"
               onClick={() => setLightboxImage(null)}
-              className="absolute top-6 right-6 p-2 text-white/70 hover:text-white bg-black/50 hover:bg-black/80 rounded-full transition"
+              className="absolute right-6 top-6 flex h-11 w-11 items-center justify-center rounded-full bg-black/40 text-white"
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              <X className="h-5 w-5" />
             </button>
           </motion.div>
         )}
