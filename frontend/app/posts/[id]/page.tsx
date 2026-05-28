@@ -12,7 +12,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Expand,
-  Heart,
   LoaderCircle,
   Mail,
   MapPin,
@@ -59,8 +58,6 @@ type EditFormState = {
 const imageFallback =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 800'><rect width='1200' height='800' fill='%230b1120'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-family='Arial' font-size='52'>TrustEstate</text></svg>";
 
-const savedKey = "trustestate-saved-posts";
-
 const buildEditState = (post: Post): EditFormState => ({
   title: post.title,
   description: post.description,
@@ -86,20 +83,14 @@ export default function PostDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
-  const [isSaved, setIsSaved] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSaveSubmitting, setIsSaveSubmitting] = useState(false);
   const [isStartingConversation, setIsStartingConversation] = useState(false);
   const [conversationError, setConversationError] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<EditFormState | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-
-  useEffect(() => {
-    const rawValue = window.localStorage.getItem(savedKey);
-    const savedPosts = rawValue ? (JSON.parse(rawValue) as string[]) : [];
-    setIsSaved(savedPosts.includes(params.id));
-  }, [params.id]);
 
   useEffect(() => {
     let isMounted = true;
@@ -168,15 +159,47 @@ export default function PostDetailPage() {
   const activeImage = images[selectedImage]?.imageUrl ?? imageFallback;
   const isOwnPost = !!user && !!post && user.id === post.author.id;
 
-  const handleSaveToggle = () => {
-    const rawValue = window.localStorage.getItem(savedKey);
-    const savedPosts = rawValue ? (JSON.parse(rawValue) as string[]) : [];
-    const nextSavedPosts = isSaved
-      ? savedPosts.filter((postId) => postId !== params.id)
-      : Array.from(new Set([...savedPosts, params.id]));
+  const handleSaveToggle = async () => {
+    if (!user) {
+      router.push("/auth/login");
+      return;
+    }
 
-    window.localStorage.setItem(savedKey, JSON.stringify(nextSavedPosts));
-    setIsSaved(!isSaved);
+    if (!post) {
+      return;
+    }
+
+    try {
+      setIsSaveSubmitting(true);
+      setError(null);
+
+      if (post.isSaved) {
+        await api.delete(`/saved-posts/${post.id}`);
+        setPost((currentPost) =>
+          currentPost
+            ? {
+                ...currentPost,
+                isSaved: false,
+              }
+            : currentPost,
+        );
+      } else {
+        await api.post("/saved-posts", { postId: post.id });
+        setPost((currentPost) =>
+          currentPost
+            ? {
+                ...currentPost,
+                isSaved: true,
+              }
+            : currentPost,
+        );
+      }
+    } catch (err) {
+      const axiosError = err as AxiosError<{ message?: string }>;
+      setError(axiosError.response?.data?.message ?? "Không thể cập nhật bài đã lưu.");
+    } finally {
+      setIsSaveSubmitting(false);
+    }
   };
 
   const handleEditSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -447,10 +470,11 @@ export default function PostDetailPage() {
                 <button
                   type="button"
                   onClick={handleSaveToggle}
-                  className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-gray-200 transition hover:bg-white/10"
+                  disabled={isSaveSubmitting}
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-gray-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <Heart className={`h-4 w-4 ${isSaved ? "fill-blue-400 text-blue-400" : "text-blue-300"}`} />
-                  {isSaved ? "Đã lưu" : "Lưu"}
+                  <Bookmark className={`h-4 w-4 ${post.isSaved ? "fill-blue-400 text-blue-400" : "text-blue-300"}`} />
+                  {post.isSaved ? "Đã lưu" : "Lưu"}
                 </button>
                 <button type="button" className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-gray-200 transition hover:bg-white/10">
                   <Building2 className="h-4 w-4 text-blue-300" />
@@ -805,9 +829,10 @@ export default function PostDetailPage() {
         <button 
           type="button"
           onClick={handleSaveToggle}
-          className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-gray-200 transition hover:bg-white/10"
+          disabled={isSaveSubmitting}
+          className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-gray-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <Heart className={`h-5 w-5 ${isSaved ? "fill-blue-400 text-blue-400" : "text-blue-300"}`} />
+          <Bookmark className={`h-5 w-5 ${post.isSaved ? "fill-blue-400 text-blue-400" : "text-blue-300"}`} />
         </button>
         <a
           href={`mailto:${post.author.email}`}

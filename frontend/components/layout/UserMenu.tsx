@@ -2,7 +2,7 @@
 
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth.store";
-import { LogOut, User as UserIcon, List } from "lucide-react";
+import { Bookmark, List, LogOut, User as UserIcon } from "lucide-react";
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 
@@ -78,6 +78,14 @@ export function UserMenu() {
           >
             <List size={16} />
             <span>My Posts</span>
+          </Link>
+          <Link
+            href="/profile/saved"
+            className="flex items-center gap-3 px-4 py-2 hover:bg-white/10 transition-colors"
+            onClick={() => setIsOpen(false)}
+          >
+            <Bookmark size={16} />
+            <span>Saved Posts</span>
           </Link>
           <div className="h-px bg-white/10 my-1"></div>
           <button
