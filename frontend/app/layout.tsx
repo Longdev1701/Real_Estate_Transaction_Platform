@@ -3,6 +3,7 @@ import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { FloatingCreateButton } from "@/components/layout/FloatingCreateButton";
+import { MainContent } from "@/components/layout/MainContent";
 import { AuthSessionProvider } from "@/components/auth/AuthSessionProvider";
 
 export const metadata: Metadata = {
@@ -21,9 +22,7 @@ export default function RootLayout({
         <AuthSessionProvider>
           <div className="no-scrollbar flex h-screen flex-col overflow-y-auto overflow-x-hidden">
             <Header />
-            <main className="flex-1 pt-20">
-              {children}
-            </main>
+            <MainContent>{children}</MainContent>
             <Footer />
             <FloatingCreateButton />
           </div>
