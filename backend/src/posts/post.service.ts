@@ -77,6 +77,26 @@ const postListSelect = {
   },
 } satisfies Prisma.PropertyPostSelect;
 
+const relatedPostSelect = {
+  id: true,
+  title: true,
+  price: true,
+  area: true,
+  address: true,
+  city: true,
+  district: true,
+  ward: true,
+  images: {
+    orderBy: {
+      order: "asc" as const,
+    },
+    take: 1,
+    select: {
+      imageUrl: true,
+    },
+  },
+} satisfies Prisma.PropertyPostSelect;
+
 type PostListItem = Prisma.PropertyPostGetPayload<{
   select: typeof postListSelect;
 }>;
@@ -475,13 +495,17 @@ export const getPostById = async (id: string, user?: AuthenticatedUser) => {
         propertyType: post.propertyType,
         id: { not: id },
       },
-      select: postListSelect,
+      select: relatedPostSelect,
       orderBy: { createdAt: "desc" },
       take: 3,
     }),
   ]);
 
-  const relatedPosts = await attachSavedStateToListItems(relatedPostsRaw, user);
+  const relatedPosts = relatedPostsRaw.map((item) => ({
+    ...item,
+    imageCount: item.images.length,
+    isSaved: false,
+  }));
 
   return {
     ...post,
