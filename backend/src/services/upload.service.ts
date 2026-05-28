@@ -92,6 +92,30 @@ export const uploadPostImages = async (
   }
 };
 
+const buildChatStoragePath = (conversationId: string, file: Express.Multer.File) =>
+  `chat-images/${conversationId}/${Date.now()}-${randomUUID()}${getFileExtension(file)}`;
+
+export const uploadChatImage = async (
+  conversationId: string,
+  file: Express.Multer.File,
+) => {
+  const storagePath = buildChatStoragePath(conversationId, file);
+  const { error } = await getSupabaseClient().storage
+    .from(propertyImagesBucket)
+    .upload(storagePath, file.buffer, {
+      contentType: file.mimetype,
+      upsert: false,
+    });
+
+  if (error) {
+    throw new AppError("Failed to upload image to Supabase Storage.", 500, {
+      cause: error.message,
+    });
+  }
+
+  return getPublicUrl(storagePath);
+};
+
 export const deleteImageByUrl = async (imageUrl: string) => {
   const storagePath = getStoragePathFromPublicUrl(imageUrl);
   const { error } = await getSupabaseClient().storage
