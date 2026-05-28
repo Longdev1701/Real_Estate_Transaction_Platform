@@ -121,17 +121,9 @@ export default function PostDetailPage() {
         setEditForm(buildEditState(currentPost));
         setSelectedImage(0);
 
-        const relatedResponse = await api.get<{ data: { items: Post[] } }>(
-          `/posts?city=${encodeURIComponent(currentPost.city)}&propertyType=${currentPost.propertyType}&limit=3`,
-        );
-
-        if (!isMounted) {
-          return;
+        if (currentPost.relatedPosts) {
+          setRelatedPosts(currentPost.relatedPosts);
         }
-
-        setRelatedPosts(
-          relatedResponse.data.data.items.filter((item) => item.id !== currentPost.id).slice(0, 3),
-        );
       } catch (err) {
         const axiosError = err as AxiosError<{ message?: string }>;
         if (isMounted) {

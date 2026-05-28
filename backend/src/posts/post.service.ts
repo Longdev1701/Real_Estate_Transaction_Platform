@@ -455,7 +455,39 @@ export const getPostById = async (id: string, user?: AuthenticatedUser) => {
     throw new AppError("Post not found.", 404);
   }
 
-  return attachSavedStateToDetailItem(post, user);
+  // Fetch saved status and related posts in parallel to minimize network latency overhead
+  const [isSavedResult, relatedPostsRaw] = await Promise.all([
+    user
+      ? prisma.savedPost.findUnique({
+          where: {
+            userId_postId: {
+              userId: user.id,
+              postId: id,
+            },
+          },
+          select: { id: true },
+        })
+      : null,
+    prisma.propertyPost.findMany({
+      where: {
+        status: PostStatus.ACTIVE,
+        city: { contains: post.city, mode: "insensitive" },
+        propertyType: post.propertyType,
+        id: { not: id },
+      },
+      select: postListSelect,
+      orderBy: { createdAt: "desc" },
+      take: 3,
+    }),
+  ]);
+
+  const relatedPosts = await attachSavedStateToListItems(relatedPostsRaw, user);
+
+  return {
+    ...post,
+    isSaved: Boolean(isSavedResult),
+    relatedPosts,
+  };
 };
 
 export const updatePost = async (

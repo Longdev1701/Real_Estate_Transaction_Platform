@@ -41,6 +41,7 @@ export type Post = {
   images: PostImage[];
   imageCount?: number;
   isSaved?: boolean;
+  relatedPosts?: Post[];
 };
 
 export type SavedPost = {
