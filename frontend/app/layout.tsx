@@ -20,7 +20,7 @@ export default function RootLayout({
     <html lang="vi">
       <body className="overflow-hidden">
         <AuthSessionProvider>
-          <div className="no-scrollbar flex h-screen flex-col overflow-y-auto overflow-x-hidden">
+          <div id="main-scroll-container" className="no-scrollbar flex h-screen flex-col overflow-y-auto overflow-x-hidden">
             <Header />
             <MainContent>{children}</MainContent>
             <Footer />
