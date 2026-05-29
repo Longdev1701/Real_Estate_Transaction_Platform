@@ -77,6 +77,26 @@ const postListSelect = {
   },
 } satisfies Prisma.PropertyPostSelect;
 
+const relatedPostSelect = {
+  id: true,
+  title: true,
+  price: true,
+  area: true,
+  address: true,
+  city: true,
+  district: true,
+  ward: true,
+  images: {
+    orderBy: {
+      order: "asc" as const,
+    },
+    take: 1,
+    select: {
+      imageUrl: true,
+    },
+  },
+} satisfies Prisma.PropertyPostSelect;
+
 type PostListItem = Prisma.PropertyPostGetPayload<{
   select: typeof postListSelect;
 }>;
@@ -455,7 +475,43 @@ export const getPostById = async (id: string, user?: AuthenticatedUser) => {
     throw new AppError("Post not found.", 404);
   }
 
-  return attachSavedStateToDetailItem(post, user);
+  // Fetch saved status and related posts in parallel to minimize network latency overhead
+  const [isSavedResult, relatedPostsRaw] = await Promise.all([
+    user
+      ? prisma.savedPost.findUnique({
+          where: {
+            userId_postId: {
+              userId: user.id,
+              postId: id,
+            },
+          },
+          select: { id: true },
+        })
+      : null,
+    prisma.propertyPost.findMany({
+      where: {
+        status: PostStatus.ACTIVE,
+        city: { contains: post.city, mode: "insensitive" },
+        propertyType: post.propertyType,
+        id: { not: id },
+      },
+      select: relatedPostSelect,
+      orderBy: { createdAt: "desc" },
+      take: 3,
+    }),
+  ]);
+
+  const relatedPosts = relatedPostsRaw.map((item) => ({
+    ...item,
+    imageCount: item.images.length,
+    isSaved: false,
+  }));
+
+  return {
+    ...post,
+    isSaved: Boolean(isSavedResult),
+    relatedPosts,
+  };
 };
 
 export const updatePost = async (
@@ -583,12 +639,6 @@ export const deletePostImage = async (
           authorId: true,
         },
       },
-      id: true,
-      postId: true,
-      imageUrl: true,
-      caption: true,
-      order: true,
-      createdAt: true,
     },
   });
 
