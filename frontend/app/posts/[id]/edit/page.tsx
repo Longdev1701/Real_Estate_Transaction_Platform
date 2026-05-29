@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { AxiosError } from "axios";
 import {
   ArrowLeft,
+  AlertTriangle,
   BadgeCheck,
   Building2,
   Camera,
@@ -11,11 +12,13 @@ import {
   Eye,
   ImagePlus,
   LoaderCircle,
+  MapPin,
   MessageCircle,
   Trash2,
   X,
 } from "lucide-react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -42,6 +45,8 @@ const editPostSchema = z.object({
   city: z.string().min(2, "Vui lòng nhập tỉnh / thành phố"),
   district: z.string().min(2, "Vui lòng nhập quận / huyện"),
   ward: z.string().optional(),
+  latitude: z.coerce.number().min(-90, "Vĩ độ không hợp lệ").max(90, "Vĩ độ không hợp lệ"),
+  longitude: z.coerce.number().min(-180, "Kinh độ không hợp lệ").max(180, "Kinh độ không hợp lệ"),
   propertyType: z.enum(PROPERTY_TYPES),
   postType: z.enum(POST_TYPES),
 });
@@ -60,6 +65,15 @@ const imageFallback =
 const maxImages = 10;
 const acceptedImageTypes = "image/jpeg,image/png,image/webp,image/jpg";
 
+const CreatePostMap = dynamic(() => import("@/components/map/CreatePostMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-full w-full items-center justify-center bg-slate-950 text-sm text-gray-400">
+      Đang tải bản đồ...
+    </div>
+  ),
+});
+
 const toDateTime = (value: string) =>
   new Intl.DateTimeFormat("vi-VN", {
     dateStyle: "short",
@@ -75,6 +89,8 @@ const buildDefaults = (post: Post): EditPostValues => ({
   city: post.city,
   district: post.district,
   ward: post.ward ?? "",
+  latitude: post.latitude,
+  longitude: post.longitude,
   propertyType: post.propertyType,
   postType: post.postType,
 });
@@ -92,12 +108,15 @@ export default function EditPostPage() {
   const [error, setError] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isGeocoding, setIsGeocoding] = useState(false);
+  const [geocodeStatus, setGeocodeStatus] = useState<"idle" | "success" | "failed">("idle");
   const [isDeletingImageId, setIsDeletingImageId] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
     watch,
     formState: { errors, isSubmitting },
   } = useForm<EditPostInput, unknown, EditPostValues>({
@@ -165,6 +184,12 @@ export default function EditPostPage() {
 
   const watchedPrice = watch("price");
   const watchedDescription = watch("description") ?? "";
+  const address = watch("address");
+  const city = watch("city");
+  const district = watch("district");
+  const ward = watch("ward");
+  const latitude = watch("latitude");
+  const longitude = watch("longitude");
   const primaryImage = images[0]?.imageUrl ?? newImages[0]?.url ?? imageFallback;
   const totalImageCount = images.length + newImages.length;
 
@@ -211,6 +236,61 @@ export default function EditPostPage() {
 
       return current.filter((image) => image.id !== id);
     });
+  };
+
+  const handleGeocode = async () => {
+    if (!city || !district || !address) {
+      return;
+    }
+
+    setIsGeocoding(true);
+    setGeocodeStatus("idle");
+
+    const queries = [
+      [address, ward, district, city, "Việt Nam"].filter(Boolean).join(", "),
+      [ward, district, city, "Việt Nam"].filter(Boolean).join(", "),
+      [district, city, "Việt Nam"].filter(Boolean).join(", "),
+      [city, "Việt Nam"].filter(Boolean).join(", "),
+    ];
+
+    try {
+      let found = false;
+
+      for (const query of queries) {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=vn&limit=1`,
+          {
+            headers: {
+              "Accept-Language": "vi",
+            },
+          },
+        );
+        const data = await response.json();
+
+        if (data && data.length > 0) {
+          setValue("latitude", parseFloat(data[0].lat), { shouldDirty: true, shouldValidate: true });
+          setValue("longitude", parseFloat(data[0].lon), { shouldDirty: true, shouldValidate: true });
+          setGeocodeStatus("success");
+          found = true;
+          break;
+        }
+      }
+
+      if (!found) {
+        setGeocodeStatus("failed");
+      }
+    } catch (err) {
+      console.error("Lỗi định vị tọa độ:", err);
+      setGeocodeStatus("failed");
+    } finally {
+      setIsGeocoding(false);
+    }
+  };
+
+  const handleAddressBlur = () => {
+    if (address && district && city) {
+      handleGeocode();
+    }
   };
 
   const handleDeleteExistingImage = async (imageId: string) => {
@@ -398,7 +478,7 @@ export default function EditPostPage() {
                   <h2 className="text-xl font-semibold text-white">Vị trí & Bản đồ</h2>
                   <div className="mt-5 grid gap-5 lg:grid-cols-12">
                     <Field className="lg:col-span-12" label="Địa chỉ cụ thể" required error={errors.address?.message}>
-                      <input {...register("address")} className="input-dark" />
+                      <input {...register("address")} onBlur={handleAddressBlur} className="input-dark" />
                     </Field>
                     <Field className="lg:col-span-4" label="Tỉnh / Thành phố" required error={errors.city?.message}>
                       <input {...register("city")} className="input-dark" />
@@ -409,6 +489,57 @@ export default function EditPostPage() {
                     <Field className="lg:col-span-4" label="Phường / Xã">
                       <input {...register("ward")} className="input-dark" />
                     </Field>
+                    <div className="lg:col-span-12">
+                      <div className="grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
+                        <Field label="Vĩ độ (Lat)" required error={errors.latitude?.message}>
+                          <input type="number" step="any" {...register("latitude")} className="input-dark bg-slate-950/20" />
+                        </Field>
+                        <Field label="Kinh độ (Lng)" required error={errors.longitude?.message}>
+                          <input type="number" step="any" {...register("longitude")} className="input-dark bg-slate-950/20" />
+                        </Field>
+                        <button
+                          type="button"
+                          onClick={handleGeocode}
+                          disabled={isGeocoding || !address || !city}
+                          className="btn-primary inline-flex h-[46px] items-center justify-center gap-2 rounded-2xl px-5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {isGeocoding ? (
+                            <LoaderCircle className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <MapPin className="h-4 w-4" />
+                          )}
+                          <span>Tìm vị trí</span>
+                        </button>
+                      </div>
+
+                      {latitude && longitude && Number(latitude) !== 0 && Number(longitude) !== 0 ? (
+                        <>
+                          <div className="mt-5 h-[280px] overflow-hidden rounded-xl border border-white/10 shadow-lg">
+                            <CreatePostMap
+                              latitude={Number(latitude)}
+                              longitude={Number(longitude)}
+                              onChange={(lat, lng) => {
+                                setValue("latitude", lat, { shouldDirty: true, shouldValidate: true });
+                                setValue("longitude", lng, { shouldDirty: true, shouldValidate: true });
+                              }}
+                            />
+                          </div>
+                          <p className="mt-5 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-xs font-medium leading-relaxed text-amber-300">
+                            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                            <span>
+                              <strong>Lưu ý:</strong> Bạn có thể kéo thả dấu mốc (Marker) hoặc click trực tiếp lên bản đồ trên để điều chỉnh vị trí mong muốn.
+                            </span>
+                          </p>
+                        </>
+                      ) : null}
+
+                      {geocodeStatus === "success" ? (
+                        <p className="mt-2 text-xs text-emerald-400">Đã cập nhật tọa độ bản đồ dựa vào địa chỉ.</p>
+                      ) : null}
+                      {geocodeStatus === "failed" ? (
+                        <p className="mt-2 text-xs text-amber-400">Không tìm thấy tọa độ phù hợp. Hãy kiểm tra lại địa chỉ hoặc tự nhập tay.</p>
+                      ) : null}
+                    </div>
                   </div>
                 </section>
 
