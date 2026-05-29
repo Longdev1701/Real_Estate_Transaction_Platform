@@ -44,6 +44,7 @@ import {
 } from "lucide-react";
 
 import { api } from "@/lib/api";
+import PostDetailMap from "@/components/map/PostDetailMap";
 import {
   formatArea,
   formatLocation,
@@ -527,54 +528,13 @@ export default function PostDetailPage() {
 
         <aside className="space-y-5">
           <div className="lg:sticky lg:top-24 space-y-5">
-            <div className="glass-card p-6 border-t-4 border-t-blue-500 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-blue-500/20 to-transparent pointer-events-none" />
-              <h2 className="text-xl font-semibold text-white relative">Liên hệ người bán</h2>
-              <div className="mt-5 flex items-center gap-4 relative">
-                <div className="relative shrink-0">
-                  <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border-2 border-blue-500 bg-blue-500/10 text-xl font-semibold text-blue-200">
-                    {post.author.avatarUrl ? (
-                      <img src={post.author.avatarUrl} alt={post.author.fullName} className="h-full w-full object-cover" />
-                    ) : (
-                      post.author.fullName.charAt(0).toUpperCase()
-                    )}
-                  </div>
-                  <div className="absolute -bottom-1 -right-1 rounded-full bg-slate-900 p-1">
-                    <BadgeCheck className="h-4 w-4 text-blue-500" />
-                  </div>
-                </div>
-                <div>
-                  <p className="text-lg font-bold text-white line-clamp-1">{post.author.fullName}</p>
-                  <p className="text-sm text-gray-400 mt-1">Hoạt động gần đây</p>
-                </div>
-              </div>
-
-              <div className="mt-6 space-y-3 relative">
-                <a
-                  href={post.author.phone ? `tel:${post.author.phone}` : `mailto:${post.author.email}`}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3.5 font-bold text-white shadow-[0_0_15px_rgba(5,150,105,0.3)] transition hover:bg-emerald-500"
-                >
-                  <Phone className="h-5 w-5" />
-                  {post.author.phone ? post.author.phone : "Gọi điện thoại"}
-                </a>
-                <button
-                  type="button"
-                  onClick={handleMessageClick}
-                  disabled={isStartingConversation || isOwnPost}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3.5 font-medium text-transparent transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <MessageCircle className="h-5 w-5 text-white" />
-                  <span className="text-white">
-                    {isOwnPost
-                      ? "Bài đăng của bạn"
-                      : isStartingConversation
-                        ? "Đang mở chat..."
-                        : "Nhắn tin ngay"}
-                  </span>
-                </button>
-              </div>
-
-              {canManagePost && (
+            {canManagePost ? (
+              <div className="glass-card p-6 border-t-4 border-t-blue-500 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-blue-500/20 to-transparent pointer-events-none" />
+                <h2 className="text-xl font-semibold text-white relative">Quản lý bài đăng</h2>
+                <p className="text-sm text-gray-400 mt-2 relative">
+                  Bạn là người sở hữu bài đăng này. Bạn có quyền chỉnh sửa thông tin hoặc xoá bài viết.
+                </p>
                 <div className="mt-6 grid gap-3 sm:grid-cols-2 relative">
                   <Link
                     href={`/posts/${post.id}/edit`}
@@ -593,8 +553,47 @@ export default function PostDetailPage() {
                     {isDeleting ? "Đang xoá..." : "Xoá bài"}
                   </button>
                 </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="glass-card p-6 border-t-4 border-t-blue-500 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-blue-500/20 to-transparent pointer-events-none" />
+                <h2 className="text-xl font-semibold text-white relative">Liên hệ người bán</h2>
+                <div className="mt-5 flex items-center gap-4 relative">
+                  <div className="relative shrink-0">
+                    <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border-2 border-blue-500 bg-blue-500/10 text-xl font-semibold text-blue-200">
+                      {post.author.avatarUrl ? (
+                        <img src={post.author.avatarUrl} alt={post.author.fullName} className="h-full w-full object-cover" />
+                      ) : (
+                        post.author.fullName.charAt(0).toUpperCase()
+                      )}
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 rounded-full bg-slate-900 p-1">
+                      <BadgeCheck className="h-4 w-4 text-blue-500" />
+                    </div>
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 rounded-full bg-slate-900 p-1">
+                    <BadgeCheck className="h-4 w-4 text-blue-500" />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-white line-clamp-1">{post.author.fullName}</p>
+                  <p className="text-sm text-gray-400 mt-1">Hoạt động gần đây</p>
+                </div>
+              </div>
+
+                <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4 relative">
+                  <div className="mb-3 flex items-center gap-2 text-white">
+                    <ShieldCheck className="h-5 w-5 text-emerald-400" />
+                    <h3 className="font-semibold text-sm">Giao dịch an toàn</h3>
+                  </div>
+                  <ul className="space-y-1.5 text-xs text-gray-300">
+                    <li>• Không chuyển khoản trước khi xem nhà.</li>
+                    <li>• Kiểm tra giấy tờ và thông tin người đăng.</li>
+                    <li>• Liên hệ trực tiếp qua kênh chính thống.</li>
+                  </ul>
+                </div>
+              </div>
+            )}
 
             <div className="glass-card p-6">
               <div className="mb-5 flex items-center justify-between gap-3">
