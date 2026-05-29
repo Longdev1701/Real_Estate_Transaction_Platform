@@ -181,9 +181,9 @@ export default function PostDetailPage() {
         setPost((currentPost) =>
           currentPost
             ? {
-                ...currentPost,
-                isSaved: false,
-              }
+              ...currentPost,
+              isSaved: false,
+            }
             : currentPost,
         );
       } else {
@@ -191,9 +191,9 @@ export default function PostDetailPage() {
         setPost((currentPost) =>
           currentPost
             ? {
-                ...currentPost,
-                isSaved: true,
-              }
+              ...currentPost,
+              isSaved: true,
+            }
             : currentPost,
         );
       }
@@ -350,11 +350,10 @@ export default function PostDetailPage() {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <section className="space-y-6 min-w-0">
           <div className="glass-card overflow-hidden p-0">
-            <div className={`grid gap-1 overflow-hidden ${
-              images.length === 1 ? 'grid-cols-1' :
-              images.length === 2 ? 'grid-cols-1 lg:grid-cols-2' :
-              'grid-cols-1 lg:grid-cols-[1.8fr_1fr]'
-            }`}>
+            <div className={`grid gap-1 overflow-hidden ${images.length === 1 ? 'grid-cols-1' :
+                images.length === 2 ? 'grid-cols-1 lg:grid-cols-2' :
+                  'grid-cols-1 lg:grid-cols-[1.8fr_1fr]'
+              }`}>
               {/* Left Column - Main Image */}
               <div className="relative overflow-hidden w-full h-full group">
                 <img
@@ -366,11 +365,11 @@ export default function PostDetailPage() {
                     event.currentTarget.src = imageFallback;
                   }}
                 />
-                
+
                 <div className="absolute left-4 top-4 rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white pointer-events-none shadow-md">
                   {postTypeLabels[post.postType]}
                 </div>
-                
+
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); setIsFullscreen(true); }}
@@ -379,17 +378,17 @@ export default function PostDetailPage() {
                 >
                   <Expand className="h-5 w-5" />
                 </button>
-                
+
                 <div className="absolute bottom-4 left-4">
-                  <button 
-                    type="button" 
-                    onClick={(e) => { e.stopPropagation(); setIsFullscreen(true); }} 
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setIsFullscreen(true); }}
                     className="rounded-xl border border-white/20 bg-slate-950/60 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-slate-950/80 backdrop-blur-sm"
                   >
                     Ảnh ({images.length})
                   </button>
                 </div>
-                
+
                 {images.length > 1 && (
                   <>
                     <button
@@ -412,11 +411,10 @@ export default function PostDetailPage() {
 
               {/* Right Column - Secondary Images (Hidden on mobile) */}
               {images.length > 1 && (
-                <div className={`hidden lg:grid gap-1 w-full h-full ${
-                  images.length === 2 ? 'grid-cols-1 grid-rows-1' :
-                  images.length === 3 ? 'grid-cols-1 grid-rows-2' :
-                  'grid-cols-2 grid-rows-2'
-                }`}>
+                <div className={`hidden lg:grid gap-1 w-full h-full ${images.length === 2 ? 'grid-cols-1 grid-rows-1' :
+                    images.length === 3 ? 'grid-cols-1 grid-rows-2' :
+                      'grid-cols-2 grid-rows-2'
+                  }`}>
                   {images.slice(1, 5).map((image, index) => {
                     const actualIndex = index + 1;
                     return (
@@ -435,7 +433,7 @@ export default function PostDetailPage() {
                           }}
                         />
                         <div className="absolute inset-0 bg-slate-950/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                        
+
                         {/* +X overlay on the last image if there are more */}
                         {index === 3 && images.length > 5 && (
                           <div className="absolute inset-0 flex items-center justify-center bg-slate-950/60 text-3xl font-semibold text-white transition hover:bg-slate-950/80">
@@ -779,9 +777,9 @@ export default function PostDetailPage() {
 
               <div className="space-y-4">
                 {relatedPosts.length === 0 ? (
-                <div className="flex min-h-[200px] items-center justify-center rounded-2xl border border-dashed border-white/10">
-                  <p className="text-sm text-gray-400">Chưa có bài đăng tương tự.</p>
-                </div>) : (
+                  <div className="flex min-h-[200px] items-center justify-center rounded-2xl border border-dashed border-white/10">
+                    <p className="text-sm text-gray-400">Chưa có bài đăng tương tự.</p>
+                  </div>) : (
                   relatedPosts.map((item) => (
                     <Link
                       key={item.id}
@@ -821,13 +819,13 @@ export default function PostDetailPage() {
 
       {isFullscreen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-sm">
-          <button 
-            onClick={() => setIsFullscreen(false)} 
+          <button
+            onClick={() => setIsFullscreen(false)}
             className="absolute top-6 right-6 text-white/70 hover:text-white bg-white/10 p-2 rounded-full transition z-10"
           >
             <X className="w-6 h-6" />
           </button>
-          
+
           {images.length > 1 && (
             <button
               onClick={() => setSelectedImage((current) => (current === 0 ? images.length - 1 : current - 1))}
@@ -837,9 +835,9 @@ export default function PostDetailPage() {
             </button>
           )}
 
-          <img 
-            src={activeImage} 
-            alt={post.title} 
+          <img
+            src={activeImage}
+            alt={post.title}
             className="max-h-[90vh] max-w-[90vw] object-contain"
           />
 
@@ -861,7 +859,7 @@ export default function PostDetailPage() {
       {/* Mobile Bottom Action Bar */}
       {!isOwnPost && (
         <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center gap-3 border-t border-white/10 bg-slate-950/90 p-4 pb-6 backdrop-blur-xl lg:hidden shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-          <button 
+          <button
             type="button"
             onClick={handleSaveToggle}
             disabled={isSaveSubmitting}
