@@ -59,7 +59,7 @@ export function Header() {
           </Link>
 
           <Link href="/posts/create" className="btn-primary ml-2 hidden sm:block">
-            {"+ \u0110\u0103ng tin"}
+            {"+ \u0110\u0103ng b\u00e0i"}
           </Link>
 
           <div className="mx-2 h-8 w-px bg-white/10" />
