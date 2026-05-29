@@ -40,6 +40,17 @@ export type Post = {
   author: PostAuthor;
   images: PostImage[];
   imageCount?: number;
+  isSaved?: boolean;
+  relatedPosts?: Post[];
+};
+
+export type SavedPost = {
+  id: string;
+  createdAt: string;
+  postId: string;
+  userId: string;
+  isSaved: boolean;
+  post: Post;
 };
 
 export type PostFilterValue = {

@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuthStore } from "@/stores/auth.store";
 import { UserMenu } from "./UserMenu";
-import { Bell, Heart, MessageSquare } from "lucide-react";
+import { Bell, Bookmark, MessageSquare } from "lucide-react";
 
 export function Header() {
   const pathname = usePathname();
+  const { user } = useAuthStore();
 
   if (pathname?.startsWith("/messages")) {
     return null;
@@ -49,9 +51,12 @@ export function Header() {
             <MessageSquare size={20} />
           </Link>
 
-          <button className="p-2 text-gray-400 transition-colors hover:text-red-400">
-            <Heart size={20} />
-          </button>
+          <Link
+            href={user ? "/profile/saved" : "/auth/login"}
+            className="p-2 text-gray-400 transition-colors hover:text-blue-400"
+          >
+            <Bookmark size={20} />
+          </Link>
 
           <Link href="/posts/create" className="btn-primary ml-2 hidden sm:block">
             {"+ \u0110\u0103ng b\u00e0i"}

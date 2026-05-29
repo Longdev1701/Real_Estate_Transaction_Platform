@@ -4,10 +4,9 @@ import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-interface CreatePostMapProps {
+interface PostDetailMapProps {
   latitude: number;
   longitude: number;
-  onChange: (lat: number, lng: number) => void;
 }
 
 // Khắc phục lỗi hiển thị marker icon của Leaflet trong Next.js do sai đường dẫn tương đối
@@ -18,16 +17,10 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
 
-export default function CreatePostMap({ latitude, longitude, onChange }: CreatePostMapProps) {
+export default function PostDetailMap({ latitude, longitude }: PostDetailMapProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapInstance = useRef<L.Map | null>(null);
   const markerInstance = useRef<L.Marker | null>(null);
-
-  // Lưu trữ onChange trong ref để tránh stale closures
-  const onChangeRef = useRef(onChange);
-  useEffect(() => {
-    onChangeRef.current = onChange;
-  }, [onChange]);
 
   // Khởi tạo bản đồ Leaflet
   useEffect(() => {
@@ -52,23 +45,8 @@ export default function CreatePostMap({ latitude, longitude, onChange }: CreateP
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       }).addTo(map);
 
-      const marker = L.marker(center, { draggable: true }).addTo(map);
+      const marker = L.marker(center, { draggable: false }).addTo(map);
       markerInstance.current = marker;
-
-      marker.on("dragend", () => {
-        const pos = marker.getLatLng();
-        if (pos) {
-          onChangeRef.current(pos.lat, pos.lng);
-        }
-      });
-
-      map.on("click", (e: L.LeafletMouseEvent) => {
-        const clickedLatLng = e.latlng;
-        if (clickedLatLng) {
-          marker.setLatLng(clickedLatLng);
-          onChangeRef.current(clickedLatLng.lat, clickedLatLng.lng);
-        }
-      });
     } catch (err) {
       console.error("Lỗi khi khởi tạo Leaflet Map: ", err);
     }
@@ -90,13 +68,9 @@ export default function CreatePostMap({ latitude, longitude, onChange }: CreateP
     const lng = Number(longitude);
     if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return;
 
-    // Tránh setView/setLatLng liên tục nếu tọa độ trùng khớp để tránh giật hình
-    const currentLatLng = markerInstance.current.getLatLng();
-    if (Math.abs(currentLatLng.lat - lat) > 0.0001 || Math.abs(currentLatLng.lng - lng) > 0.0001) {
-      const newPos: L.LatLngExpression = [lat, lng];
-      mapInstance.current.setView(newPos, 15);
-      markerInstance.current.setLatLng(newPos);
-    }
+    const newPos: L.LatLngExpression = [lat, lng];
+    mapInstance.current.setView(newPos, 15);
+    markerInstance.current.setLatLng(newPos);
   }, [latitude, longitude]);
 
   return (
@@ -109,4 +83,3 @@ export default function CreatePostMap({ latitude, longitude, onChange }: CreateP
     </div>
   );
 }
-

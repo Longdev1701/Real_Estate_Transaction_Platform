@@ -94,7 +94,7 @@ export const getConversations = async (req: Request, res: Response, next: NextFu
 
 export const getConversationMessages = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const userId = req.user!.id;
 
     const conversation = await prisma.conversation.findUnique({
@@ -128,7 +128,7 @@ export const getConversationMessages = async (req: Request, res: Response, next:
 
 export const markMessagesAsRead = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const userId = req.user!.id;
 
     const conversation = await prisma.conversation.findUnique({
@@ -156,7 +156,7 @@ export const markMessagesAsRead = async (req: Request, res: Response, next: Next
 
 export const uploadChatImage = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const userId = req.user!.id;
     const file = req.file;
 
@@ -186,7 +186,8 @@ const editMessageSchema = z.object({
 
 export const editMessage = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id, messageId } = req.params;
+    const id = req.params.id as string;
+    const messageId = req.params.messageId as string;
     const userId = req.user!.id;
     const { content } = editMessageSchema.parse(req.body);
 
@@ -214,7 +215,8 @@ export const editMessage = async (req: Request, res: Response, next: NextFunctio
 
 export const deleteMessage = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id, messageId } = req.params;
+    const id = req.params.id as string;
+    const messageId = req.params.messageId as string;
     const userId = req.user!.id;
 
     const message = await prisma.message.findFirst({
@@ -237,7 +239,7 @@ export const deleteMessage = async (req: Request, res: Response, next: NextFunct
 
 export const deleteConversation = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const userId = req.user!.id;
 
     const conversation = await prisma.conversation.findUnique({

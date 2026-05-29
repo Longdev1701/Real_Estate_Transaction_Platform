@@ -77,6 +77,34 @@ const postListSelect = {
   },
 } satisfies Prisma.PropertyPostSelect;
 
+const relatedPostSelect = {
+  id: true,
+  title: true,
+  price: true,
+  area: true,
+  address: true,
+  city: true,
+  district: true,
+  ward: true,
+  images: {
+    orderBy: {
+      order: "asc" as const,
+    },
+    take: 1,
+    select: {
+      imageUrl: true,
+    },
+  },
+} satisfies Prisma.PropertyPostSelect;
+
+type PostListItem = Prisma.PropertyPostGetPayload<{
+  select: typeof postListSelect;
+}>;
+
+type PostDetailItem = Prisma.PropertyPostGetPayload<{
+  include: typeof postInclude;
+}>;
+
 const POSTS_CACHE_TTL_MS = 15_000;
 const postsCache = new Map<
   string,
@@ -105,6 +133,58 @@ const ensureAuthenticated = (user?: AuthenticatedUser) => {
 
 const canManagePost = (user: AuthenticatedUser, authorId: string) =>
   user.role === UserRole.ADMIN || user.id === authorId;
+
+const getSavedPostIds = async (postIds: string[], user?: AuthenticatedUser) => {
+  if (!user || postIds.length === 0) {
+    return new Set<string>();
+  }
+
+  const savedPosts = await prisma.savedPost.findMany({
+    where: {
+      userId: user.id,
+      postId: {
+        in: postIds,
+      },
+    },
+    select: {
+      postId: true,
+    },
+  });
+
+  return new Set(savedPosts.map((item) => item.postId));
+};
+
+const attachSavedStateToListItems = async (
+  items: PostListItem[],
+  user?: AuthenticatedUser,
+) => {
+  const savedPostIds = await getSavedPostIds(
+    items.map((item) => item.id),
+    user,
+  );
+
+  return items.map((item) => {
+    const { _count, ...rest } = item;
+
+    return {
+      ...rest,
+      imageCount: _count.images,
+      isSaved: savedPostIds.has(item.id),
+    };
+  });
+};
+
+const attachSavedStateToDetailItem = async (
+  post: PostDetailItem,
+  user?: AuthenticatedUser,
+) => {
+  const savedPostIds = await getSavedPostIds([post.id], user);
+
+  return {
+    ...post,
+    isSaved: savedPostIds.has(post.id),
+  };
+};
 
 const toOptionalString = (value: unknown) =>
   typeof value === "string" && value.trim() ? value.trim() : undefined;
@@ -351,15 +431,12 @@ export const getPosts = async (
   const hasMore = rawItems.length > limit;
   const pagedItems = hasMore ? rawItems.slice(0, limit) : rawItems;
   const items = pagedItems.map((item) => {
-    const { _count, ...rest } = item;
-    return {
-      ...rest,
-      imageCount: _count.images,
-    };
+    return item;
   });
+  const itemsWithSavedState = await attachSavedStateToListItems(items, user);
 
   const data = {
-    items,
+    items: itemsWithSavedState,
     meta: {
       page,
       limit,
@@ -398,7 +475,43 @@ export const getPostById = async (id: string, user?: AuthenticatedUser) => {
     throw new AppError("Post not found.", 404);
   }
 
-  return post;
+  // Fetch saved status and related posts in parallel to minimize network latency overhead
+  const [isSavedResult, relatedPostsRaw] = await Promise.all([
+    user
+      ? prisma.savedPost.findUnique({
+          where: {
+            userId_postId: {
+              userId: user.id,
+              postId: id,
+            },
+          },
+          select: { id: true },
+        })
+      : null,
+    prisma.propertyPost.findMany({
+      where: {
+        status: PostStatus.ACTIVE,
+        city: { contains: post.city, mode: "insensitive" },
+        propertyType: post.propertyType,
+        id: { not: id },
+      },
+      select: relatedPostSelect,
+      orderBy: { createdAt: "desc" },
+      take: 3,
+    }),
+  ]);
+
+  const relatedPosts = relatedPostsRaw.map((item) => ({
+    ...item,
+    imageCount: item.images.length,
+    isSaved: false,
+  }));
+
+  return {
+    ...post,
+    isSaved: Boolean(isSavedResult),
+    relatedPosts,
+  };
 };
 
 export const updatePost = async (
@@ -421,7 +534,7 @@ export const updatePost = async (
     throw new AppError("At least one field is required for update.", 400);
   }
 
-  return prisma.propertyPost.update({
+  const updatedPost = await prisma.propertyPost.update({
     where: {
       id,
     },
@@ -430,6 +543,8 @@ export const updatePost = async (
     },
     include: postInclude,
   });
+
+  return attachSavedStateToDetailItem(updatedPost, user);
 };
 
 export const deletePost = async (id: string, user?: AuthenticatedUser) => {
@@ -498,12 +613,14 @@ export const addPostImages = async (
     throw error;
   }
 
-  return prisma.propertyPost.findUniqueOrThrow({
+  const post = await prisma.propertyPost.findUniqueOrThrow({
     where: {
       id: postId,
     },
     include: postInclude,
   });
+
+  return attachSavedStateToDetailItem(post, user);
 };
 
 export const deletePostImage = async (
@@ -522,12 +639,6 @@ export const deletePostImage = async (
           authorId: true,
         },
       },
-      id: true,
-      postId: true,
-      imageUrl: true,
-      caption: true,
-      order: true,
-      createdAt: true,
     },
   });
 

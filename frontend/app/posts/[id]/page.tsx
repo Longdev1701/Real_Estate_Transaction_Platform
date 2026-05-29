@@ -12,7 +12,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Expand,
-  Heart,
   LoaderCircle,
   Mail,
   MapPin,
@@ -35,6 +34,17 @@ import {
   type Post,
 } from "@/lib/posts";
 import { useAuthStore } from "@/stores/auth.store";
+import dynamic from "next/dynamic";
+import CommentSection from "@/components/comment/CommentSection";
+
+const PostDetailMap = dynamic(() => import("@/components/map/PostDetailMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[360px] bg-slate-950/40 flex items-center justify-center text-xs text-gray-400 rounded-xl border border-white/10 mt-2">
+      Đang tải bản đồ...
+    </div>
+  ),
+});
 
 const imageFallback =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 800'><rect width='1200' height='800' fill='%230b1120'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-family='Arial' font-size='52'>TrustEstate</text></svg>";
@@ -53,15 +63,10 @@ export default function PostDetailPage() {
   const [selectedImage, setSelectedImage] = useState(0);
   const [isSaved, setIsSaved] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSaveSubmitting, setIsSaveSubmitting] = useState(false);
   const [isStartingConversation, setIsStartingConversation] = useState(false);
   const [conversationError, setConversationError] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-
-  useEffect(() => {
-    const rawValue = window.localStorage.getItem(savedKey);
-    const savedPosts = rawValue ? (JSON.parse(rawValue) as string[]) : [];
-    setIsSaved(savedPosts.includes(params.id));
-  }, [params.id]);
 
   useEffect(() => {
     let isMounted = true;
@@ -80,17 +85,9 @@ export default function PostDetailPage() {
         setPost(currentPost);
         setSelectedImage(0);
 
-        const relatedResponse = await api.get<{ data: { items: Post[] } }>(
-          `/posts?city=${encodeURIComponent(currentPost.city)}&propertyType=${currentPost.propertyType}&limit=3`,
-        );
-
-        if (!isMounted) {
-          return;
+        if (currentPost.relatedPosts) {
+          setRelatedPosts(currentPost.relatedPosts);
         }
-
-        setRelatedPosts(
-          relatedResponse.data.data.items.filter((item) => item.id !== currentPost.id).slice(0, 3),
-        );
       } catch (err) {
         const axiosError = err as AxiosError<{ message?: string }>;
         if (isMounted) {
@@ -129,15 +126,47 @@ export default function PostDetailPage() {
   const activeImage = images[selectedImage]?.imageUrl ?? imageFallback;
   const isOwnPost = !!user && !!post && user.id === post.author.id;
 
-  const handleSaveToggle = () => {
-    const rawValue = window.localStorage.getItem(savedKey);
-    const savedPosts = rawValue ? (JSON.parse(rawValue) as string[]) : [];
-    const nextSavedPosts = isSaved
-      ? savedPosts.filter((postId) => postId !== params.id)
-      : Array.from(new Set([...savedPosts, params.id]));
+  const handleSaveToggle = async () => {
+    if (!user) {
+      router.push("/auth/login");
+      return;
+    }
 
-    window.localStorage.setItem(savedKey, JSON.stringify(nextSavedPosts));
-    setIsSaved(!isSaved);
+    if (!post) {
+      return;
+    }
+
+    try {
+      setIsSaveSubmitting(true);
+      setError(null);
+
+      if (post.isSaved) {
+        await api.delete(`/saved-posts/${post.id}`);
+        setPost((currentPost) =>
+          currentPost
+            ? {
+                ...currentPost,
+                isSaved: false,
+              }
+            : currentPost,
+        );
+      } else {
+        await api.post("/saved-posts", { postId: post.id });
+        setPost((currentPost) =>
+          currentPost
+            ? {
+                ...currentPost,
+                isSaved: true,
+              }
+            : currentPost,
+        );
+      }
+    } catch (err) {
+      const axiosError = err as AxiosError<{ message?: string }>;
+      setError(axiosError.response?.data?.message ?? "Không thể cập nhật bài đã lưu.");
+    } finally {
+      setIsSaveSubmitting(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -351,7 +380,7 @@ export default function PostDetailPage() {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <div className="mb-3 flex flex-wrap items-center gap-3">
-                  <h1 className="text-4xl font-bold tracking-tight text-white">{post.title}</h1>
+                  <h1 className="text-4xl font-bold tracking-tight text-white break-words">{post.title}</h1>
                   <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-sm font-medium text-emerald-300">
                     <BadgeCheck className="h-4 w-4" />
                     Đã xác thực
@@ -370,10 +399,11 @@ export default function PostDetailPage() {
                 <button
                   type="button"
                   onClick={handleSaveToggle}
-                  className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-gray-200 transition hover:bg-white/10"
+                  disabled={isSaveSubmitting}
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-gray-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <Heart className={`h-4 w-4 ${isSaved ? "fill-blue-400 text-blue-400" : "text-blue-300"}`} />
-                  {isSaved ? "Đã lưu" : "Lưu"}
+                  <Bookmark className={`h-4 w-4 ${post.isSaved ? "fill-blue-400 text-blue-400" : "text-blue-300"}`} />
+                  {post.isSaved ? "Đã lưu" : "Lưu"}
                 </button>
                 <button type="button" className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-gray-200 transition hover:bg-white/10">
                   <Building2 className="h-4 w-4 text-blue-300" />
@@ -396,23 +426,23 @@ export default function PostDetailPage() {
                 <p className="text-4xl font-semibold text-blue-300">{formatPrice(post.price)}</p>
                 <p className="mt-1 text-sm text-gray-400">Giá đăng bài</p>
               </div>
-              <div>
-                <p className="inline-flex items-center gap-2 text-2xl font-semibold text-white">
-                  <Expand className="h-5 w-5 text-blue-300" />
+              <div className="shrink-0">
+                <p className="inline-flex items-center gap-2 text-2xl font-semibold text-white break-words">
+                  <Expand className="h-5 w-5 text-blue-300 shrink-0" />
                   {formatArea(post.area)}
                 </p>
                 <p className="mt-1 text-sm text-gray-400">Diện tích</p>
               </div>
-              <div>
-                <p className="text-2xl font-semibold text-white">{propertyTypeLabels[post.propertyType]}</p>
+              <div className="shrink-0">
+                <p className="text-2xl font-semibold text-white break-words">{propertyTypeLabels[post.propertyType]}</p>
                 <p className="mt-1 text-sm text-gray-400">Loại hình</p>
               </div>
-              <div>
-                <p className="text-2xl font-semibold text-white">{postTypeLabels[post.postType]}</p>
+              <div className="shrink-0">
+                <p className="text-2xl font-semibold text-white break-words">{postTypeLabels[post.postType]}</p>
                 <p className="mt-1 text-sm text-gray-400">Loại tin</p>
               </div>
-              <div>
-                <p className="text-2xl font-semibold text-white">{post.city}</p>
+              <div className="shrink-0">
+                <p className="text-2xl font-semibold text-white break-words">{post.city}</p>
                 <p className="mt-1 text-sm text-gray-400">Khu vực</p>
               </div>
             </div>
@@ -420,7 +450,7 @@ export default function PostDetailPage() {
             <div className="mt-6 grid gap-8 xl:grid-cols-[minmax(0,1fr)_420px]">
               <div>
                 <h2 className="text-2xl font-semibold text-white">Mô tả chi tiết</h2>
-                <p className="mt-4 whitespace-pre-line leading-8 text-gray-300">{post.description}</p>
+                <p className="mt-4 whitespace-pre-line leading-8 text-gray-300 break-words">{post.description}</p>
               </div>
 
               <div className="border-t border-white/10 pt-6 xl:border-l xl:border-t-0 xl:pl-8 xl:pt-0">
@@ -428,27 +458,27 @@ export default function PostDetailPage() {
                 <dl className="mt-5 grid gap-4 sm:grid-cols-2">
                   <div>
                     <dt className="text-sm text-gray-400">Mã tin</dt>
-                    <dd className="mt-1 font-medium text-white">{post.id}</dd>
+                    <dd className="mt-1 font-medium text-white break-all">{post.id}</dd>
                   </div>
                   <div>
                     <dt className="text-sm text-gray-400">Người đăng</dt>
-                    <dd className="mt-1 font-medium text-white">{post.author.fullName}</dd>
+                    <dd className="mt-1 font-medium text-white break-words">{post.author.fullName}</dd>
                   </div>
                   <div>
                     <dt className="text-sm text-gray-400">Địa chỉ</dt>
-                    <dd className="mt-1 font-medium text-white">{post.address}</dd>
+                    <dd className="mt-1 font-medium text-white break-words">{post.address}</dd>
                   </div>
                   <div>
                     <dt className="text-sm text-gray-400">Quận / huyện</dt>
-                    <dd className="mt-1 font-medium text-white">{post.district}</dd>
+                    <dd className="mt-1 font-medium text-white break-words">{post.district}</dd>
                   </div>
                   <div>
                     <dt className="text-sm text-gray-400">Tỉnh / thành</dt>
-                    <dd className="mt-1 font-medium text-white">{post.city}</dd>
+                    <dd className="mt-1 font-medium text-white break-words">{post.city}</dd>
                   </div>
                   <div>
                     <dt className="text-sm text-gray-400">Trạng thái</dt>
-                    <dd className="mt-1 font-medium text-white">{post.status}</dd>
+                    <dd className="mt-1 font-medium text-white break-words">{post.status}</dd>
                   </div>
                 </dl>
               </div>
@@ -481,89 +511,25 @@ export default function PostDetailPage() {
             <div className="border-b border-white/10 px-6 py-4">
               <h2 className="text-2xl font-semibold text-white">Vị trí trên bản đồ</h2>
             </div>
-            <iframe
-              title={`Bản đồ ${post.title}`}
-              src={`https://maps.google.com/maps?q=${post.latitude},${post.longitude}&z=15&output=embed`}
-              className="h-[360px] w-full border-0"
-              loading="lazy"
-            />
+            <div className="h-[360px] w-full relative">
+              <PostDetailMap
+                latitude={Number(post.latitude)}
+                longitude={Number(post.longitude)}
+              />
+            </div>
           </div>
 
         </section>
 
         <aside className="space-y-5">
           <div className="lg:sticky lg:top-24 space-y-5">
-            <div className="glass-card p-6 border-t-4 border-t-blue-500 relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-blue-500/20 to-transparent pointer-events-none" />
-              <h2 className="text-xl font-semibold text-white relative">Liên hệ người bán</h2>
-              <div className="mt-5 flex items-center gap-4 relative">
-                <div className="relative shrink-0">
-                  <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border-2 border-blue-500 bg-blue-500/10 text-xl font-semibold text-blue-200">
-                    {post.author.avatarUrl ? (
-                      <img src={post.author.avatarUrl} alt={post.author.fullName} className="h-full w-full object-cover" />
-                    ) : (
-                      post.author.fullName.charAt(0).toUpperCase()
-                    )}
-                  </div>
-                  <div className="absolute -bottom-1 -right-1 rounded-full bg-slate-900 p-1">
-                    <BadgeCheck className="h-4 w-4 text-blue-500" />
-                  </div>
-                </div>
-                <div>
-                  <p className="text-lg font-bold text-white line-clamp-1">{post.author.fullName}</p>
-                  <p className="text-sm text-gray-400 mt-1">Hoạt động gần đây</p>
-                </div>
-              </div>
-
-              <div className="mt-6 space-y-3 relative">
-                <a
-                  href={post.author.phone ? `tel:${post.author.phone}` : `mailto:${post.author.email}`}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3.5 font-bold text-white shadow-[0_0_15px_rgba(5,150,105,0.3)] transition hover:bg-emerald-500"
-                >
-                  <Phone className="h-5 w-5" />
-                  {post.author.phone ? post.author.phone : "Gọi điện thoại"}
-                </a>
-                <button
-                  type="button"
-                  onClick={handleMessageClick}
-                  disabled={isStartingConversation || isOwnPost}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3.5 font-medium text-transparent transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <MessageCircle className="h-5 w-5 text-white" />
-                  <span className="text-white">
-                    {isOwnPost
-                      ? "Bài đăng của bạn"
-                      : isStartingConversation
-                        ? "Đang mở chat..."
-                        : "Nhắn tin ngay"}
-                  </span>
-                  Nhắn tin ngay
-                </button>
-              </div>
-
-              <div className="mt-6 border-t border-white/10 pt-6 relative">
-                <h3 className="text-sm font-medium text-gray-300 mb-4">Hoặc để lại số điện thoại, chúng tôi sẽ gọi lại:</h3>
-                <div className="flex gap-2">
-                  <input type="text" placeholder="Số điện thoại của bạn" className="input-dark w-full text-sm py-2.5" />
-                  <button type="button" className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500 whitespace-nowrap shadow-[0_0_15px_rgba(37,99,235,0.3)]">
-                    Gửi
-                  </button>
-                </div>
-              </div>
-
-              <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4 relative">
-                <div className="mb-3 flex items-center gap-2 text-white">
-                  <ShieldCheck className="h-5 w-5 text-emerald-400" />
-                  <h3 className="font-semibold text-sm">Giao dịch an toàn</h3>
-                </div>
-                <ul className="space-y-1.5 text-xs text-gray-300">
-                  <li>• Không chuyển khoản trước khi xem nhà.</li>
-                  <li>• Kiểm tra giấy tờ và thông tin người đăng.</li>
-                  <li>• Liên hệ trực tiếp qua kênh chính thống.</li>
-                </ul>
-              </div>
-
-              {canManagePost && (
+            {isOwnPost ? (
+              <div className="glass-card p-6 border-t-4 border-t-blue-500 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-blue-500/20 to-transparent pointer-events-none" />
+                <h2 className="text-xl font-semibold text-white relative">Quản lý bài đăng</h2>
+                <p className="text-sm text-gray-400 mt-2 relative">
+                  Bạn là người sở hữu bài đăng này. Bạn có quyền chỉnh sửa thông tin hoặc xoá bài viết.
+                </p>
                 <div className="mt-6 grid gap-3 sm:grid-cols-2 relative">
                   <Link
                     href={`/posts/${post.id}/edit`}
@@ -582,8 +548,101 @@ export default function PostDetailPage() {
                     {isDeleting ? "Đang xoá..." : "Xoá bài"}
                   </button>
                 </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="glass-card p-6 border-t-4 border-t-blue-500 relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-blue-500/20 to-transparent pointer-events-none" />
+                <h2 className="text-xl font-semibold text-white relative">Liên hệ người bán</h2>
+                <div className="mt-5 flex items-center gap-4 relative">
+                  <div className="relative shrink-0">
+                    <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border-2 border-blue-500 bg-blue-500/10 text-xl font-semibold text-blue-200">
+                      {post.author.avatarUrl ? (
+                        <img src={post.author.avatarUrl} alt={post.author.fullName} className="h-full w-full object-cover" />
+                      ) : (
+                        post.author.fullName.charAt(0).toUpperCase()
+                      )}
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 rounded-full bg-slate-900 p-1">
+                      <BadgeCheck className="h-4 w-4 text-blue-500" />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-white line-clamp-1">{post.author.fullName}</p>
+                    <p className="text-sm text-gray-400 mt-1">Hoạt động gần đây</p>
+                  </div>
+                </div>
+
+                <div className="mt-6 space-y-3 relative">
+                  <a
+                    href={post.author.phone ? `tel:${post.author.phone}` : `mailto:${post.author.email}`}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3.5 font-bold text-white shadow-[0_0_15px_rgba(5,150,105,0.3)] transition hover:bg-emerald-500"
+                  >
+                    <Phone className="h-5 w-5" />
+                    {post.author.phone ? post.author.phone : "Gọi điện thoại"}
+                  </a>
+                  <button
+                    type="button"
+                    onClick={handleMessageClick}
+                    disabled={isStartingConversation || isOwnPost}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3.5 font-medium text-transparent transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <MessageCircle className="h-5 w-5 text-white" />
+                    <span className="text-white">
+                      {isOwnPost
+                        ? "Bài đăng của bạn"
+                        : isStartingConversation
+                          ? "Đang mở chat..."
+                          : "Nhắn tin ngay"}
+                    </span>
+                    Nhắn tin ngay
+                  </button>
+                </div>
+
+                <div className="mt-6 border-t border-white/10 pt-6 relative">
+                  <h3 className="text-sm font-medium text-gray-300 mb-4">Hoặc để lại số điện thoại, chúng tôi sẽ gọi lại:</h3>
+                  <div className="flex gap-2">
+                    <input type="text" placeholder="Số điện thoại của bạn" className="input-dark w-full text-sm py-2.5" />
+                    <button type="button" className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500 whitespace-nowrap shadow-[0_0_15px_rgba(37,99,235,0.3)]">
+                      Gửi
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4 relative">
+                  <div className="mb-3 flex items-center gap-2 text-white">
+                    <ShieldCheck className="h-5 w-5 text-emerald-400" />
+                    <h3 className="font-semibold text-sm">Giao dịch an toàn</h3>
+                  </div>
+                  <ul className="space-y-1.5 text-xs text-gray-300">
+                    <li>• Không chuyển khoản trước khi xem nhà.</li>
+                    <li>• Kiểm tra giấy tờ và thông tin người đăng.</li>
+                    <li>• Liên hệ trực tiếp qua kênh chính thống.</li>
+                  </ul>
+                </div>
+
+                {canManagePost && (
+                  <div className="mt-6 grid gap-3 sm:grid-cols-2 relative">
+                    <button
+                      type="button"
+                      onClick={() => setIsEditing((current) => !current)}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-medium text-gray-100 transition hover:bg-white/10"
+                    >
+                      {isEditing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+                      {isEditing ? "Đóng sửa" : "Chỉnh sửa"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDelete}
+                      disabled={isDeleting}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 font-medium text-red-200 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      {isDeleting ? "Đang xoá..." : "Xoá bài"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="glass-card p-6">
               <div className="mb-5 flex items-center justify-between gap-3">
@@ -675,29 +734,32 @@ export default function PostDetailPage() {
       )}
 
       {/* Mobile Bottom Action Bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center gap-3 border-t border-white/10 bg-slate-950/90 p-4 pb-6 backdrop-blur-xl lg:hidden shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-        <button 
-          type="button"
-          onClick={handleSaveToggle}
-          className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-gray-200 transition hover:bg-white/10"
-        >
-          <Heart className={`h-5 w-5 ${isSaved ? "fill-blue-400 text-blue-400" : "text-blue-300"}`} />
-        </button>
-        <a
-          href={`mailto:${post.author.email}`}
-          className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 font-medium text-white transition hover:bg-white/10"
-        >
-          <MessageCircle className="h-5 w-5" />
-          Nhắn tin
-        </a>
-        <a
-          href={post.author.phone ? `tel:${post.author.phone}` : `mailto:${post.author.email}`}
-          className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 font-bold text-white shadow-[0_0_15px_rgba(5,150,105,0.3)] transition hover:bg-emerald-500"
-        >
-          <Phone className="h-5 w-5" />
-          Gọi điện
-        </a>
-      </div>
+      {!isOwnPost && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center gap-3 border-t border-white/10 bg-slate-950/90 p-4 pb-6 backdrop-blur-xl lg:hidden shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+          <button 
+            type="button"
+            onClick={handleSaveToggle}
+            disabled={isSaveSubmitting}
+            className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-gray-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Bookmark className={`h-5 w-5 ${post.isSaved ? "fill-blue-400 text-blue-400" : "text-blue-300"}`} />
+          </button>
+          <a
+            href={`mailto:${post.author.email}`}
+            className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 font-medium text-white transition hover:bg-white/10"
+          >
+            <MessageCircle className="h-5 w-5" />
+            Nhắn tin
+          </a>
+          <a
+            href={post.author.phone ? `tel:${post.author.phone}` : `mailto:${post.author.email}`}
+            className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 font-bold text-white shadow-[0_0_15px_rgba(5,150,105,0.3)] transition hover:bg-emerald-500"
+          >
+            <Phone className="h-5 w-5" />
+            Gọi điện
+          </a>
+        </div>
+      )}
     </div>
   );
 }

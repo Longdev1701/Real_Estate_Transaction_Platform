@@ -17,8 +17,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi">
-      <body className="overflow-hidden">
+    <html lang="vi" suppressHydrationWarning>
+      <body className="overflow-hidden" suppressHydrationWarning>
         <AuthSessionProvider>
           <div id="main-scroll-container" className="no-scrollbar flex h-screen flex-col overflow-y-auto overflow-x-hidden">
             <Header />
