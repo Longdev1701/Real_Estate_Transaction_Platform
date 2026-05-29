@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { api } from "@/lib/api";
+import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
 import {
   formatPrice,
   postTypeLabels,
@@ -63,10 +64,17 @@ export default function SavedPostsPage() {
       try {
         setIsLoading(true);
         setError(null);
-        const response = await api.get<{ data: SavedPost[] }>("/saved-posts");
+        const cacheKey = `profile:saved:${user.id}`;
+        const cachedSavedPosts = readSessionCache<SavedPost[]>(cacheKey);
+        if (cachedSavedPosts && isMounted) {
+          setSavedPosts(cachedSavedPosts);
+          setIsLoading(false);
+        }
+        const response = await api.get<{ data: SavedPost[] }>("/saved-posts?imageLimit=1");
 
         if (isMounted) {
           setSavedPosts(response.data.data);
+          writeSessionCache(cacheKey, response.data.data);
         }
       } catch (err) {
         const axiosError = err as AxiosError<{ message?: string }>;
@@ -152,11 +160,17 @@ export default function SavedPostsPage() {
   };
 
   const handleUnsave = async (postId: string) => {
+    if (!user) return;
+
     try {
       setRemovingPostId(postId);
       setError(null);
       await api.delete(`/saved-posts/${postId}`);
-      setSavedPosts((currentPosts) => currentPosts.filter((item) => item.postId !== postId));
+      setSavedPosts((currentPosts) => {
+        const nextPosts = currentPosts.filter((item) => item.postId !== postId);
+        writeSessionCache(`profile:saved:${user.id}`, nextPosts);
+        return nextPosts;
+      });
       setSelectedPostIds((currentPostIds) => currentPostIds.filter((currentPostId) => currentPostId !== postId));
     } catch (err) {
       const axiosError = err as AxiosError<{ message?: string }>;
@@ -167,6 +181,8 @@ export default function SavedPostsPage() {
   };
 
   const handleBulkUnsave = async () => {
+    if (!user) return;
+
     if (selectedPostIds.length === 0) {
       return;
     }
@@ -185,9 +201,11 @@ export default function SavedPostsPage() {
       await api.post("/saved-posts/bulk-remove", {
         postIds: selectedPostIds,
       });
-      setSavedPosts((currentPosts) =>
-        currentPosts.filter((item) => !selectedPostIds.includes(item.postId)),
-      );
+      setSavedPosts((currentPosts) => {
+        const nextPosts = currentPosts.filter((item) => !selectedPostIds.includes(item.postId));
+        writeSessionCache(`profile:saved:${user.id}`, nextPosts);
+        return nextPosts;
+      });
       setSelectedPostIds([]);
     } catch (err) {
       const axiosError = err as AxiosError<{ message?: string }>;
@@ -381,7 +399,11 @@ export default function SavedPostsPage() {
                   }`}
                 >
                   <div className="relative aspect-[16/10] overflow-hidden">
-                    <Link href={`/posts/${post.id}`} className="block h-full w-full">
+                    <Link
+                      href={`/posts/${post.id}`}
+                      onClick={() => writeSessionCache(`posts:detail:${post.id}`, post)}
+                      className="block h-full w-full"
+                    >
                       <img
                         src={imageUrl}
                         alt={post.title}
@@ -431,6 +453,7 @@ export default function SavedPostsPage() {
                       <p className="text-2xl font-bold text-blue-300">{formatPrice(post.price)}</p>
                       <Link
                         href={`/posts/${post.id}`}
+                        onClick={() => writeSessionCache(`posts:detail:${post.id}`, post)}
                         className="mt-2 block line-clamp-2 text-lg font-semibold text-white transition hover:text-blue-300"
                       >
                         {post.title}

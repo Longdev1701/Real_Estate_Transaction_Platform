@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 
 import { api } from "@/lib/api";
+import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
 import {
   formatArea,
   formatLocation,
@@ -221,12 +222,20 @@ export default function ComparePage() {
       try {
         setIsLoading(true);
         setError(null);
-        const response = await api.get<{ data: SavedPost[] }>("/saved-posts");
+        const cacheKey = `compare:saved:${user.id}`;
+        const cachedSavedPosts = readSessionCache<SavedPost[]>(cacheKey);
+        if (cachedSavedPosts && isMounted) {
+          setSavedPosts(cachedSavedPosts);
+          setSelectedPostIds(cachedSavedPosts.slice(0, maxCompareItems).map((item) => item.postId));
+          setIsLoading(false);
+        }
+        const response = await api.get<{ data: SavedPost[] }>("/saved-posts?includeFeatures=true&imageLimit=1");
         const items = response.data.data;
 
         if (isMounted) {
           setSavedPosts(items);
           setSelectedPostIds(items.slice(0, maxCompareItems).map((item) => item.postId));
+          writeSessionCache(cacheKey, items);
         }
       } catch (err) {
         const axiosError = err as AxiosError<{ message?: string }>;
@@ -307,6 +316,7 @@ export default function ComparePage() {
 
   const openPostDetail = (targetPost: Post) => {
     setActionPicker(null);
+    writeSessionCache(`posts:detail:${targetPost.id}`, targetPost);
     router.push(`/posts/${targetPost.id}`);
   };
 

@@ -14,4 +14,10 @@ export const bulkSavedPostBodySchema = z.object({
     .min(1, "At least one post id is required."),
 });
 
+export const savedPostQuerySchema = z.object({
+  includeFeatures: z.enum(["true", "false"]).optional(),
+  imageLimit: z.coerce.number().int().min(1).max(10).optional(),
+});
+
 export type SavedPostBodyInput = z.infer<typeof savedPostBodySchema>;
+export type SavedPostQueryInput = z.infer<typeof savedPostQuerySchema>;

@@ -11,6 +11,7 @@ import {
   propertyTypeLabels,
   type Post,
 } from "@/lib/posts";
+import { writeSessionCache } from "@/lib/client-cache";
 
 const imageFallback =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 500'><rect width='800' height='500' fill='%230b1120'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-family='Arial' font-size='32'>TrustEstate</text></svg>";
@@ -20,6 +21,13 @@ export function ProfilePostCard({ post }: { post: Post }) {
 
   const mainImage = post.images.length > 0 ? post.images[0].imageUrl : imageFallback;
   const totalImages = post.imageCount ?? post.images.length;
+  const cachePostDetailPreview = () => {
+    writeSessionCache(`posts:detail:${post.id}`, {
+      ...post,
+      features: post.features ?? [],
+      relatedPosts: post.relatedPosts ?? [],
+    });
+  };
 
   return (
     <article className="glass-card flex h-full flex-col overflow-hidden p-4 md:p-5">
@@ -43,7 +51,7 @@ export function ProfilePostCard({ post }: { post: Post }) {
         </div>
       </div>
 
-      <Link href={`/posts/${post.id}`} className="group relative mb-4 block aspect-video shrink-0 overflow-hidden rounded-xl border border-white/10 bg-white/5">
+      <Link href={`/posts/${post.id}`} onClick={cachePostDetailPreview} className="group relative mb-4 block aspect-video shrink-0 overflow-hidden rounded-xl border border-white/10 bg-white/5">
         <img
           src={imageError ? imageFallback : mainImage}
           alt={post.title}
@@ -62,7 +70,7 @@ export function ProfilePostCard({ post }: { post: Post }) {
       </Link>
 
       <div className="flex flex-grow flex-col">
-        <Link href={`/posts/${post.id}`} className="mb-2 block line-clamp-2 text-xl font-bold text-white transition hover:text-blue-400">
+        <Link href={`/posts/${post.id}`} onClick={cachePostDetailPreview} className="mb-2 block line-clamp-2 text-xl font-bold text-white transition hover:text-blue-400">
           {post.title}
         </Link>
 
@@ -87,6 +95,7 @@ export function ProfilePostCard({ post }: { post: Post }) {
           <div className="flex items-center gap-2 border-t border-white/10 pt-4">
             <Link
               href={`/posts/${post.id}`}
+              onClick={cachePostDetailPreview}
               className="inline-flex w-full items-center justify-center rounded-xl bg-blue-600 py-2 text-sm font-medium text-white shadow-[0_0_15px_rgba(59,130,246,0.3)] transition hover:bg-blue-500"
             >
               Xem chi tiết

@@ -10,6 +10,10 @@ let homeCache:
     }
   | null = null;
 
+export const clearHomeCache = () => {
+  homeCache = null;
+};
+
 const postInclude = {
   author: {
     select: {

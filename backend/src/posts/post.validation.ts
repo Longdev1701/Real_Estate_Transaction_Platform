@@ -62,6 +62,7 @@ export const updatePostSchema = createPostSchema.partial().extend({
 export const postFilterSchema = z
   .object({
     keyword: z.string().trim().optional(),
+    authorId: z.string().trim().optional(),
     city: z.string().trim().optional(),
     district: z.string().trim().optional(),
     postType: z.enum(postTypeValues).optional(),

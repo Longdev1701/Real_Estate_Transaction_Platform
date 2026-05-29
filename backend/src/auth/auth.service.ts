@@ -5,6 +5,7 @@ import { UserRole, UserStatus } from "@prisma/client";
 import { AppError } from "../middlewares/error.middleware.js";
 import { prisma } from "../prisma/prisma.service.js";
 import { compareValue, hashValue } from "../utils/hash.js";
+import { sha256 } from "../utils/sha256.js";
 import {
   signAccessToken,
   signRefreshToken,
@@ -47,7 +48,7 @@ const buildAuthResponse = async (user: User): Promise<AuthResponse> => {
   const payload = buildUserPayload(user);
   const accessToken = signAccessToken(payload);
   const refreshToken = signRefreshToken(payload);
-  const refreshTokenHash = await hashValue(refreshToken);
+  const refreshTokenHash = sha256(refreshToken);
 
   await prisma.refreshToken.create({
     data: {
@@ -145,38 +146,23 @@ export const refreshAuthToken = async ({
     throw new AppError("User not found.", 404);
   }
 
-  const refreshTokens = await prisma.refreshToken.findMany({
-    where: {
-      userId: user.id,
-      revokedAt: null,
-      expiresAt: {
-        gt: new Date(),
-      },
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
+  const tokenHash = sha256(refreshToken);
+  const matchedToken = await prisma.refreshToken.findUnique({
+    where: { tokenHash },
   });
 
-  const matchedToken = await (async () => {
-    for (const tokenRecord of refreshTokens) {
-      const isMatch = await compareValue(refreshToken, tokenRecord.tokenHash);
-
-      if (isMatch) {
-        return tokenRecord;
-      }
-    }
-
-    return null;
-  })();
-
-  if (!matchedToken) {
+  if (
+    !matchedToken ||
+    matchedToken.userId !== user.id ||
+    matchedToken.revokedAt !== null ||
+    matchedToken.expiresAt <= new Date()
+  ) {
     throw new AppError("Refresh token not recognized.", 401);
   }
 
   const newAccessToken = signAccessToken(buildUserPayload(user));
   const newRefreshToken = signRefreshToken(buildUserPayload(user));
-  const newRefreshTokenHash = await hashValue(newRefreshToken);
+  const newRefreshTokenHash = sha256(newRefreshToken);
 
   await prisma.refreshToken.update({
     where: {
@@ -204,32 +190,21 @@ export const logout = async ({ refreshToken }: RefreshTokenInput) => {
     throw new AppError("Invalid refresh token.", 401);
   }
 
-  const refreshTokens = await prisma.refreshToken.findMany({
-    where: {
-      userId: payload.sub,
-      revokedAt: null,
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
+  const tokenHash = sha256(refreshToken);
+  const matchedToken = await prisma.refreshToken.findUnique({
+    where: { tokenHash },
   });
 
-  for (const tokenRecord of refreshTokens) {
-    const isMatch = await compareValue(refreshToken, tokenRecord.tokenHash);
-
-    if (isMatch) {
-      await prisma.refreshToken.update({
-        where: {
-          id: tokenRecord.id,
-        },
-        data: {
-          revokedAt: new Date(),
-        },
-      });
-
-      return;
-    }
+  if (!matchedToken || matchedToken.userId !== payload.sub) {
+    throw new AppError("Refresh token not recognized.", 401);
   }
 
-  throw new AppError("Refresh token not recognized.", 401);
+  await prisma.refreshToken.update({
+    where: {
+      id: matchedToken.id,
+    },
+    data: {
+      revokedAt: new Date(),
+    },
+  });
 };

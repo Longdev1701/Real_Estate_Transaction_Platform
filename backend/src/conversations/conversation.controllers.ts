@@ -37,13 +37,28 @@ export const createOrGetConversation = async (req: Request, res: Response, next:
         throw new AppError("Property post not found.", 404);
       }
 
-      conversation = await prisma.conversation.create({
-        data: {
-          postId,
-          buyerId,
-          sellerId
+      try {
+        conversation = await prisma.conversation.create({
+          data: {
+            postId,
+            buyerId,
+            sellerId
+          }
+        });
+      } catch (error: any) {
+        // Handle race condition: if another request created the same conversation
+        if (error?.code === "P2002") {
+          conversation = await prisma.conversation.findFirst({
+            where: { postId, buyerId, sellerId }
+          });
+
+          if (!conversation) {
+            throw new AppError("Failed to create or find conversation.", 500);
+          }
+        } else {
+          throw error;
         }
-      });
+      }
     }
 
     sendSuccess(res, { conversation }, "Conversation fetched successfully", 200);

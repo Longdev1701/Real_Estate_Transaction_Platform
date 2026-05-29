@@ -31,6 +31,40 @@ const savedPostInclude = {
   },
 } as const;
 
+type SavedPostListOptions = {
+  includeFeatures?: boolean;
+  imageLimit?: number;
+};
+
+const buildSavedPostListInclude = (options: SavedPostListOptions = {}) => ({
+  post: {
+    include: {
+      author: {
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          phone: true,
+          avatarUrl: true,
+        },
+      },
+      images: {
+        orderBy: {
+          order: "asc" as const,
+        },
+        take: options.imageLimit ?? 1,
+      },
+      features: options.includeFeatures
+        ? {
+            include: {
+              feature: true,
+            },
+          }
+        : false,
+    },
+  },
+});
+
 const ensureAuthenticated = (user?: AuthenticatedUser) => {
   if (!user) {
     throw new AppError("Authentication required.", 401);
@@ -139,7 +173,10 @@ export const bulkUnsavePosts = async (postIds: string[], user?: AuthenticatedUse
   };
 };
 
-export const getSavedPosts = async (user?: AuthenticatedUser) => {
+export const getSavedPosts = async (
+  user?: AuthenticatedUser,
+  options: SavedPostListOptions = {},
+) => {
   const actor = ensureAuthenticated(user);
 
   const savedPosts = await prisma.savedPost.findMany({
@@ -149,7 +186,7 @@ export const getSavedPosts = async (user?: AuthenticatedUser) => {
         status: PostStatus.ACTIVE,
       },
     },
-    include: savedPostInclude,
+    include: buildSavedPostListInclude(options),
     orderBy: {
       createdAt: "desc",
     },
@@ -163,7 +200,9 @@ export const getSavedPosts = async (user?: AuthenticatedUser) => {
     isSaved: true,
     post: {
       ...savedPost.post,
-      features: savedPost.post.features?.map((item: any) => item.feature) ?? [],
+      features: Array.isArray(savedPost.post.features)
+        ? savedPost.post.features.map((item: any) => item.feature)
+        : [],
       isSaved: true,
     },
   }));

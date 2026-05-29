@@ -27,6 +27,7 @@ import {
 } from "@/lib/posts";
 import { useSound } from "@/hooks/useSound";
 import { api } from "@/lib/api";
+import { writeSessionCache } from "@/lib/client-cache";
 import { useAuthStore } from "@/stores/auth.store";
 
 const imageFallback =
@@ -114,6 +115,14 @@ export function PostCard({ post }: { post: Post }) {
   const openImageViewer = (index: number) => {
     setActiveImageIndex(index);
     setIsImageViewerOpen(true);
+  };
+
+  const cachePostDetailPreview = () => {
+    writeSessionCache(`posts:detail:${post.id}`, {
+      ...post,
+      features: post.features ?? [],
+      relatedPosts: post.relatedPosts ?? [],
+    });
   };
 
   const goToPreviousImage = () => {
@@ -263,7 +272,7 @@ export function PostCard({ post }: { post: Post }) {
         </div>
 
         <div className="px-4 md:px-5">
-          <Link href={`/posts/${post.id}`} className="mb-1 block">
+          <Link href={`/posts/${post.id}`} onClick={cachePostDetailPreview} className="mb-1 block">
             <h3 className="line-clamp-1 text-base font-semibold text-white transition hover:text-blue-200">
               {post.title}
             </h3>
@@ -381,7 +390,10 @@ export function PostCard({ post }: { post: Post }) {
             </button>
             <Link
               href={`/posts/${post.id}`}
-              onClick={playDetail}
+              onClick={() => {
+                cachePostDetailPreview();
+                playDetail();
+              }}
               className="group relative inline-flex items-center justify-center gap-2 overflow-hidden border-l border-cyan-300/25 bg-[linear-gradient(135deg,#0ea5e9,#2563eb_48%,#7c3aed)] px-2 py-3 font-semibold text-white shadow-[0_0_24px_rgba(14,165,233,0.35)] transition duration-300 hover:scale-[1.01] hover:shadow-[0_0_34px_rgba(34,211,238,0.55)]"
             >
               <span className="absolute inset-0 translate-x-[-120%] bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.35),transparent)] transition duration-700 group-hover:translate-x-[120%]" />
