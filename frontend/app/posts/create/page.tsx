@@ -502,7 +502,7 @@ export default function CreatePostPage() {
       router.push(createdPostId ? `/posts/${createdPostId}` : "/posts");
     } catch (err) {
       const axiosError = err as AxiosError<{ message?: string }>;
-      setError(axiosError.response?.data?.message ?? "Đăng tin thất bại. Vui lòng kiểm tra lại thông tin.");
+      setError(axiosError.response?.data?.message ?? "Đăng bài thất bại. Vui lòng kiểm tra lại thông tin.");
     }
   };
 
@@ -527,7 +527,7 @@ export default function CreatePostPage() {
       {/* Header */}
       <div className="mb-4 shrink-0 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-wide">Đăng tin mới</h1>
+          <h1 className="text-2xl font-bold text-white tracking-wide">Đăng bài mới</h1>
           <p className="text-xs text-gray-400 mt-0.5">
             Điền các thông tin mô tả chi tiết, vị trí và tải ảnh lên trực quan.
           </p>
@@ -576,7 +576,7 @@ export default function CreatePostPage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-300">Nhu cầu đăng tin</label>
+                <label className="mb-1 block text-xs font-medium text-gray-300">Nhu cầu đăng bài</label>
                 <select {...register("postType")} className="input-dark py-2 text-sm">
                   <option value="SELL">Bán</option>
                   <option value="RENT">Cho thuê</option>
@@ -887,7 +887,7 @@ export default function CreatePostPage() {
                 ) : (
                   <>
                     <Upload className="h-4 w-4" />
-                    Đăng tin ngay
+                    Đăng bài ngay
                   </>
                 )}
               </button>
