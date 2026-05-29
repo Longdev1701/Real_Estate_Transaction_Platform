@@ -18,6 +18,7 @@ import {
   MessageCircle,
   Pencil,
   Phone,
+  Save,
   Share2,
   ShieldCheck,
   Trash2,
@@ -26,12 +27,16 @@ import {
 
 import { api } from "@/lib/api";
 import {
+  POST_TYPES,
+  PROPERTY_TYPES,
   formatArea,
   formatLocation,
   formatPrice,
   postTypeLabels,
   propertyTypeLabels,
   type Post,
+  type PostType,
+  type PropertyType,
 } from "@/lib/posts";
 import { useAuthStore } from "@/stores/auth.store";
 import dynamic from "next/dynamic";
@@ -46,10 +51,38 @@ const PostDetailMap = dynamic(() => import("@/components/map/PostDetailMap"), {
   ),
 });
 
+type EditFormState = {
+  title: string;
+  description: string;
+  price: string;
+  area: string;
+  address: string;
+  city: string;
+  district: string;
+  ward: string;
+  latitude: string;
+  longitude: string;
+  postType: PostType;
+  propertyType: PropertyType;
+};
+
 const imageFallback =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 800'><rect width='1200' height='800' fill='%230b1120'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-family='Arial' font-size='52'>TrustEstate</text></svg>";
 
-const savedKey = "trustestate-saved-posts";
+const buildEditState = (post: Post): EditFormState => ({
+  title: post.title,
+  description: post.description,
+  price: String(post.price),
+  area: String(post.area),
+  address: post.address,
+  city: post.city,
+  district: post.district,
+  ward: post.ward ?? "",
+  latitude: String(post.latitude),
+  longitude: String(post.longitude),
+  postType: post.postType,
+  propertyType: post.propertyType,
+});
 
 export default function PostDetailPage() {
   const params = useParams<{ id: string }>();
@@ -61,11 +94,13 @@ export default function PostDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
-  const [isSaved, setIsSaved] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaveSubmitting, setIsSaveSubmitting] = useState(false);
   const [isStartingConversation, setIsStartingConversation] = useState(false);
   const [conversationError, setConversationError] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<EditFormState | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
@@ -83,6 +118,7 @@ export default function PostDetailPage() {
 
         const currentPost = response.data.data;
         setPost(currentPost);
+        setEditForm(buildEditState(currentPost));
         setSelectedImage(0);
 
         if (currentPost.relatedPosts) {
@@ -169,6 +205,44 @@ export default function PostDetailPage() {
     }
   };
 
+  const handleEditSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!editForm) {
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setError(null);
+
+      const payload = {
+        title: editForm.title,
+        description: editForm.description,
+        price: Number(editForm.price),
+        area: Number(editForm.area),
+        address: editForm.address,
+        city: editForm.city,
+        district: editForm.district,
+        ward: editForm.ward || undefined,
+        latitude: Number(editForm.latitude),
+        longitude: Number(editForm.longitude),
+        postType: editForm.postType,
+        propertyType: editForm.propertyType,
+      };
+
+      const response = await api.patch<{ data: Post }>(`/posts/${params.id}`, payload);
+      setPost(response.data.data);
+      setEditForm(buildEditState(response.data.data));
+      setIsEditing(false);
+    } catch (err) {
+      const axiosError = err as AxiosError<{ message?: string }>;
+      setError(axiosError.response?.data?.message ?? "Cap nhat bai dang that bai.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!window.confirm("Xoa bai dang nay?")) {
       return;
@@ -249,7 +323,7 @@ export default function PostDetailPage() {
     );
   }
 
-  if (!post) {
+  if (!post || !editForm) {
     return null;
   }
 
@@ -421,10 +495,10 @@ export default function PostDetailPage() {
               </div>
             </div>
 
-            <div className="mt-6 grid gap-4 border-b border-white/10 pb-6 sm:grid-cols-2 xl:grid-cols-5">
-              <div>
-                <p className="text-4xl font-semibold text-blue-300">{formatPrice(post.price)}</p>
-                <p className="mt-1 text-sm text-gray-400">Giá đăng bài</p>
+            <div className="mt-6 flex flex-wrap items-start gap-x-8 gap-y-6 md:gap-x-12 border-b border-white/10 pb-6">
+              <div className="shrink-0">
+                <p className="text-3xl sm:text-4xl font-semibold text-blue-300 break-words">{formatPrice(post.price)}</p>
+                <p className="mt-1 text-sm text-gray-400">Giá đăng tin</p>
               </div>
               <div className="shrink-0">
                 <p className="inline-flex items-center gap-2 text-2xl font-semibold text-white break-words">
@@ -490,7 +564,7 @@ export default function PostDetailPage() {
             <ul className="mt-4 grid gap-3 sm:grid-cols-2 text-sm text-gray-300">
               <li className="flex items-start gap-3">
                 <span className="mt-1 shrink-0 h-2 w-2 rounded-full bg-blue-400" />
-                Giá đăng bài {formatPrice(post.price)} cho {formatArea(post.area)}.
+                Giá đăng tin {formatPrice(post.price)} cho {formatArea(post.area)}.
               </li>
               <li className="flex items-start gap-3">
                 <span className="mt-1 shrink-0 h-2 w-2 rounded-full bg-blue-400" />
@@ -498,7 +572,7 @@ export default function PostDetailPage() {
               </li>
               <li className="flex items-start gap-3">
                 <span className="mt-1 shrink-0 h-2 w-2 rounded-full bg-blue-400" />
-                Đăng bài theo hình thức {postTypeLabels[post.postType].toLowerCase()}.
+                Đăng tin theo hình thức {postTypeLabels[post.postType].toLowerCase()}.
               </li>
               <li className="flex items-start gap-3">
                 <span className="mt-1 shrink-0 h-2 w-2 rounded-full bg-blue-400" />
@@ -519,6 +593,56 @@ export default function PostDetailPage() {
             </div>
           </div>
 
+          <CommentSection postId={post.id} postAuthorId={post.author.id} />
+
+          {canManagePost && isEditing && (
+            <form onSubmit={handleEditSubmit} className="glass-card space-y-4 p-6 mt-6">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-semibold text-white">Cập nhật bài đăng</h2>
+                  <p className="text-sm text-gray-400">Chỉnh sửa thông tin chính của bài đăng hiện tại.</p>
+                </div>
+              </div>
+
+              <input className="input-dark w-full" value={editForm.title} onChange={(event) => setEditForm({ ...editForm, title: event.target.value })} placeholder="Tiêu đề" />
+              <textarea className="input-dark w-full min-h-32" value={editForm.description} onChange={(event) => setEditForm({ ...editForm, description: event.target.value })} placeholder="Mô tả" />
+              <div className="grid gap-4 md:grid-cols-2">
+                <input className="input-dark w-full" type="number" min="0" value={editForm.price} onChange={(event) => setEditForm({ ...editForm, price: event.target.value })} placeholder="Giá" />
+                <input className="input-dark w-full" type="number" min="0" value={editForm.area} onChange={(event) => setEditForm({ ...editForm, area: event.target.value })} placeholder="Diện tích" />
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <select className="input-dark w-full" value={editForm.postType} onChange={(event) => setEditForm({ ...editForm, postType: event.target.value as PostType })}>
+                  {POST_TYPES.map((value) => (
+                    <option key={value} value={value}>
+                      {postTypeLabels[value]}
+                    </option>
+                  ))}
+                </select>
+                <select className="input-dark w-full" value={editForm.propertyType} onChange={(event) => setEditForm({ ...editForm, propertyType: event.target.value as PropertyType })}>
+                  {PROPERTY_TYPES.map((value) => (
+                    <option key={value} value={value}>
+                      {propertyTypeLabels[value]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <input className="input-dark w-full" value={editForm.address} onChange={(event) => setEditForm({ ...editForm, address: event.target.value })} placeholder="Địa chỉ" />
+              <div className="grid gap-4 md:grid-cols-3">
+                <input className="input-dark w-full" value={editForm.city} onChange={(event) => setEditForm({ ...editForm, city: event.target.value })} placeholder="Tỉnh / thành phố" />
+                <input className="input-dark w-full" value={editForm.district} onChange={(event) => setEditForm({ ...editForm, district: event.target.value })} placeholder="Quận / huyện" />
+                <input className="input-dark w-full" value={editForm.ward} onChange={(event) => setEditForm({ ...editForm, ward: event.target.value })} placeholder="Phường / xã" />
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <input className="input-dark w-full" type="number" step="any" value={editForm.latitude} onChange={(event) => setEditForm({ ...editForm, latitude: event.target.value })} placeholder="Vĩ độ" />
+                <input className="input-dark w-full" type="number" step="any" value={editForm.longitude} onChange={(event) => setEditForm({ ...editForm, longitude: event.target.value })} placeholder="Kinh độ" />
+              </div>
+
+              <button type="submit" disabled={isSaving} className="btn-primary inline-flex items-center gap-2">
+                <Save className="h-4 w-4" />
+                {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
+              </button>
+            </form>
+          )}
         </section>
 
         <aside className="space-y-5">
@@ -531,13 +655,14 @@ export default function PostDetailPage() {
                   Bạn là người sở hữu bài đăng này. Bạn có quyền chỉnh sửa thông tin hoặc xoá bài viết.
                 </p>
                 <div className="mt-6 grid gap-3 sm:grid-cols-2 relative">
-                  <Link
-                    href={`/posts/${post.id}/edit`}
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing((current) => !current)}
                     className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-medium text-gray-100 transition hover:bg-white/10"
                   >
-                    <Pencil className="h-4 w-4" />
-                    Chỉnh sửa
-                  </Link>
+                    {isEditing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+                    {isEditing ? "Đóng sửa" : "Chỉnh sửa"}
+                  </button>
                   <button
                     type="button"
                     onClick={handleDelete}
