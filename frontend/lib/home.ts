@@ -23,8 +23,8 @@ export type HomeData = {
 
 const getApiBaseUrl = () => {
   const apiURL = process.env.NEXT_PUBLIC_API_URL;
-  if (!apiURL) {
-    return "http://localhost:4000/api";
+  if (!apiURL || apiURL.startsWith("/")) {
+    return "http://127.0.0.1:4000/api";
   }
 
   const normalizedURL = apiURL.replace(/\/$/, "");
