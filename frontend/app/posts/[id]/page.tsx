@@ -18,7 +18,6 @@ import {
   MessageCircle,
   Pencil,
   Phone,
-  Save,
   Share2,
   ShieldCheck,
   Trash2,
@@ -27,62 +26,19 @@ import {
 
 import { api } from "@/lib/api";
 import {
-  POST_TYPES,
-  PROPERTY_TYPES,
   formatArea,
   formatLocation,
   formatPrice,
   postTypeLabels,
   propertyTypeLabels,
   type Post,
-  type PostType,
-  type PropertyType,
 } from "@/lib/posts";
 import { useAuthStore } from "@/stores/auth.store";
-import dynamic from "next/dynamic";
-import CommentSection from "@/components/comment/CommentSection";
-
-const PostDetailMap = dynamic(() => import("@/components/map/PostDetailMap"), {
-  ssr: false,
-  loading: () => (
-    <div className="h-[360px] bg-slate-950/40 flex items-center justify-center text-xs text-gray-400 rounded-xl border border-white/10 mt-2">
-      Đang tải bản đồ...
-    </div>
-  ),
-});
-
-type EditFormState = {
-  title: string;
-  description: string;
-  price: string;
-  area: string;
-  address: string;
-  city: string;
-  district: string;
-  ward: string;
-  latitude: string;
-  longitude: string;
-  postType: PostType;
-  propertyType: PropertyType;
-};
 
 const imageFallback =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 800'><rect width='1200' height='800' fill='%230b1120'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-family='Arial' font-size='52'>TrustEstate</text></svg>";
 
-const buildEditState = (post: Post): EditFormState => ({
-  title: post.title,
-  description: post.description,
-  price: String(post.price),
-  area: String(post.area),
-  address: post.address,
-  city: post.city,
-  district: post.district,
-  ward: post.ward ?? "",
-  latitude: String(post.latitude),
-  longitude: String(post.longitude),
-  postType: post.postType,
-  propertyType: post.propertyType,
-});
+const savedKey = "trustestate-saved-posts";
 
 export default function PostDetailPage() {
   const params = useParams<{ id: string }>();
@@ -94,13 +50,11 @@ export default function PostDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaveSubmitting, setIsSaveSubmitting] = useState(false);
   const [isStartingConversation, setIsStartingConversation] = useState(false);
   const [conversationError, setConversationError] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<EditFormState | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
@@ -118,7 +72,6 @@ export default function PostDetailPage() {
 
         const currentPost = response.data.data;
         setPost(currentPost);
-        setEditForm(buildEditState(currentPost));
         setSelectedImage(0);
 
         if (currentPost.relatedPosts) {
@@ -162,85 +115,15 @@ export default function PostDetailPage() {
   const activeImage = images[selectedImage]?.imageUrl ?? imageFallback;
   const isOwnPost = !!user && !!post && user.id === post.author.id;
 
-  const handleSaveToggle = async () => {
-    if (!user) {
-      router.push("/auth/login");
-      return;
-    }
+  const handleSaveToggle = () => {
+    const rawValue = window.localStorage.getItem(savedKey);
+    const savedPosts = rawValue ? (JSON.parse(rawValue) as string[]) : [];
+    const nextSavedPosts = isSaved
+      ? savedPosts.filter((postId) => postId !== params.id)
+      : Array.from(new Set([...savedPosts, params.id]));
 
-    if (!post) {
-      return;
-    }
-
-    try {
-      setIsSaveSubmitting(true);
-      setError(null);
-
-      if (post.isSaved) {
-        await api.delete(`/saved-posts/${post.id}`);
-        setPost((currentPost) =>
-          currentPost
-            ? {
-                ...currentPost,
-                isSaved: false,
-              }
-            : currentPost,
-        );
-      } else {
-        await api.post("/saved-posts", { postId: post.id });
-        setPost((currentPost) =>
-          currentPost
-            ? {
-                ...currentPost,
-                isSaved: true,
-              }
-            : currentPost,
-        );
-      }
-    } catch (err) {
-      const axiosError = err as AxiosError<{ message?: string }>;
-      setError(axiosError.response?.data?.message ?? "Không thể cập nhật bài đã lưu.");
-    } finally {
-      setIsSaveSubmitting(false);
-    }
-  };
-
-  const handleEditSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!editForm) {
-      return;
-    }
-
-    try {
-      setIsSaving(true);
-      setError(null);
-
-      const payload = {
-        title: editForm.title,
-        description: editForm.description,
-        price: Number(editForm.price),
-        area: Number(editForm.area),
-        address: editForm.address,
-        city: editForm.city,
-        district: editForm.district,
-        ward: editForm.ward || undefined,
-        latitude: Number(editForm.latitude),
-        longitude: Number(editForm.longitude),
-        postType: editForm.postType,
-        propertyType: editForm.propertyType,
-      };
-
-      const response = await api.patch<{ data: Post }>(`/posts/${params.id}`, payload);
-      setPost(response.data.data);
-      setEditForm(buildEditState(response.data.data));
-      setIsEditing(false);
-    } catch (err) {
-      const axiosError = err as AxiosError<{ message?: string }>;
-      setError(axiosError.response?.data?.message ?? "Cap nhat bai dang that bai.");
-    } finally {
-      setIsSaving(false);
-    }
+    window.localStorage.setItem(savedKey, JSON.stringify(nextSavedPosts));
+    setIsSaved(!isSaved);
   };
 
   const handleDelete = async () => {
@@ -323,7 +206,7 @@ export default function PostDetailPage() {
     );
   }
 
-  if (!post || !editForm) {
+  if (!post) {
     return null;
   }
 
@@ -350,11 +233,10 @@ export default function PostDetailPage() {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <section className="space-y-6 min-w-0">
           <div className="glass-card overflow-hidden p-0">
-            <div className={`grid gap-1 overflow-hidden ${
-              images.length === 1 ? 'grid-cols-1' :
-              images.length === 2 ? 'grid-cols-1 lg:grid-cols-2' :
-              'grid-cols-1 lg:grid-cols-[1.8fr_1fr]'
-            }`}>
+            <div className={`grid gap-1 overflow-hidden ${images.length === 1 ? 'grid-cols-1' :
+                images.length === 2 ? 'grid-cols-1 lg:grid-cols-2' :
+                  'grid-cols-1 lg:grid-cols-[1.8fr_1fr]'
+              }`}>
               {/* Left Column - Main Image */}
               <div className="relative overflow-hidden w-full h-full group">
                 <img
@@ -366,11 +248,11 @@ export default function PostDetailPage() {
                     event.currentTarget.src = imageFallback;
                   }}
                 />
-                
+
                 <div className="absolute left-4 top-4 rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white pointer-events-none shadow-md">
                   {postTypeLabels[post.postType]}
                 </div>
-                
+
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); setIsFullscreen(true); }}
@@ -379,17 +261,17 @@ export default function PostDetailPage() {
                 >
                   <Expand className="h-5 w-5" />
                 </button>
-                
+
                 <div className="absolute bottom-4 left-4">
-                  <button 
-                    type="button" 
-                    onClick={(e) => { e.stopPropagation(); setIsFullscreen(true); }} 
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setIsFullscreen(true); }}
                     className="rounded-xl border border-white/20 bg-slate-950/60 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-slate-950/80 backdrop-blur-sm"
                   >
                     Ảnh ({images.length})
                   </button>
                 </div>
-                
+
                 {images.length > 1 && (
                   <>
                     <button
@@ -412,11 +294,10 @@ export default function PostDetailPage() {
 
               {/* Right Column - Secondary Images (Hidden on mobile) */}
               {images.length > 1 && (
-                <div className={`hidden lg:grid gap-1 w-full h-full ${
-                  images.length === 2 ? 'grid-cols-1 grid-rows-1' :
-                  images.length === 3 ? 'grid-cols-1 grid-rows-2' :
-                  'grid-cols-2 grid-rows-2'
-                }`}>
+                <div className={`hidden lg:grid gap-1 w-full h-full ${images.length === 2 ? 'grid-cols-1 grid-rows-1' :
+                    images.length === 3 ? 'grid-cols-1 grid-rows-2' :
+                      'grid-cols-2 grid-rows-2'
+                  }`}>
                   {images.slice(1, 5).map((image, index) => {
                     const actualIndex = index + 1;
                     return (
@@ -435,7 +316,7 @@ export default function PostDetailPage() {
                           }}
                         />
                         <div className="absolute inset-0 bg-slate-950/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                        
+
                         {/* +X overlay on the last image if there are more */}
                         {index === 3 && images.length > 5 && (
                           <div className="absolute inset-0 flex items-center justify-center bg-slate-950/60 text-3xl font-semibold text-white transition hover:bg-slate-950/80">
@@ -498,7 +379,7 @@ export default function PostDetailPage() {
             <div className="mt-6 flex flex-wrap items-start gap-x-8 gap-y-6 md:gap-x-12 border-b border-white/10 pb-6">
               <div className="shrink-0">
                 <p className="text-3xl sm:text-4xl font-semibold text-blue-300 break-words">{formatPrice(post.price)}</p>
-                <p className="mt-1 text-sm text-gray-400">Giá đăng tin</p>
+                <p className="mt-1 text-sm text-gray-400">Giá đăng bài</p>
               </div>
               <div className="shrink-0">
                 <p className="inline-flex items-center gap-2 text-2xl font-semibold text-white break-words">
@@ -564,7 +445,7 @@ export default function PostDetailPage() {
             <ul className="mt-4 grid gap-3 sm:grid-cols-2 text-sm text-gray-300">
               <li className="flex items-start gap-3">
                 <span className="mt-1 shrink-0 h-2 w-2 rounded-full bg-blue-400" />
-                Giá đăng tin {formatPrice(post.price)} cho {formatArea(post.area)}.
+                Giá đăng bài {formatPrice(post.price)} cho {formatArea(post.area)}.
               </li>
               <li className="flex items-start gap-3">
                 <span className="mt-1 shrink-0 h-2 w-2 rounded-full bg-blue-400" />
@@ -572,7 +453,7 @@ export default function PostDetailPage() {
               </li>
               <li className="flex items-start gap-3">
                 <span className="mt-1 shrink-0 h-2 w-2 rounded-full bg-blue-400" />
-                Đăng tin theo hình thức {postTypeLabels[post.postType].toLowerCase()}.
+                Đăng bài theo hình thức {postTypeLabels[post.postType].toLowerCase()}.
               </li>
               <li className="flex items-start gap-3">
                 <span className="mt-1 shrink-0 h-2 w-2 rounded-full bg-blue-400" />
@@ -593,56 +474,6 @@ export default function PostDetailPage() {
             </div>
           </div>
 
-          <CommentSection postId={post.id} postAuthorId={post.author.id} />
-
-          {canManagePost && isEditing && (
-            <form onSubmit={handleEditSubmit} className="glass-card space-y-4 p-6 mt-6">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-xl font-semibold text-white">Cập nhật bài đăng</h2>
-                  <p className="text-sm text-gray-400">Chỉnh sửa thông tin chính của bài đăng hiện tại.</p>
-                </div>
-              </div>
-
-              <input className="input-dark w-full" value={editForm.title} onChange={(event) => setEditForm({ ...editForm, title: event.target.value })} placeholder="Tiêu đề" />
-              <textarea className="input-dark w-full min-h-32" value={editForm.description} onChange={(event) => setEditForm({ ...editForm, description: event.target.value })} placeholder="Mô tả" />
-              <div className="grid gap-4 md:grid-cols-2">
-                <input className="input-dark w-full" type="number" min="0" value={editForm.price} onChange={(event) => setEditForm({ ...editForm, price: event.target.value })} placeholder="Giá" />
-                <input className="input-dark w-full" type="number" min="0" value={editForm.area} onChange={(event) => setEditForm({ ...editForm, area: event.target.value })} placeholder="Diện tích" />
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <select className="input-dark w-full" value={editForm.postType} onChange={(event) => setEditForm({ ...editForm, postType: event.target.value as PostType })}>
-                  {POST_TYPES.map((value) => (
-                    <option key={value} value={value}>
-                      {postTypeLabels[value]}
-                    </option>
-                  ))}
-                </select>
-                <select className="input-dark w-full" value={editForm.propertyType} onChange={(event) => setEditForm({ ...editForm, propertyType: event.target.value as PropertyType })}>
-                  {PROPERTY_TYPES.map((value) => (
-                    <option key={value} value={value}>
-                      {propertyTypeLabels[value]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <input className="input-dark w-full" value={editForm.address} onChange={(event) => setEditForm({ ...editForm, address: event.target.value })} placeholder="Địa chỉ" />
-              <div className="grid gap-4 md:grid-cols-3">
-                <input className="input-dark w-full" value={editForm.city} onChange={(event) => setEditForm({ ...editForm, city: event.target.value })} placeholder="Tỉnh / thành phố" />
-                <input className="input-dark w-full" value={editForm.district} onChange={(event) => setEditForm({ ...editForm, district: event.target.value })} placeholder="Quận / huyện" />
-                <input className="input-dark w-full" value={editForm.ward} onChange={(event) => setEditForm({ ...editForm, ward: event.target.value })} placeholder="Phường / xã" />
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <input className="input-dark w-full" type="number" step="any" value={editForm.latitude} onChange={(event) => setEditForm({ ...editForm, latitude: event.target.value })} placeholder="Vĩ độ" />
-                <input className="input-dark w-full" type="number" step="any" value={editForm.longitude} onChange={(event) => setEditForm({ ...editForm, longitude: event.target.value })} placeholder="Kinh độ" />
-              </div>
-
-              <button type="submit" disabled={isSaving} className="btn-primary inline-flex items-center gap-2">
-                <Save className="h-4 w-4" />
-                {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
-              </button>
-            </form>
-          )}
         </section>
 
         <aside className="space-y-5">
@@ -745,29 +576,27 @@ export default function PostDetailPage() {
                   </ul>
                 </div>
 
-                {canManagePost && (
-                  <div className="mt-6 grid gap-3 sm:grid-cols-2 relative">
-                    <button
-                      type="button"
-                      onClick={() => setIsEditing((current) => !current)}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-medium text-gray-100 transition hover:bg-white/10"
-                    >
-                      {isEditing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-                      {isEditing ? "Đóng sửa" : "Chỉnh sửa"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleDelete}
-                      disabled={isDeleting}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 font-medium text-red-200 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      {isDeleting ? "Đang xoá..." : "Xoá bài"}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
+              {canManagePost && (
+                <div className="mt-6 grid gap-3 sm:grid-cols-2 relative">
+                  <Link
+                    href={`/posts/${post.id}/edit`}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-medium text-gray-100 transition hover:bg-white/10"
+                  >
+                    <Pencil className="h-4 w-4" />
+                    Chỉnh sửa
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 font-medium text-red-200 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    {isDeleting ? "Đang xoá..." : "Xoá bài"}
+                  </button>
+                </div>
+              )}
+            </div>
 
             <div className="glass-card p-6">
               <div className="mb-5 flex items-center justify-between gap-3">
@@ -821,13 +650,13 @@ export default function PostDetailPage() {
 
       {isFullscreen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-sm">
-          <button 
-            onClick={() => setIsFullscreen(false)} 
+          <button
+            onClick={() => setIsFullscreen(false)}
             className="absolute top-6 right-6 text-white/70 hover:text-white bg-white/10 p-2 rounded-full transition z-10"
           >
             <X className="w-6 h-6" />
           </button>
-          
+
           {images.length > 1 && (
             <button
               onClick={() => setSelectedImage((current) => (current === 0 ? images.length - 1 : current - 1))}
@@ -837,9 +666,9 @@ export default function PostDetailPage() {
             </button>
           )}
 
-          <img 
-            src={activeImage} 
-            alt={post.title} 
+          <img
+            src={activeImage}
+            alt={post.title}
             className="max-h-[90vh] max-w-[90vw] object-contain"
           />
 
@@ -861,7 +690,7 @@ export default function PostDetailPage() {
       {/* Mobile Bottom Action Bar */}
       {!isOwnPost && (
         <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center gap-3 border-t border-white/10 bg-slate-950/90 p-4 pb-6 backdrop-blur-xl lg:hidden shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-          <button 
+          <button
             type="button"
             onClick={handleSaveToggle}
             disabled={isSaveSubmitting}
