@@ -251,6 +251,7 @@ export default function EditPostPage() {
   const ward = watch("ward");
   const latitude = watch("latitude");
   const longitude = watch("longitude");
+  const watchedPropertyType = watch("propertyType");
   const primaryImage = images[0]?.imageUrl ?? newImages[0]?.url ?? imageFallback;
 
   useEffect(() => {

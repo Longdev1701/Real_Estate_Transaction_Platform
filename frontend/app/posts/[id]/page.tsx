@@ -44,7 +44,6 @@ import {
 } from "lucide-react";
 
 import { api } from "@/lib/api";
-import PostDetailMap from "@/components/map/PostDetailMap";
 import {
   formatArea,
   formatLocation,
@@ -172,7 +171,7 @@ export default function PostDetailPage() {
   const activeImage = images[selectedImage]?.imageUrl ?? imageFallback;
   const isOwnPost = !!user && !!post && user.id === post.author.id;
 
-  const handleSaveToggle = () => {
+  const handleSaveToggle = async () => {
     const rawValue = window.localStorage.getItem(savedKey);
     const savedPosts = rawValue ? (JSON.parse(rawValue) as string[]) : [];
     const nextSavedPosts = isSaved
@@ -213,44 +212,6 @@ export default function PostDetailPage() {
       setError(axiosError.response?.data?.message ?? "Không thể cập nhật bài đã lưu.");
     } finally {
       setIsSaveSubmitting(false);
-    }
-  };
-
-  const handleEditSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!editForm) {
-      return;
-    }
-
-    try {
-      setIsSaving(true);
-      setError(null);
-
-      const payload = {
-        title: editForm.title,
-        description: editForm.description,
-        price: Number(editForm.price),
-        area: Number(editForm.area),
-        address: editForm.address,
-        city: editForm.city,
-        district: editForm.district,
-        ward: editForm.ward || undefined,
-        latitude: Number(editForm.latitude),
-        longitude: Number(editForm.longitude),
-        postType: editForm.postType,
-        propertyType: editForm.propertyType,
-      };
-
-      const response = await api.patch<{ data: Post }>(`/posts/${params.id}`, payload);
-      setPost(response.data.data);
-      setEditForm(buildEditState(response.data.data));
-      setIsEditing(false);
-    } catch (err) {
-      const axiosError = err as AxiosError<{ message?: string }>;
-      setError(axiosError.response?.data?.message ?? "Cap nhat bai dang that bai.");
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -642,15 +603,11 @@ export default function PostDetailPage() {
                       <BadgeCheck className="h-4 w-4 text-blue-500" />
                     </div>
                   </div>
-                  <div className="absolute -bottom-1 -right-1 rounded-full bg-slate-900 p-1">
-                    <BadgeCheck className="h-4 w-4 text-blue-500" />
+                  <div>
+                    <p className="text-lg font-bold text-white line-clamp-1">{post.author.fullName}</p>
+                    <p className="text-sm text-gray-400 mt-1">Hoạt động gần đây</p>
                   </div>
                 </div>
-                <div>
-                  <p className="text-lg font-bold text-white line-clamp-1">{post.author.fullName}</p>
-                  <p className="text-sm text-gray-400 mt-1">Hoạt động gần đây</p>
-                </div>
-              </div>
 
                 <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4 relative">
                   <div className="mb-3 flex items-center gap-2 text-white">
