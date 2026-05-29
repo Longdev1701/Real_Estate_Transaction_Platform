@@ -6,7 +6,7 @@ Tai lieu nay mo ta muc dich cua tung thu muc/file trong du an, ly do tach cau tr
 
 Du an duoc tach thanh 2 ung dung rieng:
 
-- `frontend/`: ung dung Next.js App Router, hien thi giao dien nguoi dung, form dang tin, tim kiem bat dong san, ban do, chat tu van va cac trang quan tri.
+- `frontend/`: ung dung Next.js App Router, hien thi giao dien nguoi dung, form dang bai, tim kiem bat dong san, ban do, chat tu van va cac trang quan tri.
 - `backend/`: ung dung Node.js/ExpressJS, cung cap REST API, xac thuc JWT, CRUD du lieu bat dong san, chat realtime, upload anh va ket noi database thong qua Prisma.
 
 Ly do tach frontend/backend:
@@ -301,7 +301,7 @@ Hien tai la landing/placeholder cho san giao dich BDS. Sau nay nen phat trien th
 - Thanh tim kiem nhanh.
 - Danh sach BDS noi bat.
 - Bo loc khu vuc/khoang gia/loai nha.
-- CTA dang tin.
+- CTA dang bai.
 
 #### `frontend/app/loading.tsx`
 
@@ -509,9 +509,9 @@ Nguyen tac lam frontend:
 6. Backend tra access token/refresh token.
 7. Frontend luu auth state trong Zustand/cookie tuy cach trien khai.
 
-### Dang tin bat dong san
+### Dang bai bat dong san
 
-1. User vao form dang tin.
+1. User vao form dang bai.
 2. Nhap thong tin: tieu de, gia, dien tich, dia chi, toa do, loai BDS.
 3. Upload anh qua backend.
 4. Backend dua anh len Cloudinary.
