@@ -7,9 +7,10 @@ import { AxiosError } from "axios";
 import { BadgeCheck, Edit, LoaderCircle } from "lucide-react";
 
 import { api } from "@/lib/api";
+import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
 import { ProfilePostCard } from "@/components/post/ProfilePostCard";
 import { useAuthStore } from "@/stores/auth.store";
-import type { Post, PostListData } from "@/lib/posts";
+import { buildPostQuery, defaultPostFilter, type Post, type PostListData } from "@/lib/posts";
 
 export default function ProfilePostsPage() {
   const searchParams = useSearchParams();
@@ -31,10 +32,31 @@ export default function ProfilePostsPage() {
       try {
         setIsLoading(true);
         setError(null);
-        const response = await api.get<{ data: PostListData }>("/posts?limit=100");
+        const targetAuthorId = authorId ?? user?.id;
+        if (!targetAuthorId) {
+          setPosts([]);
+          return;
+        }
+
+        const query = buildPostQuery(
+          {
+            ...defaultPostFilter,
+            authorId: targetAuthorId,
+          },
+          1,
+          30,
+        );
+        const cacheKey = `profile:posts:${targetAuthorId}`;
+        const cachedPayload = readSessionCache<PostListData>(cacheKey);
+        if (cachedPayload && isMounted) {
+          setPosts(cachedPayload.items);
+          setIsLoading(false);
+        }
+        const response = await api.get<{ data: PostListData }>(`/posts?${query}`);
 
         if (isMounted) {
           setPosts(response.data.data.items);
+          writeSessionCache(cacheKey, response.data.data);
         }
       } catch (err) {
         const axiosError = err as AxiosError<{ message?: string }>;
@@ -53,11 +75,11 @@ export default function ProfilePostsPage() {
     return () => {
       isMounted = false;
     };
-  }, [hasHydrated]);
+  }, [authorId, hasHydrated, user?.id]);
 
   const targetAuthorId = authorId ?? user?.id ?? "";
   const myPosts = useMemo(
-    () => (targetAuthorId ? posts.filter((post) => post.author.id === targetAuthorId) : []),
+    () => (targetAuthorId ? posts : []),
     [posts, targetAuthorId],
   );
 

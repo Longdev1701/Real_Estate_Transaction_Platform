@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { api } from "@/lib/api";
+import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
 import {
   buildPostQuery,
   defaultPostFilter,
@@ -111,6 +112,17 @@ export function PostList() {
 
       try {
         const query = buildPostQuery(filter, nextPage, PAGE_SIZE);
+        const cacheKey = `posts:list:${query}`;
+        if (!append) {
+          const cachedPayload = readSessionCache<PostListData>(cacheKey);
+          if (cachedPayload) {
+            setPosts(cachedPayload.items);
+            setPage(cachedPayload.meta.page);
+            setHasMore(cachedPayload.meta.hasMore);
+            setTotal(cachedPayload.meta.total ?? cachedPayload.items.length);
+            setIsLoading(false);
+          }
+        }
         const response = await api.get<{ data: PostListData }>(`/posts?${query}`);
         const payload = response.data.data;
 
@@ -124,6 +136,9 @@ export function PostList() {
         setPage(payload.meta.page);
         setHasMore(payload.meta.hasMore);
         setTotal(payload.meta.total ?? payload.items.length);
+        if (!append) {
+          writeSessionCache(cacheKey, payload);
+        }
       } catch (err) {
         const axiosError = err as AxiosError<{ message?: string }>;
         if (requestId === requestIdRef.current) {

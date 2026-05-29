@@ -44,6 +44,7 @@ import {
 } from "lucide-react";
 
 import { api } from "@/lib/api";
+import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
 import {
   formatArea,
   formatLocation,
@@ -54,7 +55,6 @@ import {
 } from "@/lib/posts";
 import { useAuthStore } from "@/stores/auth.store";
 import dynamic from "next/dynamic";
-import CommentSection from "@/components/comment/CommentSection";
 
 const PostDetailMap = dynamic(() => import("@/components/map/PostDetailMap"), {
   ssr: false,
@@ -95,6 +95,11 @@ const imageFallback =
 
 const savedKey = "trustestate-saved-posts";
 
+const getPostDetailCacheKey = (postId: string) => `posts:detail:${postId}`;
+
+const isUsablePostDetailCache = (value: Post | null): value is Post =>
+  Boolean(value?.id && value.author && Array.isArray(value.images));
+
 export default function PostDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -120,6 +125,16 @@ export default function PostDetailPage() {
       try {
         setIsLoading(true);
         setError(null);
+        const cacheKey = getPostDetailCacheKey(params.id);
+        const cachedPost = readSessionCache<Post>(cacheKey);
+
+        if (isUsablePostDetailCache(cachedPost) && isMounted) {
+          setPost(cachedPost);
+          setSelectedImage(0);
+          setRelatedPosts(cachedPost.relatedPosts ?? []);
+          setIsLoading(false);
+        }
+
         const response = await api.get<{ data: Post }>(`/posts/${params.id}`);
 
         if (!isMounted) {
@@ -129,6 +144,7 @@ export default function PostDetailPage() {
         const currentPost = response.data.data;
         setPost(currentPost);
         setSelectedImage(0);
+        writeSessionCache(cacheKey, currentPost);
 
         if (currentPost.relatedPosts) {
           setRelatedPosts(currentPost.relatedPosts);
@@ -189,22 +205,28 @@ export default function PostDetailPage() {
       if (post.isSaved) {
         await api.delete(`/saved-posts/${post.id}`);
         setPost((currentPost) =>
-          currentPost
-            ? {
+          {
+            if (!currentPost) return currentPost;
+            const nextPost = {
               ...currentPost,
               isSaved: false,
-            }
-            : currentPost,
+            };
+            writeSessionCache(getPostDetailCacheKey(nextPost.id), nextPost);
+            return nextPost;
+          },
         );
       } else {
         await api.post("/saved-posts", { postId: post.id });
         setPost((currentPost) =>
-          currentPost
-            ? {
+          {
+            if (!currentPost) return currentPost;
+            const nextPost = {
               ...currentPost,
               isSaved: true,
-            }
-            : currentPost,
+            };
+            writeSessionCache(getPostDetailCacheKey(nextPost.id), nextPost);
+            return nextPost;
+          },
         );
       }
     } catch (err) {
@@ -330,6 +352,8 @@ export default function PostDetailPage() {
                 <img
                   src={activeImage}
                   alt={post.title}
+                  loading="eager"
+                  fetchPriority="high"
                   className="w-full h-full object-cover aspect-[16/10] lg:aspect-[16/9] transition duration-700 group-hover:scale-[1.02] cursor-pointer"
                   onClick={() => setIsFullscreen(true)}
                   onError={(event) => {
@@ -397,6 +421,7 @@ export default function PostDetailPage() {
                         <img
                           src={image.imageUrl}
                           alt={post.title}
+                          loading="lazy"
                           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                           onError={(event) => {
                             event.currentTarget.src = imageFallback;
@@ -645,6 +670,7 @@ export default function PostDetailPage() {
                       <img
                         src={item.images[0]?.imageUrl || imageFallback}
                         alt={item.title}
+                        loading="lazy"
                         className="h-24 w-28 rounded-2xl object-cover"
                       />
                       <div className="min-w-0 flex-1">
