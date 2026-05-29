@@ -2,13 +2,45 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useAuthStore } from "@/stores/auth.store";
 import { UserMenu } from "./UserMenu";
 import { Bell, Bookmark, MessageSquare } from "lucide-react";
+import { api } from "@/lib/api";
+import type { NotificationListData } from "@/lib/notifications";
 
 export function Header() {
   const pathname = usePathname();
-  const { user } = useAuthStore();
+  const { user, hasHydrated } = useAuthStore();
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+
+  useEffect(() => {
+    if (!hasHydrated || !user) {
+      setUnreadNotifications(0);
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchUnreadCount = async () => {
+      try {
+        const response = await api.get<{ data: NotificationListData }>("/notifications?limit=1");
+        if (isMounted) {
+          setUnreadNotifications(response.data.data.unreadCount);
+        }
+      } catch {
+        if (isMounted) {
+          setUnreadNotifications(0);
+        }
+      }
+    };
+
+    fetchUnreadCount();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [hasHydrated, pathname, user]);
 
   if (pathname?.startsWith("/messages")) {
     return null;
@@ -32,9 +64,6 @@ export function Header() {
             <Link href="/posts" className="transition-colors hover:text-blue-400">
               {"B\u00e0i \u0111\u0103ng"}
             </Link>
-            <Link href="/projects" className="transition-colors hover:text-blue-400">
-              {"D\u1ef1 \u00e1n"}
-            </Link>
             <Link href="/compare" className="transition-colors hover:text-blue-400">
               {"So s\u00e1nh"}
             </Link>
@@ -42,10 +71,23 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-4">
-          <button className="relative p-2 text-gray-400 transition-colors hover:text-white">
+          <Link
+            href={user ? "/notifications" : "/auth/login"}
+            className={`relative p-2 transition-colors ${
+              pathname === "/notifications" ? "text-blue-300" : "text-gray-400 hover:text-white"
+            }`}
+            aria-label="Thông báo"
+          >
             <Bell size={20} />
-            <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-blue-500" />
-          </button>
+            {unreadNotifications > 0 ? (
+              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-[11px] font-bold text-white shadow-[0_0_14px_rgba(37,99,235,0.7)]">
+                {unreadNotifications > 99 ? "99+" : unreadNotifications}
+              </span>
+            ) : null}
+            {pathname === "/notifications" ? (
+              <span className="absolute inset-x-1 -bottom-5 h-1 rounded-full bg-blue-500 shadow-[0_0_16px_rgba(37,99,235,0.8)]" />
+            ) : null}
+          </Link>
 
           <Link href="/messages" className="relative p-2 text-gray-400 transition-colors hover:text-blue-400">
             <MessageSquare size={20} />
