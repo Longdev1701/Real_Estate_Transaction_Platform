@@ -75,6 +75,16 @@ interface Province {
   name: string;
 }
 
+interface District {
+  code: number;
+  name: string;
+}
+
+interface Ward {
+  code: number;
+  name: string;
+}
+
 interface Feature {
   id: string;
   name: string;
@@ -168,6 +178,14 @@ export default function EditPostPage() {
   const [geocodeStatus, setGeocodeStatus] = useState<"idle" | "success" | "failed">("idle");
   const [isDeletingImageId, setIsDeletingImageId] = useState<string | null>(null);
 
+  // States hành chính
+  const [adminTree, setAdminTree] = useState<any[]>([]);
+  const [provinces, setProvinces] = useState<Province[]>([]);
+  const [districts, setDistricts] = useState<District[]>([]);
+  const [wards, setWards] = useState<Ward[]>([]);
+  const [selProvinceCode, setSelProvinceCode] = useState<string>("");
+  const [selDistrictCode, setSelDistrictCode] = useState<string>("");
+
   // States cho đặc trưng bất động sản
   const [features, setFeatures] = useState<Feature[]>([]);
   const [selectedFeatureIds, setSelectedFeatureIds] = useState<string[]>([]);
@@ -232,6 +250,51 @@ export default function EditPostPage() {
       isMounted = false;
     };
   }, [hasHydrated, params.id, reset, user]);
+
+  // Tải danh sách Tỉnh/Thành phố và đồng bộ
+  useEffect(() => {
+    const initializeAdminData = async () => {
+      try {
+        const pRes = await fetch("https://production.cas.so/address-kit/2025-07-01/provinces");
+        const pDataObj = await pRes.json();
+        
+        const pData: Province[] = (pDataObj.provinces || []).map((p: any) => ({ code: p.code, name: p.name }));
+        setProvinces(pData);
+
+        if (post?.city) {
+          const matchProv = pData.find((p) => p.name === post.city);
+          if (matchProv) {
+            setSelProvinceCode(String(matchProv.code));
+
+            try {
+              const cRes = await fetch(`https://production.cas.so/address-kit/2025-07-01/provinces/${matchProv.code}/communes`);
+              const cDataObj = await cRes.json();
+              const distList: District[] = (cDataObj.communes || [])
+                .map((c: any) => ({ code: c.code, name: c.name.replace(/\n/g, "").trim() }))
+                .sort((a: District, b: District) => a.name.localeCompare(b.name, 'vi'));
+              setDistricts(distList);
+
+              if (post.district) {
+                const matchDist = distList.find((d) => d.name === post.district);
+                if (matchDist) {
+                  setSelDistrictCode(String(matchDist.code));
+                  setWards([]);
+                }
+              }
+            } catch (e) {
+              console.error("Lỗi fetch communes:", e);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Lỗi tải danh sách tỉnh thành:", err);
+      }
+    };
+    
+    if (post) {
+      initializeAdminData();
+    }
+  }, [post]);
 
   useEffect(() => {
     newImagesRef.current = newImages;
@@ -332,6 +395,56 @@ export default function EditPostPage() {
     });
   };
 
+  const handleProvinceChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const code = e.target.value;
+    setSelProvinceCode(code);
+    setDistricts([]);
+    setSelDistrictCode("");
+    setWards([]);
+    
+    if (code) {
+      const name = provinces.find((p) => String(p.code) === code)?.name || "";
+      setValue("city", name, { shouldValidate: true });
+      try {
+        const res = await fetch(`https://production.cas.so/address-kit/2025-07-01/provinces/${code}/communes`);
+        const data = await res.json();
+        const dataList: District[] = (data.communes || [])
+          .map((c: any) => ({ code: c.code, name: c.name.replace(/\n/g, "").trim() }))
+          .sort((a: District, b: District) => a.name.localeCompare(b.name, 'vi'));
+        setDistricts(dataList);
+      } catch (err) {
+        console.error("Lỗi tải danh sách phường xã:", err);
+      }
+    } else {
+      setValue("city", "", { shouldValidate: true });
+    }
+    setValue("district", "", { shouldValidate: true });
+    setValue("ward", "");
+    
+    setValue("latitude", 0);
+    setValue("longitude", 0);
+    setGeocodeStatus("idle");
+  };
+
+  const handleDistrictChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const code = e.target.value;
+    setSelDistrictCode(code);
+    setWards([]);
+    
+    if (code) {
+      const name = districts.find((d) => String(d.code) === code)?.name || "";
+      setValue("district", name, { shouldValidate: true });
+      // API mới không có phường xã
+      setWards([]);
+    } else {
+      setValue("district", "", { shouldValidate: true });
+    }
+    setValue("ward", "");
+    
+    setValue("latitude", 0);
+    setValue("longitude", 0);
+  };
+
   const handleGeocode = async () => {
     if (!city || !district || !address) {
       return;
@@ -352,7 +465,7 @@ export default function EditPostPage() {
 
       for (const query of queries) {
         const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=vn&limit=1`,
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=vn&limit=1&addressdetails=1`,
           {
             headers: {
               "Accept-Language": "vi",
@@ -364,6 +477,68 @@ export default function EditPostPage() {
         if (data && data.length > 0) {
           setValue("latitude", parseFloat(data[0].lat), { shouldDirty: true, shouldValidate: true });
           setValue("longitude", parseFloat(data[0].lon), { shouldDirty: true, shouldValidate: true });
+          
+          const addr = data[0].address;
+          if (addr) {
+            const addressParts = [addr.house_number, addr.road].filter(Boolean);
+            const detailedAddress = addressParts.length > 0 ? addressParts.join(" ") : null;
+            if (detailedAddress) {
+              setValue("address", detailedAddress, { shouldValidate: true });
+            }
+          }
+          
+          const displayName = data[0].display_name;
+          if (displayName) {
+            const nameParts = displayName.split(',').map((s: string) => s.trim());
+            
+            const matchProv = provinces.find(p => {
+              const baseProv = p.name.replace(/^(Thành phố|Tỉnh)\s+/i, "");
+              return nameParts.some((part: string) => part === p.name || part === baseProv || part.includes(p.name) || (baseProv.length > 2 && part.includes(baseProv)));
+            });
+            
+            if (matchProv) {
+              const provCodeStr = String(matchProv.code);
+              let currentDistricts = districts;
+              
+              if (selProvinceCode !== provCodeStr) {
+                setSelProvinceCode(provCodeStr);
+                setValue("city", matchProv.name, { shouldValidate: true });
+                setSelDistrictCode("");
+                setValue("district", "", { shouldValidate: true });
+                setValue("ward", "", { shouldValidate: true });
+                setWards([]);
+                
+                try {
+                  const res = await fetch(`https://production.cas.so/address-kit/2025-07-01/provinces/${provCodeStr}/communes`);
+                  const data = await res.json();
+                  const distList: District[] = (data.communes || [])
+                    .map((c: any) => ({ code: c.code, name: c.name.replace(/\n/g, "").trim() }))
+                    .sort((a: District, b: District) => a.name.localeCompare(b.name, 'vi'));
+                  setDistricts(distList);
+                  currentDistricts = distList;
+                } catch (e) {
+                  console.error("Lỗi fetch communes:", e);
+                }
+              }
+              
+              const matchDist = currentDistricts.find(d => {
+                const baseDist = d.name.replace(/^(Quận|Huyện|Thị xã|Thành phố)\s+/i, "");
+                return nameParts.some((part: string) => part === d.name || part === baseDist || part.includes(d.name) || (baseDist.length > 2 && part.includes(baseDist)));
+              });
+              
+              if (matchDist) {
+                const distCodeStr = String(matchDist.code);
+                
+                if (selDistrictCode !== distCodeStr || selProvinceCode !== provCodeStr) {
+                  setSelDistrictCode(distCodeStr);
+                  setValue("district", matchDist.name, { shouldValidate: true });
+                  setValue("ward", "", { shouldValidate: true });
+                  setWards([]);
+                }
+              }
+            }
+          }
+          
           setGeocodeStatus("success");
           found = true;
           break;
@@ -575,14 +750,39 @@ export default function EditPostPage() {
                     <Field className="lg:col-span-12" label="Địa chỉ cụ thể" required error={errors.address?.message}>
                       <input {...register("address")} onBlur={handleAddressBlur} className="input-dark" />
                     </Field>
-                    <Field className="lg:col-span-4" label="Tỉnh / Thành phố" required error={errors.city?.message}>
-                      <input {...register("city")} className="input-dark" />
+                    <Field className="lg:col-span-6" label="Tỉnh / Thành phố" required error={errors.city?.message}>
+                      <select
+                        {...register("city")}
+                        className="input-dark"
+                        value={selProvinceCode}
+                        onChange={handleProvinceChange}
+                      >
+                        <option value="">-- Chọn Tỉnh / Thành phố --</option>
+                        {provinces.map((p) => (
+                          <option key={p.code} value={p.code}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </select>
                     </Field>
-                    <Field className="lg:col-span-4" label="Quận / Huyện" required error={errors.district?.message}>
-                      <input {...register("district")} className="input-dark" />
-                    </Field>
-                    <Field className="lg:col-span-4" label="Phường / Xã">
-                      <input {...register("ward")} className="input-dark" />
+                    <Field className="lg:col-span-6" label="Phường / Xã (hoặc Quận / Huyện)" required error={errors.district?.message}>
+                      <select
+                        {...register("district")}
+                        className="input-dark"
+                        value={selDistrictCode}
+                        onChange={handleDistrictChange}
+                        disabled={!selProvinceCode}
+                      >
+                        <option value="">-- Chọn Phường / Xã --</option>
+                        {districts.map((d) => (
+                          <option key={d.code} value={d.code}>
+                            {d.name}
+                          </option>
+                        ))}
+                      </select>
+                      {!selProvinceCode && (
+                        <p className="mt-1 text-xs text-red-500">Vui lòng chọn Tỉnh / Thành phố</p>
+                      )}
                     </Field>
                     <div className="lg:col-span-12">
                       <div className="grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
@@ -616,6 +816,73 @@ export default function EditPostPage() {
                               onChange={(lat, lng) => {
                                 setValue("latitude", lat, { shouldDirty: true, shouldValidate: true });
                                 setValue("longitude", lng, { shouldDirty: true, shouldValidate: true });
+                              }}
+                              onLocationSelect={async (addr, displayName) => {
+                                if (addr) {
+                                  setValue("address", addr, { shouldDirty: true, shouldValidate: true });
+                                }
+                                if (!displayName) return;
+                                const nameParts = displayName.split(',').map((s: string) => s.trim());
+                                
+                                let matchProv;
+                                for (let i = nameParts.length - 1; i >= 0; i--) {
+                                  const part = nameParts[i];
+                                  const found = provinces.find(p => {
+                                    const baseName = p.name.replace(/^(Thành phố|Tỉnh)\s+/i, "");
+                                    return part === p.name || part === baseName || part.includes(p.name) || (baseName.length > 2 && part.includes(baseName));
+                                  });
+                                  if (found) {
+                                    matchProv = found;
+                                    break;
+                                  }
+                                }
+                                
+                                if (matchProv) {
+                                  const provCodeStr = String(matchProv.code);
+                                  let currentDistricts = districts;
+                                  
+                                  if (selProvinceCode !== provCodeStr) {
+                                    setSelProvinceCode(provCodeStr);
+                                    setValue("city", matchProv.name, { shouldValidate: true });
+                                    setSelDistrictCode("");
+                                    setValue("district", "", { shouldValidate: true });
+                                    setValue("ward", "", { shouldValidate: true });
+                                    setWards([]);
+                                    
+                                    try {
+                                      const res = await fetch(`https://production.cas.so/address-kit/2025-07-01/provinces/${provCodeStr}/communes`);
+                                      const data = await res.json();
+                                      const distList: District[] = (data.communes || [])
+                                        .map((c: any) => ({ code: c.code, name: c.name.replace(/\n/g, "").trim() }))
+                                        .sort((a: District, b: District) => a.name.localeCompare(b.name, 'vi'));
+                                      setDistricts(distList);
+                                      currentDistricts = distList;
+                                    } catch (e) {
+                                      console.error("Lỗi fetch communes:", e);
+                                    }
+                                  }
+                                  let matchDist;
+                                  for (let i = nameParts.length - 1; i >= 0; i--) {
+                                    const part = nameParts[i];
+                                    const found = currentDistricts.find(d => {
+                                      const baseDist = d.name.replace(/^(Phường|Xã|Thị trấn|Quận|Huyện|Thị xã|Thành phố)\s+/i, "");
+                                      return part === d.name || part === baseDist || part.includes(d.name);
+                                    });
+                                    if (found) {
+                                      matchDist = found;
+                                      break;
+                                    }
+                                  }
+                                  
+                                  if (matchDist) {
+                                    const distCodeStr = String(matchDist.code);
+                                    
+                                    if (selDistrictCode !== distCodeStr || selProvinceCode !== provCodeStr) {
+                                      setSelDistrictCode(distCodeStr);
+                                      setValue("district", matchDist.name, { shouldValidate: true });
+                                    }
+                                  }
+                                }
                               }}
                             />
                           </div>

@@ -8,6 +8,7 @@ interface CreatePostMapProps {
   latitude: number;
   longitude: number;
   onChange: (lat: number, lng: number) => void;
+  onLocationSelect?: (address: string | null, displayName?: string) => void;
 }
 
 // Khắc phục lỗi hiển thị marker icon của Leaflet trong Next.js do sai đường dẫn tương đối
@@ -18,16 +19,19 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
 
-export default function CreatePostMap({ latitude, longitude, onChange }: CreatePostMapProps) {
+export default function CreatePostMap({ latitude, longitude, onChange, onLocationSelect }: CreatePostMapProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapInstance = useRef<L.Map | null>(null);
   const markerInstance = useRef<L.Marker | null>(null);
 
   // Lưu trữ onChange trong ref để tránh stale closures
   const onChangeRef = useRef(onChange);
+  const onLocationSelectRef = useRef(onLocationSelect);
+
   useEffect(() => {
     onChangeRef.current = onChange;
-  }, [onChange]);
+    onLocationSelectRef.current = onLocationSelect;
+  }, [onChange, onLocationSelect]);
 
   // Khởi tạo bản đồ Leaflet
   useEffect(() => {
@@ -55,18 +59,36 @@ export default function CreatePostMap({ latitude, longitude, onChange }: CreateP
       const marker = L.marker(center, { draggable: true }).addTo(map);
       markerInstance.current = marker;
 
-      marker.on("dragend", () => {
+      marker.on("dragend", async () => {
         const pos = marker.getLatLng();
         if (pos) {
           onChangeRef.current(pos.lat, pos.lng);
+          if (onLocationSelectRef.current) {
+            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.lat}&lon=${pos.lng}&accept-language=vi`);
+            const data = await response.json();
+            const addr = data.address;
+            const addressParts = [addr.house_number, addr.road].filter(Boolean);
+            const detailedAddress = addressParts.length > 0 ? addressParts.join(" ") : null;
+            
+            onLocationSelectRef.current(detailedAddress, data.display_name);
+          }
         }
       });
 
-      map.on("click", (e: L.LeafletMouseEvent) => {
+      map.on("click", async (e: L.LeafletMouseEvent) => {
         const clickedLatLng = e.latlng;
         if (clickedLatLng) {
           marker.setLatLng(clickedLatLng);
           onChangeRef.current(clickedLatLng.lat, clickedLatLng.lng);
+          if (onLocationSelectRef.current) {
+            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${clickedLatLng.lat}&lon=${clickedLatLng.lng}&accept-language=vi`);
+            const data = await response.json();
+            const addr = data.address;
+            const addressParts = [addr.house_number, addr.road].filter(Boolean);
+            const detailedAddress = addressParts.length > 0 ? addressParts.join(" ") : null;
+            
+            onLocationSelectRef.current(detailedAddress, data.display_name);
+          }
         }
       });
     } catch (err) {
