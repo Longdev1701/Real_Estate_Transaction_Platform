@@ -61,6 +61,7 @@ export type SavedPost = {
 
 export type PostFilterValue = {
   keyword: string;
+  authorId?: string;
   city: string;
   district: string;
   postType: "" | PostType;

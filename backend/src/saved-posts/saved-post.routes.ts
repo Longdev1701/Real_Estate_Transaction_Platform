@@ -11,6 +11,7 @@ import {
 } from "./saved-post.controller.js";
 import {
   bulkSavedPostBodySchema,
+  savedPostQuerySchema,
   savedPostBodySchema,
   savedPostParamSchema,
 } from "./saved-post.validation.js";
@@ -19,7 +20,11 @@ export const savedPostRoutes = Router();
 
 savedPostRoutes.use(authenticate);
 
-savedPostRoutes.get("/", getSavedPostsController);
+savedPostRoutes.get(
+  "/",
+  validateRequest({ query: savedPostQuerySchema }),
+  getSavedPostsController,
+);
 savedPostRoutes.get(
   "/check/:postId",
   validateRequest({ params: savedPostParamSchema }),

@@ -44,7 +44,13 @@ export const bulkUnsavePostsController: RequestHandler = async (req, res, next) 
 
 export const getSavedPostsController: RequestHandler = async (req, res, next) => {
   try {
-    const result = await getSavedPosts(req.user);
+    const result = await getSavedPosts(
+      req.user,
+      {
+        includeFeatures: req.query.includeFeatures === "true",
+        imageLimit: req.query.imageLimit ? Number(req.query.imageLimit) : 1,
+      },
+    );
 
     sendSuccess(res, result, "Saved posts fetched successfully.");
   } catch (error) {

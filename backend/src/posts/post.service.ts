@@ -7,6 +7,7 @@ import type { AuthenticatedUser } from "../types/auth.type.js";
 
 import { AppError } from "../middlewares/error.middleware.js";
 import { prisma } from "../prisma/prisma.service.js";
+import { clearHomeCache } from "../home/home.service.js";
 import { deleteImageByUrl, uploadPostImages } from "../services/upload.service.js";
 import type {
   CreatePostInput,
@@ -126,6 +127,15 @@ const postsCache = new Map<
     };
   }
 >();
+
+export const clearPostsCache = () => {
+  postsCache.clear();
+};
+
+const invalidateCaches = () => {
+  clearPostsCache();
+  clearHomeCache();
+};
 
 const ensureAuthenticated = (user?: AuthenticatedUser) => {
   if (!user) {
@@ -340,6 +350,7 @@ export const createPost = async (
       include: postInclude,
     });
 
+    invalidateCaches();
     return attachSavedStateToDetailItem(createdPost, actor);
   } catch (error) {
     await prisma.propertyPost.delete({
@@ -365,8 +376,10 @@ export const getPosts = async (
   const minArea = toOptionalNumber(filter.minArea);
   const maxArea = toOptionalNumber(filter.maxArea);
   const featureIds = toOptionalString(filter.featureIds);
+  const authorId = toOptionalString(filter.authorId);
 
   const where: Prisma.PropertyPostWhereInput = {
+    authorId,
     status:
       user?.role === UserRole.ADMIN && filter.status
         ? filter.status
@@ -419,6 +432,7 @@ export const getPosts = async (
     ? JSON.stringify({
         page,
         limit,
+        authorId: authorId ?? "",
         keyword: keyword ?? "",
         city: toOptionalString(filter.city) ?? "",
         district: toOptionalString(filter.district) ?? "",
@@ -578,6 +592,7 @@ export const updatePost = async (
     include: postInclude,
   });
 
+  invalidateCaches();
   return attachSavedStateToDetailItem(updatedPost, user);
 };
 
@@ -597,6 +612,8 @@ export const deletePost = async (id: string, user?: AuthenticatedUser) => {
       status: PostStatus.HIDDEN,
     },
   });
+
+  invalidateCaches();
 };
 
 export const addPostImages = async (
@@ -654,6 +671,7 @@ export const addPostImages = async (
     include: postInclude,
   });
 
+  invalidateCaches();
   return attachSavedStateToDetailItem(post, user);
 };
 
@@ -706,4 +724,6 @@ export const deletePostImage = async (
 
     throw error;
   }
+
+  invalidateCaches();
 };
