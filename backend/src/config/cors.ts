@@ -15,7 +15,12 @@ const allowedOrigins = new Set([
 export const corsMiddleware = cors({
   credentials: true,
   origin(origin, callback) {
-    if (!origin || allowedOrigins.has(origin)) {
+    if (
+      !origin || 
+      allowedOrigins.has(origin) || 
+      origin.startsWith("http://192.168.") || 
+      origin.startsWith("http://10.")
+    ) {
       callback(null, true);
       return;
     }

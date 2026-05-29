@@ -2,12 +2,17 @@ import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 
 import { useAuthStore } from "@/stores/auth.store";
 
+const isServer = typeof window === "undefined";
 const apiURL = process.env.NEXT_PUBLIC_API_URL;
-const baseURL = apiURL
+let baseURL = apiURL
   ? apiURL.replace(/\/$/, "").endsWith("/api")
     ? apiURL.replace(/\/$/, "")
     : `${apiURL.replace(/\/$/, "")}/api`
   : undefined;
+
+if (isServer && baseURL?.startsWith("/")) {
+  baseURL = `http://127.0.0.1:4000${baseURL}`;
+}
 
 type RetriableRequestConfig = InternalAxiosRequestConfig & {
   _retry?: boolean;
