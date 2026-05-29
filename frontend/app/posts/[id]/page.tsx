@@ -179,8 +179,79 @@ export default function PostDetailPage() {
       ? savedPosts.filter((postId) => postId !== params.id)
       : Array.from(new Set([...savedPosts, params.id]));
 
-    window.localStorage.setItem(savedKey, JSON.stringify(nextSavedPosts));
-    setIsSaved(!isSaved);
+    if (!post) {
+      return;
+    }
+
+    try {
+      setIsSaveSubmitting(true);
+      setError(null);
+
+      if (post.isSaved) {
+        await api.delete(`/saved-posts/${post.id}`);
+        setPost((currentPost) =>
+          currentPost
+            ? {
+              ...currentPost,
+              isSaved: false,
+            }
+            : currentPost,
+        );
+      } else {
+        await api.post("/saved-posts", { postId: post.id });
+        setPost((currentPost) =>
+          currentPost
+            ? {
+              ...currentPost,
+              isSaved: true,
+            }
+            : currentPost,
+        );
+      }
+    } catch (err) {
+      const axiosError = err as AxiosError<{ message?: string }>;
+      setError(axiosError.response?.data?.message ?? "Không thể cập nhật bài đã lưu.");
+    } finally {
+      setIsSaveSubmitting(false);
+    }
+  };
+
+  const handleEditSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!editForm) {
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setError(null);
+
+      const payload = {
+        title: editForm.title,
+        description: editForm.description,
+        price: Number(editForm.price),
+        area: Number(editForm.area),
+        address: editForm.address,
+        city: editForm.city,
+        district: editForm.district,
+        ward: editForm.ward || undefined,
+        latitude: Number(editForm.latitude),
+        longitude: Number(editForm.longitude),
+        postType: editForm.postType,
+        propertyType: editForm.propertyType,
+      };
+
+      const response = await api.patch<{ data: Post }>(`/posts/${params.id}`, payload);
+      setPost(response.data.data);
+      setEditForm(buildEditState(response.data.data));
+      setIsEditing(false);
+    } catch (err) {
+      const axiosError = err as AxiosError<{ message?: string }>;
+      setError(axiosError.response?.data?.message ?? "Cap nhat bai dang that bai.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -605,9 +676,9 @@ export default function PostDetailPage() {
 
               <div className="space-y-4">
                 {relatedPosts.length === 0 ? (
-                <div className="flex min-h-[200px] items-center justify-center rounded-2xl border border-dashed border-white/10">
-                  <p className="text-sm text-gray-400">Chưa có bài đăng tương tự.</p>
-                </div>) : (
+                  <div className="flex min-h-[200px] items-center justify-center rounded-2xl border border-dashed border-white/10">
+                    <p className="text-sm text-gray-400">Chưa có bài đăng tương tự.</p>
+                  </div>) : (
                   relatedPosts.map((item) => (
                     <Link
                       key={item.id}
