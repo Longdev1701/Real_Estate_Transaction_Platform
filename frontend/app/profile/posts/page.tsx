@@ -173,7 +173,7 @@ export default function ProfilePostsPage() {
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h2 className="text-2xl font-bold text-white">Bài đăng của tôi</h2>
           <Link href="/posts/create" className="btn-primary inline-flex items-center justify-center gap-2">
-            <span>+</span> Đăng tin mới
+            <span>+</span> Đăng bài mới
           </Link>
         </div>
 

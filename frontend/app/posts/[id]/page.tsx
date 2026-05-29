@@ -394,7 +394,7 @@ export default function PostDetailPage() {
             <div className="mt-6 grid gap-4 border-b border-white/10 pb-6 sm:grid-cols-2 xl:grid-cols-5">
               <div>
                 <p className="text-4xl font-semibold text-blue-300">{formatPrice(post.price)}</p>
-                <p className="mt-1 text-sm text-gray-400">Giá đăng tin</p>
+                <p className="mt-1 text-sm text-gray-400">Giá đăng bài</p>
               </div>
               <div>
                 <p className="inline-flex items-center gap-2 text-2xl font-semibold text-white">
@@ -460,7 +460,7 @@ export default function PostDetailPage() {
             <ul className="mt-4 grid gap-3 sm:grid-cols-2 text-sm text-gray-300">
               <li className="flex items-start gap-3">
                 <span className="mt-1 shrink-0 h-2 w-2 rounded-full bg-blue-400" />
-                Giá đăng tin {formatPrice(post.price)} cho {formatArea(post.area)}.
+                Giá đăng bài {formatPrice(post.price)} cho {formatArea(post.area)}.
               </li>
               <li className="flex items-start gap-3">
                 <span className="mt-1 shrink-0 h-2 w-2 rounded-full bg-blue-400" />
@@ -468,7 +468,7 @@ export default function PostDetailPage() {
               </li>
               <li className="flex items-start gap-3">
                 <span className="mt-1 shrink-0 h-2 w-2 rounded-full bg-blue-400" />
-                Đăng tin theo hình thức {postTypeLabels[post.postType].toLowerCase()}.
+                Đăng bài theo hình thức {postTypeLabels[post.postType].toLowerCase()}.
               </li>
               <li className="flex items-start gap-3">
                 <span className="mt-1 shrink-0 h-2 w-2 rounded-full bg-blue-400" />

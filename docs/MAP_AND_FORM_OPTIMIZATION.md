@@ -1,11 +1,11 @@
-# Tài Liệu Chức Năng: Bản Đồ Tương Tác & Tối Ưu Hóa Form Đăng Tin mới
+# Tài Liệu Chức Năng: Bản Đồ Tương Tác & Tối Ưu Hóa Form Đăng Bài mới
 
-Tài liệu này mô tả chi tiết chức năng đăng tin mới của hệ thống bất động sản, tập trung vào thiết kế tối ưu giao diện 2 cột, tích hợp danh mục hành chính Việt Nam, tự động định vị địa lý (Geocoding) và bản đồ tương tác OpenStreetMap (Leaflet).
+Tài liệu này mô tả chi tiết chức năng đăng bài mới của hệ thống bất động sản, tập trung vào thiết kế tối ưu giao diện 2 cột, tích hợp danh mục hành chính Việt Nam, tự động định vị địa lý (Geocoding) và bản đồ tương tác OpenStreetMap (Leaflet).
 
 ---
 
 ## 1. Tổng Quan Tính Năng
-Trang đăng tin bất động sản mới (`/posts/create`) được thiết kế lại nhằm cải thiện tối đa trải nghiệm người dùng (UX/UI):
+Trang đăng bài bất động sản mới (`/posts/create`) được thiết kế lại nhằm cải thiện tối đa trải nghiệm người dùng (UX/UI):
 * **Thiết kế gọn gàng (Single-page view):** Giao diện vừa vặn trên màn hình máy tính mà không gây cuộn trang chính (main scrollbar). Toàn bộ nội dung biểu mẫu và khu vực tải ảnh hiển thị song song.
 * **Bản đồ tương tác độc lập (OpenStreetMap):** Thay thế Google Maps bằng OpenStreetMap thông qua thư viện Leaflet giúp hệ thống hoạt động hoàn toàn miễn phí, không cần cấu hình API Key hay thẻ tín dụng thanh toán, đồng thời tránh các lỗi phân quyền (`InvalidKeyMapError`).
 * **Lưu bản nháp tự động:** Tránh mất dữ liệu nhập dở dang khi gặp sự cố trình duyệt hoặc tải lại trang.
@@ -17,7 +17,7 @@ Trang đăng tin bất động sản mới (`/posts/create`) được thiết k�
 ### 2.1. Giao Diện 2 Cột Tối Ưu (Layout)
 Giao diện biểu mẫu chia làm 2 cột chính trên màn hình lớn (Desktop):
 * **Cột trái (Form nhập thông tin chi tiết):**
-  * Tiêu đề, loại hình bất động sản, nhu cầu đăng tin (Bán/Thuê/Cần mua).
+  * Tiêu đề, loại hình bất động sản, nhu cầu đăng bài (Bán/Thuê/Cần mua).
   * Giá và Diện tích.
   * Bộ chọn khu vực hành chính 3 cấp (Tỉnh -> Quận -> Xã) và địa chỉ cụ thể.
   * Ô nhập tọa độ và Bản đồ tương tác trực tiếp.
@@ -27,7 +27,7 @@ Giao diện biểu mẫu chia làm 2 cột chính trên màn hình lớn (Deskto
   * Vùng kéo thả file tải ảnh lên (tối đa 10 ảnh, định dạng JPG/PNG/WEBP, dung lượng tối đa 5MB/ảnh).
   * Danh sách xem trước ảnh nằm ngang hỗ trợ cuộn ngang (`overflow-x-auto`).
   * Tính năng chọn **Ảnh đại diện** (Avatar) của bài viết trực quan.
-  * Nút "Đăng tin ngay" cố định ở chân trang cột phải giúp thao tác nhanh chóng.
+  * Nút "Đăng bài ngay" cố định ở chân trang cột phải giúp thao tác nhanh chóng.
 
 ### 2.2. Dữ Liệu Hành Chính Việt Nam Phân Tầng (Cascading Selects)
 * Hệ thống tích hợp dịch vụ API công khai [provinces.open-api.vn](https://provinces.open-api.vn/) để tải dữ liệu hành chính:
