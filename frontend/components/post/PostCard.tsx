@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import {
   BadgeCheck,
@@ -25,6 +26,8 @@ import {
   type Post,
 } from "@/lib/posts";
 import { useSound } from "@/hooks/useSound";
+import { api } from "@/lib/api";
+import { useAuthStore } from "@/stores/auth.store";
 
 const imageFallback =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 760'><rect width='1200' height='760' fill='%230b1120'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-family='Arial' font-size='48'>TrustEstate</text></svg>";
@@ -82,13 +85,18 @@ const getGalleryGridClassName = (imageCount: number) => {
 };
 
 export function PostCard({ post }: { post: Post }) {
-  const { playPop, playDetail, playLikeBegin, playLikeEnd, playComment } = useSound();
+  const router = useRouter();
+  const { user } = useAuthStore();
+  const { playDetail, playLikeBegin, playLikeEnd, playComment, playSave } = useSound();
   const [imageError, setImageError] = useState(false);
   const [isCommentOpen, setIsCommentOpen] = useState(false);
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [likeBurstKey, setLikeBurstKey] = useState(0);
+  const [isSaved, setIsSaved] = useState(Boolean(post.isSaved));
+  const [isSaveSubmitting, setIsSaveSubmitting] = useState(false);
+  const [saveEffect, setSaveEffect] = useState<{ key: number; type: "save" | "unsave" } | null>(null);
 
   const images = useMemo(
     () => (post.images.length > 0 ? post.images : [{ id: "fallback", imageUrl: imageFallback, order: 0 }]),
@@ -128,6 +136,42 @@ export function PostCard({ post }: { post: Post }) {
     setLikeBurstKey((current) => current + 1);
   };
 
+  const handleSaveClick = async () => {
+    if (isSaveSubmitting) {
+      return;
+    }
+
+    if (!user) {
+      router.push("/auth/login");
+      return;
+    }
+
+    const nextSaved = !isSaved;
+    const effectType = nextSaved ? "save" : "unsave";
+
+    setIsSaveSubmitting(true);
+    setSaveEffect((current) => ({
+      key: (current?.key ?? 0) + 1,
+      type: effectType,
+    }));
+    playSave();
+
+    try {
+      if (nextSaved) {
+        await api.post("/saved-posts", { postId: post.id });
+      } else {
+        await api.delete(`/saved-posts/${post.id}`);
+      }
+
+      setIsSaved(nextSaved);
+    } catch (error) {
+      setSaveEffect(null);
+      console.error("Failed to toggle saved post:", error);
+    } finally {
+      setIsSaveSubmitting(false);
+    }
+  };
+
   return (
     <>
       <article className="overflow-hidden rounded-2xl border border-blue-400/15 bg-slate-950/55 shadow-[0_20px_70px_rgba(0,0,0,0.32)] backdrop-blur-xl">
@@ -164,11 +208,57 @@ export function PostCard({ post }: { post: Post }) {
 
           <button
             type="button"
-            onClick={playPop}
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-blue-400/30 bg-blue-500/10 text-blue-200 transition hover:bg-blue-500/20 hover:text-white"
+            onClick={handleSaveClick}
+            disabled={isSaveSubmitting}
+            className={`group/save relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition disabled:cursor-not-allowed disabled:opacity-70 ${
+              isSaved
+                ? "border-blue-400/40 bg-blue-500/15 text-blue-200 hover:bg-blue-500/25 hover:text-white"
+                : "border-white/15 bg-white/5 text-gray-300 hover:border-blue-400/30 hover:bg-blue-500/10 hover:text-blue-100"
+            }`}
             aria-label="Lưu bài đăng"
           >
-            <Bookmark className={`h-5 w-5 ${post.isSaved ? "fill-blue-400 text-blue-400" : ""}`} />
+            {saveEffect && (
+              <span key={saveEffect.key} className="pointer-events-none absolute inset-0 z-20">
+                {saveEffect.type === "save" ? (
+                  <>
+                    <span className="absolute -inset-2 rounded-full bg-blue-400/0" style={{ animation: "savePulse 720ms ease-out forwards" }} />
+                    <span className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-blue-200/0" style={{ animation: "saveRing 760ms ease-out forwards" }} />
+                    {[0, 1, 2, 3, 4, 5].map((item) => (
+                      <span
+                        key={item}
+                        className="absolute left-1/2 top-1/2 h-1.5 w-1.5 rounded-full bg-blue-300 opacity-0 shadow-[0_0_10px_rgba(96,165,250,0.95)]"
+                        style={{
+                          animation: "saveSpark 680ms cubic-bezier(0.16,1,0.3,1) forwards",
+                          animationDelay: `${item * 45}ms`,
+                          ["--x" as string]: `${Math.cos((item * Math.PI) / 3) * 25}px`,
+                          ["--y" as string]: `${Math.sin((item * Math.PI) / 3) * 25}px`,
+                        }}
+                      />
+                    ))}
+                  </>
+                ) : (
+                  <>
+                    <span className="absolute -inset-3 rounded-full bg-red-500/0" style={{ animation: "killImpactFlash 620ms ease-out forwards" }} />
+                    <span className="absolute left-1/2 top-1/2 h-1.5 w-16 origin-center -translate-x-1/2 -translate-y-1/2 -rotate-45 rounded-full bg-gradient-to-r from-transparent via-red-500 to-yellow-100 opacity-0 shadow-[0_0_18px_rgba(248,113,113,0.95)]" style={{ animation: "killSlash 680ms cubic-bezier(0.16,1,0.3,1) forwards" }} />
+                    <span className="absolute left-1/2 top-1/2 h-1 w-12 origin-center -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-full bg-gradient-to-r from-transparent via-red-400 to-white opacity-0 shadow-[0_0_14px_rgba(239,68,68,0.9)]" style={{ animation: "killSlashSecondary 680ms cubic-bezier(0.16,1,0.3,1) 90ms forwards" }} />
+                    {[0, 1, 2, 3, 4, 5].map((item) => (
+                      <span
+                        key={item}
+                        className="absolute left-1/2 top-1/2 h-1.5 w-1.5 rounded-full bg-red-400 opacity-0 shadow-[0_0_8px_rgba(248,113,113,0.9)]"
+                        style={{
+                          animation: "killShard 620ms cubic-bezier(0.16,1,0.3,1) forwards",
+                          animationDelay: `${item * 35}ms`,
+                          ["--x" as string]: `${Math.cos((item * Math.PI) / 3) * 27}px`,
+                          ["--y" as string]: `${Math.sin((item * Math.PI) / 3) * 22}px`,
+                        }}
+                      />
+                    ))}
+                  </>
+                )}
+              </span>
+            )}
+            <span className={`pointer-events-none absolute inset-1 rounded-full opacity-0 blur-lg transition duration-300 group-hover/save:opacity-100 ${isSaved ? "group-hover/save:bg-blue-400/30" : "group-hover/save:bg-red-400/20"}`} />
+            <Bookmark className={`relative h-5 w-5 transition duration-300 group-hover/save:scale-110 ${saveEffect ? (saveEffect.type === "save" ? "animate-[saveIconPop_560ms_ease-out]" : "animate-[killIconShake_520ms_ease-out]") : ""} ${isSaved ? "fill-blue-400 text-blue-400" : ""}`} />
           </button>
         </div>
 
@@ -515,6 +605,148 @@ export function PostCard({ post }: { post: Post }) {
           100% {
             opacity: 0;
             transform: translate3d(10px, -34px, 0) scale(1.9);
+          }
+        }
+
+        @keyframes killImpactFlash {
+          0% {
+            opacity: 0;
+            background: rgba(239, 68, 68, 0);
+            transform: scale(0.35);
+          }
+          20% {
+            opacity: 1;
+            background: rgba(239, 68, 68, 0.28);
+            transform: scale(1);
+          }
+          100% {
+            opacity: 0;
+            background: rgba(239, 68, 68, 0);
+            transform: scale(1.35);
+          }
+        }
+
+        @keyframes savePulse {
+          0% {
+            opacity: 0;
+            background: rgba(59, 130, 246, 0);
+            transform: scale(0.35);
+          }
+          24% {
+            opacity: 1;
+            background: rgba(59, 130, 246, 0.28);
+            transform: scale(1);
+          }
+          100% {
+            opacity: 0;
+            background: rgba(59, 130, 246, 0);
+            transform: scale(1.35);
+          }
+        }
+
+        @keyframes saveRing {
+          0% {
+            opacity: 0;
+            border-color: rgba(191, 219, 254, 0);
+            transform: translate(-50%, -50%) scale(0.35);
+          }
+          28% {
+            opacity: 1;
+            border-color: rgba(191, 219, 254, 0.9);
+          }
+          100% {
+            opacity: 0;
+            border-color: rgba(191, 219, 254, 0);
+            transform: translate(-50%, -50%) scale(1.6);
+          }
+        }
+
+        @keyframes saveSpark {
+          0% {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.2);
+          }
+          20% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0;
+            transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) scale(1.2);
+          }
+        }
+
+        @keyframes saveIconPop {
+          0% {
+            transform: scale(1) rotate(0deg);
+          }
+          35% {
+            transform: scale(1.26) rotate(-8deg);
+          }
+          62% {
+            transform: scale(0.95) rotate(4deg);
+          }
+          100% {
+            transform: scale(1) rotate(0deg);
+          }
+        }
+
+        @keyframes killSlash {
+          0% {
+            opacity: 0;
+            transform: translate(-145%, 95%) rotate(-45deg) scaleX(0.2);
+          }
+          18% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0;
+            transform: translate(42%, -130%) rotate(-45deg) scaleX(1.3);
+          }
+        }
+
+        @keyframes killSlashSecondary {
+          0% {
+            opacity: 0;
+            transform: translate(90%, 90%) rotate(45deg) scaleX(0.18);
+          }
+          18% {
+            opacity: 0.9;
+          }
+          100% {
+            opacity: 0;
+            transform: translate(-120%, -120%) rotate(45deg) scaleX(1.05);
+          }
+        }
+
+        @keyframes killShard {
+          0% {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.2);
+          }
+          18% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0;
+            transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) scale(1.2);
+          }
+        }
+
+        @keyframes killIconShake {
+          0% {
+            transform: translateX(0) rotate(0deg) scale(1);
+          }
+          18% {
+            transform: translateX(-2px) rotate(-14deg) scale(1.18);
+          }
+          36% {
+            transform: translateX(2px) rotate(12deg) scale(1.08);
+          }
+          58% {
+            transform: translateX(-1px) rotate(-7deg) scale(1.12);
+          }
+          100% {
+            transform: translateX(0) rotate(0deg) scale(1);
           }
         }
       `}</style>

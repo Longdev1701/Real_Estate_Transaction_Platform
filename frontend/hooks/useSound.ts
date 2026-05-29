@@ -8,6 +8,7 @@ export const useSound = () => {
   const likeBeginAudioRef = useRef<HTMLAudioElement | null>(null);
   const likeEndAudioRef = useRef<HTMLAudioElement | null>(null);
   const commentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const saveAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     // Khởi tạo audio khi component mount để trình duyệt tải trước file
@@ -18,6 +19,7 @@ export const useSound = () => {
       likeBeginAudioRef.current = new Audio('/sounds/like_begin.mp3');
       likeEndAudioRef.current = new Audio('/sounds/like_end.mp3');
       commentAudioRef.current = new Audio('/sounds/comment.mp3');
+      saveAudioRef.current = new Audio('/sounds/save.mp3');
     }
   }, []);
 
@@ -75,5 +77,14 @@ export const useSound = () => {
     }
   }, []);
 
-  return { playPop, playDing, playDetail, playLikeBegin, playLikeEnd, playComment };
+  const playSave = useCallback(() => {
+    if (saveAudioRef.current) {
+      saveAudioRef.current.currentTime = 0;
+      saveAudioRef.current.play().catch((err) => {
+        console.log("Không thể phát âm thanh lưu bài:", err);
+      });
+    }
+  }, []);
+
+  return { playPop, playDing, playDetail, playLikeBegin, playLikeEnd, playComment, playSave };
 };
