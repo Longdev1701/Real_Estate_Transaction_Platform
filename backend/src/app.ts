@@ -12,6 +12,9 @@ import { conversationRoutes } from "./conversations/conversation.routes.js";
 import { savedPostRoutes } from "./saved-posts/saved-post.routes.js";
 import { commentRoutes } from "./comments/comment.routes.js";
 import { featureRoutes } from "./features/feature.routes.js";
+import { notificationRoutes } from "./notifications/notification.routes.js";
+import { reportRoutes } from "./reports/report.routes.js";
+import { systemLogRoutes } from "./system-logs/system-log.routes.js";
 import { sendSuccess } from "./utils/response.js";
 
 export const app = express();
@@ -33,6 +36,10 @@ app.use("/api/saved-posts", savedPostRoutes);
 app.use("/api/conversations", conversationRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/features", featureRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/reports", reportRoutes);
+app.use("/api/admin/logs", systemLogRoutes);
+
 app.get("/api/admin/test", authenticate, authorizeRoles(UserRole.ADMIN), (req, res) => {
   sendSuccess(
     res,
