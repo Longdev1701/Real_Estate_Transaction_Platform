@@ -11,6 +11,7 @@ import { postRoutes } from "./posts/post.routes.js";
 import { conversationRoutes } from "./conversations/conversation.routes.js";
 import { savedPostRoutes } from "./saved-posts/saved-post.routes.js";
 import { commentRoutes } from "./comments/comment.routes.js";
+import { featureRoutes } from "./features/feature.routes.js";
 import { sendSuccess } from "./utils/response.js";
 
 export const app = express();
@@ -31,6 +32,7 @@ app.use("/api/posts", postRoutes);
 app.use("/api/saved-posts", savedPostRoutes);
 app.use("/api/conversations", conversationRoutes);
 app.use("/api/comments", commentRoutes);
+app.use("/api/features", featureRoutes);
 app.get("/api/admin/test", authenticate, authorizeRoles(UserRole.ADMIN), (req, res) => {
   sendSuccess(
     res,

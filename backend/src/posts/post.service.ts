@@ -29,6 +29,11 @@ const postInclude = {
       order: "asc",
     },
   },
+  features: {
+    include: {
+      feature: true,
+    },
+  },
 } satisfies Prisma.PropertyPostInclude;
 
 const postListSelect = {
@@ -179,9 +184,11 @@ const attachSavedStateToDetailItem = async (
   user?: AuthenticatedUser,
 ) => {
   const savedPostIds = await getSavedPostIds([post.id], user);
+  const { features, ...rest } = post;
 
   return {
-    ...post,
+    ...rest,
+    features: features?.map((f: any) => f.feature) ?? [],
     isSaved: savedPostIds.has(post.id),
   };
 };
@@ -301,12 +308,15 @@ export const createPost = async (
   const actor = ensureAuthenticated(user);
   const imageMetadata = parseImageMetadata(imageMetadataValue);
   validateImageMetadataCount(files, imageMetadata);
-  const { imageMetadata: _imageMetadata, ...postData } = input;
+  const { imageMetadata: _imageMetadata, featureIds, ...postData } = input;
   const post = await prisma.propertyPost.create({
     data: {
       ...postData,
       authorId: actor.id,
       status: PostStatus.ACTIVE,
+      features: featureIds && featureIds.length > 0 ? {
+        create: featureIds.map((id) => ({ featureId: id })),
+      } : undefined,
     },
   });
 
@@ -324,12 +334,14 @@ export const createPost = async (
       });
     }
 
-    return prisma.propertyPost.findUniqueOrThrow({
+    const createdPost = await prisma.propertyPost.findUniqueOrThrow({
       where: {
         id: post.id,
       },
       include: postInclude,
     });
+
+    return attachSavedStateToDetailItem(createdPost, actor);
   } catch (error) {
     await prisma.propertyPost.delete({
       where: {
@@ -353,6 +365,7 @@ export const getPosts = async (
   const maxPrice = toOptionalNumber(filter.maxPrice);
   const minArea = toOptionalNumber(filter.minArea);
   const maxArea = toOptionalNumber(filter.maxArea);
+  const featureIds = toOptionalString(filter.featureIds);
 
   const where: Prisma.PropertyPostWhereInput = {
     status:
@@ -389,6 +402,19 @@ export const getPosts = async (
         ]
       : undefined,
   };
+
+  if (featureIds) {
+    const featureIdsArray = featureIds.split(",").map((id) => id.trim()).filter(Boolean);
+    if (featureIdsArray.length > 0) {
+      where.AND = featureIdsArray.map((id) => ({
+        features: {
+          some: {
+            featureId: id,
+          },
+        },
+      }));
+    }
+  }
 
   const cacheKey = isCacheableQuery
     ? JSON.stringify({
@@ -507,8 +533,11 @@ export const getPostById = async (id: string, user?: AuthenticatedUser) => {
     isSaved: false,
   }));
 
+  const { features, ...rest } = post;
+
   return {
-    ...post,
+    ...rest,
+    features: features?.map((f: any) => f.feature) ?? [],
     isSaved: Boolean(isSavedResult),
     relatedPosts,
   };
@@ -534,12 +563,18 @@ export const updatePost = async (
     throw new AppError("At least one field is required for update.", 400);
   }
 
+  const { featureIds, ...updateData } = input;
+
   const updatedPost = await prisma.propertyPost.update({
     where: {
       id,
     },
     data: {
-      ...input,
+      ...updateData,
+      features: featureIds ? {
+        deleteMany: {},
+        create: featureIds.map((fId) => ({ featureId: fId })),
+      } : undefined,
     },
     include: postInclude,
   });

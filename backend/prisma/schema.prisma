@@ -110,6 +110,7 @@ model PropertyPost {
   reports       Report[]
   savedBy       SavedPost[]
   comments      Comment[]
+  features      PropertyPostFeature[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -281,3 +282,30 @@ model Comment {
   @@index([authorId])
   @@index([parentId])
 }
+
+model PropertyFeature {
+  id            String         @id @default(cuid())
+  name          String         @unique
+  icon          String?
+  description   String?
+  category      String?
+  propertyTypes PropertyType[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  posts PropertyPostFeature[]
+}
+
+model PropertyPostFeature {
+  postId    String
+  post      PropertyPost    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  featureId String
+  feature   PropertyFeature @relation(fields: [featureId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([postId, featureId])
+  @@index([postId])
+  @@index([featureId])
+}
+

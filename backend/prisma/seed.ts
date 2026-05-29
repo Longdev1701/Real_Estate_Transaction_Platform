@@ -122,7 +122,20 @@ const upsertUser = async (data: Prisma.UserUncheckedCreateInput) =>
     create: data,
   });
 
-const upsertPostWithImages = async (authorId: string, post: SeedPostInput) => {
+const upsertPostWithImages = async (
+  authorId: string,
+  post: SeedPostInput,
+  featureNames: string[] = [],
+) => {
+  const features = await prisma.propertyFeature.findMany({
+    where: {
+      name: {
+        in: featureNames,
+      },
+    },
+    select: { id: true },
+  });
+
   const existingPost = await prisma.propertyPost.findFirst({
     where: {
       authorId,
@@ -151,6 +164,10 @@ const upsertPostWithImages = async (authorId: string, post: SeedPostInput) => {
           deleteMany: {},
           create: post.images,
         },
+        features: {
+          deleteMany: {},
+          create: features.map((f) => ({ featureId: f.id })),
+        },
       },
     });
 
@@ -174,6 +191,9 @@ const upsertPostWithImages = async (authorId: string, post: SeedPostInput) => {
       postType: post.postType,
       images: {
         create: post.images,
+      },
+      features: {
+        create: features.map((f) => ({ featureId: f.id })),
       },
     },
   });
@@ -202,9 +222,61 @@ const main = async () => {
     status: UserStatus.ACTIVE,
   });
 
-  await upsertPostWithImages(admin.id, samplePosts[0]);
-  await upsertPostWithImages(sampleUser.id, samplePosts[1]);
-  await upsertPostWithImages(sampleUser.id, samplePosts[2]);
+  // Seed property features
+  const featuresData = [
+    // Tiện nghi (Amenities)
+    { name: "Wifi / Internet", icon: "wifi", category: "Tiện nghi", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.ROOM] },
+    { name: "Điều hòa nhiệt độ", icon: "wind", category: "Tiện nghi", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.ROOM] },
+    { name: "Đầy đủ nội thất", icon: "armchair", category: "Tiện nghi", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.ROOM] },
+    { name: "Máy giặt", icon: "droplets", category: "Tiện nghi", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.ROOM] },
+    { name: "Tủ lạnh", icon: "snowflake", category: "Tiện nghi", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.ROOM] },
+    { name: "Máy nước nóng", icon: "thermometer-sun", category: "Tiện nghi", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.ROOM] },
+
+    // Tiện ích (Facilities)
+    { name: "Bể bơi", icon: "waves", category: "Tiện ích", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT] },
+    { name: "Thang máy", icon: "arrow-up-down", category: "Tiện ích", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT] },
+    { name: "Bãi đỗ xe ô tô", icon: "car", category: "Tiện ích", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT] },
+    { name: "Chỗ đỗ xe máy", icon: "bike", category: "Tiện ích", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.ROOM] },
+    { name: "Bảo vệ 24/7", icon: "shield", category: "Tiện ích", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT] },
+    { name: "Sân vườn / Cảnh quan", icon: "trees", category: "Tiện ích", propertyTypes: [PropertyType.HOUSE, PropertyType.LAND] },
+    { name: "Sân thượng / Rooftop", icon: "building", category: "Tiện ích", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT] },
+
+    // Pháp lý & Vị thế (Legal & Geography)
+    { name: "Sổ đỏ / Sổ hồng sẵn sàng", icon: "scroll", category: "Pháp lý & Vị thế", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.LAND] },
+    { name: "Mặt tiền đường chính", icon: "milestone", category: "Pháp lý & Vị thế", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.LAND] },
+    { name: "Đất thổ cư 100%", icon: "home", category: "Pháp lý & Vị thế", propertyTypes: [PropertyType.HOUSE, PropertyType.LAND] },
+    { name: "Nở hậu", icon: "expand", category: "Pháp lý & Vị thế", propertyTypes: [PropertyType.HOUSE, PropertyType.LAND] },
+
+    // Quy định (Rules)
+    { name: "Cho phép nuôi thú cưng", icon: "dog", category: "Quy định", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.ROOM] },
+  ];
+
+  for (const feature of featuresData) {
+    await prisma.propertyFeature.upsert({
+      where: { name: feature.name },
+      update: feature,
+      create: feature,
+    });
+  }
+
+  await upsertPostWithImages(admin.id, samplePosts[0], [
+    "Bảo vệ 24/7",
+    "Bãi đỗ xe ô tô",
+    "Sân thượng / Rooftop",
+    "Sổ đỏ / Sổ hồng sẵn sàng",
+  ]);
+  await upsertPostWithImages(sampleUser.id, samplePosts[1], [
+    "Wifi / Internet",
+    "Điều hòa nhiệt độ",
+    "Đầy đủ nội thất",
+    "Bể bơi",
+    "Thang máy",
+    "Cho phép nuôi thú cưng",
+  ]);
+  await upsertPostWithImages(sampleUser.id, samplePosts[2], [
+    "Wifi / Internet",
+    "Chỗ đỗ xe máy",
+  ]);
 
   console.log("Seed completed successfully.");
   console.log(`Admin account: ${adminEmail} / ${seedPassword}`);
