@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 
 import { api } from "@/lib/api";
+import PostDetailMap from "@/components/map/PostDetailMap";
 import {
   formatArea,
   formatLocation,
@@ -478,7 +479,7 @@ export default function PostDetailPage() {
 
         <aside className="space-y-5">
           <div className="lg:sticky lg:top-24 space-y-5">
-            {isOwnPost ? (
+            {canManagePost ? (
               <div className="glass-card p-6 border-t-4 border-t-blue-500 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-blue-500/20 to-transparent pointer-events-none" />
                 <h2 className="text-xl font-semibold text-white relative">Quản lý bài đăng</h2>
@@ -486,14 +487,13 @@ export default function PostDetailPage() {
                   Bạn là người sở hữu bài đăng này. Bạn có quyền chỉnh sửa thông tin hoặc xoá bài viết.
                 </p>
                 <div className="mt-6 grid gap-3 sm:grid-cols-2 relative">
-                  <button
-                    type="button"
-                    onClick={() => setIsEditing((current) => !current)}
+                  <Link
+                    href={`/posts/${post.id}/edit`}
                     className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-medium text-gray-100 transition hover:bg-white/10"
                   >
-                    {isEditing ? <X className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-                    {isEditing ? "Đóng sửa" : "Chỉnh sửa"}
-                  </button>
+                    <Pencil className="h-4 w-4" />
+                    Chỉnh sửa
+                  </Link>
                   <button
                     type="button"
                     onClick={handleDelete}
@@ -575,28 +575,8 @@ export default function PostDetailPage() {
                     <li>• Liên hệ trực tiếp qua kênh chính thống.</li>
                   </ul>
                 </div>
-
-              {canManagePost && (
-                <div className="mt-6 grid gap-3 sm:grid-cols-2 relative">
-                  <Link
-                    href={`/posts/${post.id}/edit`}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-medium text-gray-100 transition hover:bg-white/10"
-                  >
-                    <Pencil className="h-4 w-4" />
-                    Chỉnh sửa
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={handleDelete}
-                    disabled={isDeleting}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 font-medium text-red-200 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    {isDeleting ? "Đang xoá..." : "Xoá bài"}
-                  </button>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
 
             <div className="glass-card p-6">
               <div className="mb-5 flex items-center justify-between gap-3">
