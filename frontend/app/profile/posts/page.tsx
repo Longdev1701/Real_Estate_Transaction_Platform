@@ -2,22 +2,25 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { AxiosError } from "axios";
 import { BadgeCheck, Edit, LoaderCircle } from "lucide-react";
 
 import { api } from "@/lib/api";
-import { PostCard } from "@/components/post/PostCard";
+import { ProfilePostCard } from "@/components/post/ProfilePostCard";
 import { useAuthStore } from "@/stores/auth.store";
 import type { Post, PostListData } from "@/lib/posts";
 
 export default function ProfilePostsPage() {
+  const searchParams = useSearchParams();
+  const authorId = searchParams.get("authorId");
   const { user, hasHydrated, isLoadingUser } = useAuthStore();
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!hasHydrated || !user) {
+    if (!hasHydrated) {
       setIsLoading(false);
       return;
     }
@@ -50,12 +53,16 @@ export default function ProfilePostsPage() {
     return () => {
       isMounted = false;
     };
-  }, [hasHydrated, user]);
+  }, [hasHydrated]);
 
+  const targetAuthorId = authorId ?? user?.id ?? "";
   const myPosts = useMemo(
-    () => (user ? posts.filter((post) => post.author.id === user.id) : []),
-    [posts, user],
+    () => (targetAuthorId ? posts.filter((post) => post.author.id === targetAuthorId) : []),
+    [posts, targetAuthorId],
   );
+
+  const targetAuthor = myPosts[0]?.author;
+  const isOwnProfile = !!user && targetAuthorId === user.id;
 
   const saleCount = useMemo(
     () => myPosts.filter((post) => post.postType === "SELL").length,
@@ -70,7 +77,7 @@ export default function ProfilePostsPage() {
     return null;
   }
 
-  if (!user) {
+  if (!user && !authorId) {
     return (
       <div className="container mx-auto px-4 py-8 lg:px-8 lg:py-10">
         <div className="glass-card mx-auto max-w-3xl p-8 text-center">
@@ -83,8 +90,11 @@ export default function ProfilePostsPage() {
     );
   }
 
-  const displayName = user.fullName ?? user.name ?? user.email;
-  const username = user.email ? user.email.split("@")[0] : "user";
+  const displayName =
+    targetAuthor?.fullName ?? user?.fullName ?? user?.name ?? user?.email ?? "Người đăng";
+  const email = targetAuthor?.email ?? user?.email ?? "";
+  const avatarUrl = targetAuthor?.avatarUrl ?? user?.avatarUrl ?? null;
+  const username = email ? email.split("@")[0] : "user";
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 lg:px-8">
@@ -101,8 +111,8 @@ export default function ProfilePostsPage() {
         <div className="relative -mt-16 flex flex-col items-start justify-between gap-6 px-6 pb-8 md:-mt-24 md:flex-row md:items-end md:px-10">
           <div className="flex w-full flex-col items-start gap-6 md:w-auto md:flex-row md:items-end">
             <div className="relative h-32 w-32 shrink-0 overflow-hidden rounded-full border-4 border-[#0B1120] bg-blue-900 md:h-44 md:w-44">
-              {user.avatarUrl ? (
-                <img src={user.avatarUrl} alt={displayName} className="h-full w-full object-cover" />
+              {avatarUrl ? (
+                <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-5xl font-bold text-blue-200">
                   {displayName.charAt(0).toUpperCase()}
@@ -120,8 +130,7 @@ export default function ProfilePostsPage() {
               </div>
               <p className="mt-1 text-gray-400">@{username}</p>
               <p className="mt-3 max-w-2xl text-sm text-gray-300">
-                Chuyên viên môi giới và đầu tư bất động sản khu vực TP.HCM và các tỉnh lân cận.
-                Uy tín, tận tâm và chuyên nghiệp.
+                Danh sách bài đăng bất động sản đang hiển thị của {displayName}.
               </p>
 
               <div className="mt-5 flex items-center gap-6 md:gap-10">
@@ -146,12 +155,14 @@ export default function ProfilePostsPage() {
           </div>
 
           <div className="flex w-full pb-2 md:w-auto md:justify-end">
-            <Link
-              href="/profile"
-              className="w-full rounded-xl border border-blue-500/50 bg-blue-500/10 px-6 py-2.5 text-center font-medium text-blue-400 transition-colors hover:bg-blue-500/20 md:w-auto"
-            >
-              Chỉnh sửa hồ sơ
-            </Link>
+            {isOwnProfile ? (
+              <Link
+                href="/profile"
+                className="w-full rounded-xl border border-blue-500/50 bg-blue-500/10 px-6 py-2.5 text-center font-medium text-blue-400 transition-colors hover:bg-blue-500/20 md:w-auto"
+              >
+                Chỉnh sửa hồ sơ
+              </Link>
+            ) : null}
           </div>
         </div>
       </div>
@@ -159,7 +170,7 @@ export default function ProfilePostsPage() {
       <div className="glass-panel mb-8 overflow-hidden rounded-2xl">
         <div className="flex overflow-x-auto hide-scrollbar">
           <button className="whitespace-nowrap border-b-2 border-blue-500 bg-blue-500/5 px-6 py-4 font-medium text-blue-400">
-            Bài đăng của tôi
+            {isOwnProfile ? "Bài đăng của tôi" : "Bài đăng"}
           </button>
           <Link
             href="/profile/saved"
@@ -178,10 +189,14 @@ export default function ProfilePostsPage() {
 
       <div className="glass-card p-6 md:p-8">
         <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-          <h2 className="text-2xl font-bold text-white">Bài đăng của tôi</h2>
-          <Link href="/posts/create" className="btn-primary inline-flex items-center justify-center gap-2">
-            <span>+</span> Đăng bài mới
-          </Link>
+          <h2 className="text-2xl font-bold text-white">
+            {isOwnProfile ? "Bài đăng của tôi" : `Bài đăng của ${displayName}`}
+          </h2>
+          {isOwnProfile ? (
+            <Link href="/posts/create" className="btn-primary inline-flex items-center justify-center gap-2">
+              <span>+</span> Đăng bài mới
+            </Link>
+          ) : null}
         </div>
 
         <div className="mb-8 flex gap-3 overflow-x-auto pb-2 hide-scrollbar">
@@ -214,12 +229,12 @@ export default function ProfilePostsPage() {
           </div>
         ) : myPosts.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-white/10 p-12 text-center text-gray-400">
-            Bạn chưa có bài đăng nào đang hiển thị. Hãy tạo bài đăng mới trên bảng tin.
+            Chưa có bài đăng nào đang hiển thị.
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
             {myPosts.map((post) => (
-              <PostCard key={post.id} post={post} />
+              <ProfilePostCard key={post.id} post={post} />
             ))}
           </div>
         )}
