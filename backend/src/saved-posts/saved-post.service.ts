@@ -22,6 +22,11 @@ const savedPostInclude = {
           order: "asc" as const,
         },
       },
+      features: {
+        include: {
+          feature: true,
+        },
+      },
     },
   },
 } as const;
@@ -158,6 +163,7 @@ export const getSavedPosts = async (user?: AuthenticatedUser) => {
     isSaved: true,
     post: {
       ...savedPost.post,
+      features: savedPost.post.features?.map((item: any) => item.feature) ?? [],
       isSaved: true,
     },
   }));
