@@ -67,7 +67,6 @@ const postListSelect = {
     orderBy: {
       order: "asc" as const,
     },
-    take: 1,
     select: {
       id: true,
       imageUrl: true,
