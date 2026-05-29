@@ -42,6 +42,12 @@ export type Post = {
   imageCount?: number;
   isSaved?: boolean;
   relatedPosts?: Post[];
+  features: {
+    id: string;
+    name: string;
+    icon: string | null;
+    category?: string | null;
+  }[];
 };
 
 export type SavedPost = {
@@ -63,6 +69,7 @@ export type PostFilterValue = {
   maxPrice: string;
   minArea: string;
   maxArea: string;
+  featureIds: string;
 };
 
 export type PostListData = {
@@ -86,6 +93,7 @@ export const defaultPostFilter: PostFilterValue = {
   maxPrice: "",
   minArea: "",
   maxArea: "",
+  featureIds: "",
 };
 
 export const postTypeLabels: Record<PostType, string> = {

@@ -20,6 +20,23 @@ export const imageMetadataSchema = z.object({
   imageMetadata: z.string().optional(),
 });
 
+const featureIdsSchema = z.preprocess((value) => {
+  if (typeof value === "string") {
+    if (value.trim() === "") return [];
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      return value.split(",").map((s) => s.trim()).filter(Boolean);
+    }
+    return value.split(",").map((s) => s.trim()).filter(Boolean);
+  }
+  if (Array.isArray(value)) {
+    return value;
+  }
+  return value;
+}, z.array(z.string()).optional());
+
 export const createPostSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters long."),
   description: z
@@ -35,6 +52,7 @@ export const createPostSchema = z.object({
   longitude: z.coerce.number().min(-180).max(180),
   propertyType: z.enum(propertyTypeValues),
   postType: z.enum(postTypeValues),
+  featureIds: featureIdsSchema,
 }).merge(imageMetadataSchema);
 
 export const updatePostSchema = createPostSchema.partial().extend({
@@ -53,6 +71,7 @@ export const postFilterSchema = z
     maxPrice: optionalNumberSchema,
     minArea: optionalNumberSchema,
     maxArea: optionalNumberSchema,
+    featureIds: z.string().trim().optional(),
     page: z.coerce.number().int().min(1).optional(),
     limit: z.coerce.number().int().min(1).max(100).optional(),
   })

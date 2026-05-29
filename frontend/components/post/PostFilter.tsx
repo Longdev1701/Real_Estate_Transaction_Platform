@@ -1,7 +1,29 @@
-"use client";
+import { useEffect, useState } from "react";
+import {
+  ChevronDown,
+  Filter,
+  Search,
+  Wifi,
+  Wind,
+  Armchair,
+  Droplets,
+  Snowflake,
+  ThermometerSun,
+  Waves,
+  ArrowUpDown,
+  Car,
+  Bike,
+  Shield,
+  Trees,
+  Building,
+  Scroll,
+  Milestone,
+  Home,
+  Dog,
+  HelpCircle,
+} from "lucide-react";
 
-import { ChevronDown, Filter, Search } from "lucide-react";
-
+import { api } from "@/lib/api";
 import {
   POST_TYPES,
   PROPERTY_TYPES,
@@ -9,6 +31,38 @@ import {
   propertyTypeLabels,
   type PostFilterValue,
 } from "@/lib/posts";
+
+interface Feature {
+  id: string;
+  name: string;
+  icon: string | null;
+  category: string | null;
+}
+
+const featureIconMap: Record<string, React.ComponentType<any>> = {
+  wifi: Wifi,
+  wind: Wind,
+  armchair: Armchair,
+  droplets: Droplets,
+  snowflake: Snowflake,
+  "thermometer-sun": ThermometerSun,
+  waves: Waves,
+  "arrow-up-down": ArrowUpDown,
+  car: Car,
+  bike: Bike,
+  shield: Shield,
+  trees: Trees,
+  building: Building,
+  scroll: Scroll,
+  milestone: Milestone,
+  home: Home,
+  dog: Dog,
+};
+
+const FeatureIcon = ({ name, className }: { name: string; className?: string }) => {
+  const IconComponent = featureIconMap[name] || HelpCircle;
+  return <IconComponent className={className} />;
+};
 
 type PostFilterProps = {
   value: PostFilterValue;
@@ -25,6 +79,30 @@ export function PostFilter({
   onSubmit,
   onReset,
 }: PostFilterProps) {
+  const [features, setFeatures] = useState<Feature[]>([]);
+
+  useEffect(() => {
+    const fetchFeatures = async () => {
+      try {
+        const url = value.propertyType ? `/features?propertyType=${value.propertyType}` : "/features";
+        const response = await api.get<{ data: Feature[] }>(url);
+        setFeatures(response.data.data);
+      } catch (err) {
+        console.error("Lỗi tải đặc trưng:", err);
+      }
+    };
+    fetchFeatures();
+  }, [value.propertyType]);
+
+  const selectedIds = value.featureIds ? value.featureIds.split(",").filter(Boolean) : [];
+
+  const toggleFeatureId = (id: string) => {
+    const nextIds = selectedIds.includes(id)
+      ? selectedIds.filter((item) => item !== id)
+      : [...selectedIds, id];
+    updateField("featureIds", nextIds.join(","));
+  };
+
   const updateField = <K extends keyof PostFilterValue>(key: K, fieldValue: PostFilterValue[K]) => {
     onChange({
       ...value,
@@ -172,7 +250,50 @@ export function PostFilter({
             />
           </div>
         </div>
+
+        {features.length > 0 && (
+          <div className="border-t border-white/10 pt-4 mt-4">
+            <label className="mb-2.5 block text-sm font-medium text-gray-200">{"Tiện ích & Đặc trưng"}</label>
+            <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+              {features.map((feature) => {
+                const isSelected = selectedIds.includes(feature.id);
+                return (
+                  <button
+                    key={feature.id}
+                    type="button"
+                    onClick={() => toggleFeatureId(feature.id)}
+                    className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-all duration-300 ${
+                      isSelected
+                        ? "border-blue-500/40 bg-blue-500/10 text-blue-300"
+                        : "border-white/10 bg-white/5 text-gray-400 hover:border-white/20 hover:text-gray-200"
+                    }`}
+                  >
+                    <FeatureIcon name={feature.icon || "help-circle"} className="h-3.5 w-3.5" />
+                    {feature.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.02);
+          border-radius: 99px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 99px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.2);
+        }
+      ` }} />
 
       <div className="mt-6">
         <button

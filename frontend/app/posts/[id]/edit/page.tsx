@@ -14,6 +14,25 @@ import {
   MessageCircle,
   Trash2,
   X,
+  Check,
+  Wifi,
+  Wind,
+  Armchair,
+  Droplets,
+  Snowflake,
+  ThermometerSun,
+  Waves,
+  ArrowUpDown,
+  Car,
+  Bike,
+  Shield,
+  Trees,
+  Building,
+  Scroll,
+  Milestone,
+  Home,
+  Dog,
+  HelpCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -45,6 +64,43 @@ const editPostSchema = z.object({
   propertyType: z.enum(PROPERTY_TYPES),
   postType: z.enum(POST_TYPES),
 });
+
+interface Province {
+  code: number;
+  name: string;
+}
+
+interface Feature {
+  id: string;
+  name: string;
+  icon: string | null;
+  category: string | null;
+}
+
+const featureIconMap: Record<string, React.ComponentType<any>> = {
+  wifi: Wifi,
+  wind: Wind,
+  armchair: Armchair,
+  droplets: Droplets,
+  snowflake: Snowflake,
+  "thermometer-sun": ThermometerSun,
+  waves: Waves,
+  "arrow-up-down": ArrowUpDown,
+  car: Car,
+  bike: Bike,
+  shield: Shield,
+  trees: Trees,
+  building: Building,
+  scroll: Scroll,
+  milestone: Milestone,
+  home: Home,
+  dog: Dog,
+};
+
+const FeatureIcon = ({ name, className }: { name: string; className?: string }) => {
+  const IconComponent = featureIconMap[name] || HelpCircle;
+  return <IconComponent className={className} />;
+};
 
 type EditPostInput = z.input<typeof editPostSchema>;
 type EditPostValues = z.output<typeof editPostSchema>;
@@ -94,6 +150,10 @@ export default function EditPostPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDeletingImageId, setIsDeletingImageId] = useState<string | null>(null);
 
+  // States cho đặc trưng bất động sản
+  const [features, setFeatures] = useState<Feature[]>([]);
+  const [selectedFeatureIds, setSelectedFeatureIds] = useState<string[]>([]);
+
   const {
     register,
     handleSubmit,
@@ -131,6 +191,7 @@ export default function EditPostPage() {
 
         setPost(currentPost);
         setImages(currentPost.images);
+        setSelectedFeatureIds(currentPost.features?.map((f: any) => f.id) ?? []);
         reset(buildDefaults(currentPost));
       } catch (err) {
         const axiosError = err as AxiosError<{ message?: string }>;
@@ -165,7 +226,40 @@ export default function EditPostPage() {
 
   const watchedPrice = watch("price");
   const watchedDescription = watch("description") ?? "";
+  const watchedPropertyType = watch("propertyType");
   const primaryImage = images[0]?.imageUrl ?? newImages[0]?.url ?? imageFallback;
+
+  useEffect(() => {
+    const fetchFeatures = async () => {
+      try {
+        const response = await api.get<{ data: Feature[] }>(`/features?propertyType=${watchedPropertyType}`);
+        setFeatures(response.data.data);
+      } catch (err) {
+        console.error("Lỗi tải đặc trưng:", err);
+      }
+    };
+    if (watchedPropertyType) {
+      fetchFeatures();
+    }
+  }, [watchedPropertyType]);
+
+  const toggleFeature = (id: string) => {
+    setSelectedFeatureIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const groupedFeatures = useMemo(() => {
+    const groups: Record<string, Feature[]> = {};
+    features.forEach((feature) => {
+      const cat = feature.category || "Đặc trưng khác";
+      if (!groups[cat]) {
+        groups[cat] = [];
+      }
+      groups[cat].push(feature);
+    });
+    return groups;
+  }, [features]);
   const totalImageCount = images.length + newImages.length;
 
   const authorInitial = useMemo(() => {
@@ -231,6 +325,7 @@ export default function EditPostPage() {
     const payload = {
       ...data,
       ward: data.ward || undefined,
+      featureIds: selectedFeatureIds,
     };
 
     const response = await api.patch<{ data: Post }>(`/posts/${params.id}`, payload);
@@ -423,6 +518,51 @@ export default function EditPostPage() {
                     <p className="mt-2 text-right text-xs text-gray-400">{watchedDescription.length}/2000 ký tự</p>
                   </Field>
                 </section>
+
+                {/* Đặc trưng bất động sản */}
+                {features.length > 0 && (
+                  <section className="border-t border-white/10 pt-7">
+                    <h2 className="text-xl font-semibold text-white mb-4">Đặc trưng bất động sản</h2>
+                    <div className="space-y-4">
+                      {Object.entries(groupedFeatures).map(([category, list]) => (
+                        <div key={category} className="space-y-2">
+                          <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">{category}</h4>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            {list.map((feature) => {
+                              const isSelected = selectedFeatureIds.includes(feature.id);
+                              return (
+                                <div
+                                  key={feature.id}
+                                  onClick={() => toggleFeature(feature.id)}
+                                  className={`flex items-center justify-between p-2.5 rounded-xl border transition-all duration-300 cursor-pointer select-none text-xs font-medium group ${
+                                    isSelected
+                                      ? "border-blue-500/40 bg-blue-500/10 text-blue-300 ring-1 ring-blue-500/25 shadow-lg shadow-blue-500/5"
+                                      : "border-white/5 bg-slate-950/25 text-gray-400 hover:border-white/15 hover:bg-slate-950/45 hover:text-gray-200"
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <FeatureIcon
+                                      name={feature.icon || "help-circle"}
+                                      className={`h-4 w-4 shrink-0 transition-transform duration-300 group-hover:scale-110 ${
+                                        isSelected ? "text-blue-400" : "text-gray-500"
+                                      }`}
+                                    />
+                                    <span className="truncate">{feature.name}</span>
+                                  </div>
+                                  {isSelected && (
+                                    <div className="h-4 w-4 rounded-full bg-blue-600 flex items-center justify-center text-white shrink-0 shadow-md">
+                                      <Check className="h-2.5 w-2.5 stroke-[3]" />
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
 
               </div>
             </div>

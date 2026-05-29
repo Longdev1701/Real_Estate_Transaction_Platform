@@ -71,6 +71,7 @@ const getInitialFilter = (searchParams: URLSearchParams): PostFilterValue => {
     maxPrice: searchParams.get("maxPrice") ?? "",
     minArea: searchParams.get("minArea") ?? "",
     maxArea: searchParams.get("maxArea") ?? "",
+    featureIds: searchParams.get("featureIds") ?? "",
   };
 };
 

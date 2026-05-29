@@ -2,7 +2,34 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AxiosError } from "axios";
-import { ImagePlus, LoaderCircle, Trash2, Upload, MapPin, Check, Save } from "lucide-react";
+import {
+  ImagePlus,
+  LoaderCircle,
+  Trash2,
+  Upload,
+  MapPin,
+  Check,
+  Save,
+  Wifi,
+  Wind,
+  Armchair,
+  Droplets,
+  Snowflake,
+  ThermometerSun,
+  Waves,
+  ArrowUpDown,
+  Car,
+  Bike,
+  Shield,
+  Trees,
+  Building,
+  Scroll,
+  Milestone,
+  Home,
+  Expand,
+  Dog,
+  HelpCircle,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -41,6 +68,39 @@ interface Province {
   code: number;
   name: string;
 }
+
+interface Feature {
+  id: string;
+  name: string;
+  icon: string | null;
+  category: string | null;
+}
+
+const featureIconMap: Record<string, React.ComponentType<any>> = {
+  wifi: Wifi,
+  wind: Wind,
+  armchair: Armchair,
+  droplets: Droplets,
+  snowflake: Snowflake,
+  "thermometer-sun": ThermometerSun,
+  waves: Waves,
+  "arrow-up-down": ArrowUpDown,
+  car: Car,
+  bike: Bike,
+  shield: Shield,
+  trees: Trees,
+  building: Building,
+  scroll: Scroll,
+  milestone: Milestone,
+  home: Home,
+  expand: Expand,
+  dog: Dog,
+};
+
+const FeatureIcon = ({ name, className }: { name: string; className?: string }) => {
+  const IconComponent = featureIconMap[name] || HelpCircle;
+  return <IconComponent className={className} />;
+};
 interface District {
   code: number;
   name: string;
@@ -106,6 +166,10 @@ export default function CreatePostPage() {
   const [showDraftToast, setShowDraftToast] = useState(false);
   const [avatarImageId, setAvatarImageId] = useState<string | null>(null);
 
+  // States cho đặc trưng bất động sản
+  const [features, setFeatures] = useState<Feature[]>([]);
+  const [selectedFeatureIds, setSelectedFeatureIds] = useState<string[]>([]);
+
   // States cho Tỉnh/Huyện/Xã
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
@@ -163,6 +227,41 @@ export default function CreatePostPage() {
   const address = watch("address");
   const latitude = watch("latitude");
   const longitude = watch("longitude");
+  const propertyType = watch("propertyType");
+
+  useEffect(() => {
+    const fetchFeatures = async () => {
+      try {
+        const response = await api.get<{ data: Feature[] }>(`/features?propertyType=${propertyType}`);
+        setFeatures(response.data.data);
+        const availableIds = new Set(response.data.data.map((f) => f.id));
+        setSelectedFeatureIds((prev) => prev.filter((id) => availableIds.has(id)));
+      } catch (err) {
+        console.error("Lỗi tải đặc trưng:", err);
+      }
+    };
+    if (propertyType) {
+      fetchFeatures();
+    }
+  }, [propertyType]);
+
+  const toggleFeature = (id: string) => {
+    setSelectedFeatureIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const groupedFeatures = useMemo(() => {
+    const groups: Record<string, Feature[]> = {};
+    features.forEach((feature) => {
+      const cat = feature.category || "Đặc trưng khác";
+      if (!groups[cat]) {
+        groups[cat] = [];
+      }
+      groups[cat].push(feature);
+    });
+    return groups;
+  }, [features]);
 
   // Load provinces and draft on mount
   useEffect(() => {
@@ -483,6 +582,10 @@ export default function CreatePostPage() {
         formData.append("images", image);
       });
 
+      if (selectedFeatureIds.length > 0) {
+        formData.append("featureIds", selectedFeatureIds.join(","));
+      }
+
       // Tạo metadata gửi lên backend để set order: 0 cho ảnh đại diện
       const metadata = imagePreviews.map((img, idx) => {
         const isAvatar = img.id === avatarImageId;
@@ -761,6 +864,51 @@ export default function CreatePostPage() {
                 <p className="mt-1 text-xs text-red-400">{errors.description.message}</p>
               )}
             </div>
+
+            {/* Đặc trưng bất động sản */}
+            {features.length > 0 && (
+              <div className="pt-2 border-t border-white/5 mt-4">
+                <label className="mb-2.5 block text-xs font-semibold text-blue-300 uppercase tracking-wider">Đặc trưng bất động sản</label>
+                <div className="space-y-4">
+                  {Object.entries(groupedFeatures).map(([category, list]) => (
+                    <div key={category} className="space-y-2">
+                      <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">{category}</h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {list.map((feature) => {
+                          const isSelected = selectedFeatureIds.includes(feature.id);
+                          return (
+                            <div
+                              key={feature.id}
+                              onClick={() => toggleFeature(feature.id)}
+                              className={`flex items-center justify-between p-2.5 rounded-xl border transition-all duration-300 cursor-pointer select-none text-xs font-medium group ${
+                                isSelected
+                                  ? "border-blue-500/40 bg-blue-500/10 text-blue-300 ring-1 ring-blue-500/25 shadow-lg shadow-blue-500/5"
+                                  : "border-white/5 bg-slate-950/25 text-gray-400 hover:border-white/15 hover:bg-slate-950/45 hover:text-gray-200"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <FeatureIcon
+                                  name={feature.icon || "help-circle"}
+                                  className={`h-4 w-4 shrink-0 transition-transform duration-300 group-hover:scale-110 ${
+                                    isSelected ? "text-blue-400" : "text-gray-500"
+                                  }`}
+                                />
+                                <span className="truncate">{feature.name}</span>
+                              </div>
+                              {isSelected && (
+                                <div className="h-4 w-4 rounded-full bg-blue-600 flex items-center justify-center text-white shrink-0 shadow-md">
+                                  <Check className="h-2.5 w-2.5 stroke-[3]" />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
