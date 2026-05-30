@@ -63,6 +63,7 @@ import {
 } from "@/lib/posts";
 import { useAuthStore } from "@/stores/auth.store";
 import dynamic from "next/dynamic";
+import CommentSection from "@/components/comment/CommentSection";
 
 const PostDetailMap = dynamic(() => import("@/components/map/PostDetailMap"), {
   ssr: false,
@@ -621,6 +622,8 @@ export default function PostDetailPage() {
               />
             </div>
           </div>
+
+          <CommentSection postId={post.id} postAuthorId={post.author.id} />
         </section>
 
         <aside className="space-y-5">

@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { MessageSquare, Send, Trash2, LoaderCircle } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { Edit3, LoaderCircle, MessageSquare, Send, Trash2, X } from "lucide-react";
 
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth.store";
+import { useSocketStore } from "@/stores/socket.store";
 
 type CommentAuthor = {
   id: string;
@@ -20,8 +21,10 @@ type Comment = {
   authorId: string;
   content: string;
   createdAt: string;
-  author: CommentAuthor;
+  updatedAt: string;
   parentId?: string | null;
+  author: CommentAuthor;
+  replyToUser?: CommentAuthor | null;
   replies?: Comment[];
 };
 
@@ -38,36 +41,106 @@ type CommentResponse = {
   };
 };
 
+type DeletePayload = {
+  success: boolean;
+  commentId: string;
+  postId: string;
+  parentId?: string | null;
+  deletedCount: number;
+};
+
 interface CommentSectionProps {
   postId: string;
   postAuthorId?: string;
 }
 
+const COMMENT_PAGE_SIZE = 10;
+
+const getAuthorName = (author?: CommentAuthor | null) => author?.fullName || "Người dùng";
+
+const upsertRootComment = (items: Comment[], comment: Comment) => {
+  const exists = items.some((item) => item.id === comment.id);
+  if (exists) {
+    return items.map((item) => (item.id === comment.id ? { ...comment, replies: comment.replies ?? item.replies ?? [] } : item));
+  }
+
+  return [{ ...comment, replies: comment.replies ?? [] }, ...items];
+};
+
+const upsertReply = (items: Comment[], reply: Comment) =>
+  items.map((item) => {
+    if (item.id !== reply.parentId) {
+      return item;
+    }
+
+    const replies = item.replies ?? [];
+    const exists = replies.some((currentReply) => currentReply.id === reply.id);
+
+    return {
+      ...item,
+      replies: exists
+        ? replies.map((currentReply) => (currentReply.id === reply.id ? reply : currentReply))
+        : [...replies, reply],
+    };
+  });
+
+const updateCommentInTree = (items: Comment[], comment: Comment) => {
+  if (!comment.parentId) {
+    return items.map((item) => (item.id === comment.id ? { ...item, ...comment, replies: item.replies ?? [] } : item));
+  }
+
+  return items.map((item) => ({
+    ...item,
+    replies: (item.replies ?? []).map((reply) => (reply.id === comment.id ? comment : reply)),
+  }));
+};
+
+const removeCommentFromTree = (items: Comment[], payload: DeletePayload) => {
+  if (!payload.parentId) {
+    return items.filter((item) => item.id !== payload.commentId);
+  }
+
+  return items.map((item) => ({
+    ...item,
+    replies: (item.replies ?? []).filter((reply) => reply.id !== payload.commentId),
+  }));
+};
+
 export default function CommentSection({ postId, postAuthorId }: CommentSectionProps) {
   const { user } = useAuthStore();
+  const socket = useSocketStore((state) => state.socket);
+  const isConnected = useSocketStore((state) => state.isConnected);
+
   const [comments, setComments] = useState<Comment[]>([]);
   const [content, setContent] = useState("");
+  const [replyContent, setReplyContent] = useState("");
+  const [activeReplyCommentId, setActiveReplyCommentId] = useState<string | null>(null);
+  const [replyTarget, setReplyTarget] = useState<Comment | null>(null);
+  const [editingComment, setEditingComment] = useState<Comment | null>(null);
+  const [editingContent, setEditingContent] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmittingReply, setIsSubmittingReply] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
 
-  // States for replies
-  const [activeReplyCommentId, setActiveReplyCommentId] = useState<string | null>(null);
-  const [replyContent, setReplyContent] = useState("");
-  const [isSubmittingReply, setIsSubmittingReply] = useState<string | null>(null);
+  const isAdmin = user?.role === "ADMIN";
 
-  const fetchComments = async (pageNum: number = 1, append: boolean = false) => {
+  const fetchComments = useCallback(async (pageNum = 1, append = false) => {
     try {
       if (pageNum === 1) setIsLoading(true);
       setError(null);
-      const response = await api.get<CommentResponse>(`/comments?postId=${postId}&page=${pageNum}&limit=10`);
+
+      const response = await api.get<CommentResponse>("/comments", {
+        params: { postId, page: pageNum, limit: COMMENT_PAGE_SIZE },
+      });
       const { items, meta } = response.data.data;
-      
-      setComments((prev) => (append ? [...prev, ...items] : items));
+
+      setComments((current) => (append ? mergeCommentPages(current, items) : items));
       setHasMore(meta.hasMore);
       setTotalCount(meta.total);
       setPage(meta.page);
@@ -77,16 +150,73 @@ export default function CommentSection({ postId, postAuthorId }: CommentSectionP
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [postId]);
 
   useEffect(() => {
     fetchComments(1, false);
-  }, [postId]);
+  }, [fetchComments]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-    if (!content.trim()) return;
+  useEffect(() => {
+    if (!socket || !isConnected) return;
+
+    socket.emit("join_post_comments", postId);
+
+    const handleCreated = (comment: Comment) => {
+      if (comment.postId !== postId) return;
+      setComments((current) => {
+        const exists = commentsContain(current, comment.id);
+        if (!exists) {
+          setTotalCount((count) => count + 1);
+        }
+        return comment.parentId ? upsertReply(current, comment) : upsertRootComment(current, comment);
+      });
+    };
+
+    const handleUpdated = (comment: Comment) => {
+      if (comment.postId !== postId) return;
+      setComments((current) => updateCommentInTree(current, comment));
+    };
+
+    const handleDeleted = (payload: DeletePayload) => {
+      if (payload.postId !== postId) return;
+      setComments((current) => {
+        const exists = commentsContain(current, payload.commentId);
+        if (exists) {
+          setTotalCount((count) => Math.max(0, count - payload.deletedCount));
+        }
+        return removeCommentFromTree(current, payload);
+      });
+    };
+
+    socket.on("comment_created", handleCreated);
+    socket.on("comment_updated", handleUpdated);
+    socket.on("comment_deleted", handleDeleted);
+
+    return () => {
+      socket.emit("leave_post_comments", postId);
+      socket.off("comment_created", handleCreated);
+      socket.off("comment_updated", handleUpdated);
+      socket.off("comment_deleted", handleDeleted);
+    };
+  }, [isConnected, postId, socket]);
+
+  const formatCommentDate = useCallback((dateStr: string) => {
+    try {
+      return new Intl.DateTimeFormat("vi-VN", {
+        hour: "2-digit",
+        minute: "2-digit",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }).format(new Date(dateStr));
+    } catch {
+      return dateStr;
+    }
+  }, []);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!user || !content.trim()) return;
 
     try {
       setIsSubmitting(true);
@@ -95,11 +225,16 @@ export default function CommentSection({ postId, postAuthorId }: CommentSectionP
         postId,
         content: content.trim(),
       });
-      
+
       const newComment = response.data.data;
-      setComments((prev) => [newComment, ...prev]);
+      setComments((current) => {
+        const exists = commentsContain(current, newComment.id);
+        if (!exists) {
+          setTotalCount((count) => count + 1);
+        }
+        return upsertRootComment(current, newComment);
+      });
       setContent("");
-      setTotalCount((prev) => prev + 1);
     } catch (err: any) {
       console.error("Failed to post comment:", err);
       setError(err.response?.data?.message || "Không thể gửi bình luận lúc này.");
@@ -108,16 +243,9 @@ export default function CommentSection({ postId, postAuthorId }: CommentSectionP
     }
   };
 
-  const handleReplyClick = (comment: Comment) => {
-    const targetParentId = comment.parentId || comment.id;
-    setActiveReplyCommentId(targetParentId);
-    setReplyContent("");
-  };
-
-  const handleReplySubmit = async (e: React.FormEvent, parentId: string) => {
-    e.preventDefault();
-    if (!user) return;
-    if (!replyContent.trim()) return;
+  const handleReplySubmit = async (event: React.FormEvent, parentId: string) => {
+    event.preventDefault();
+    if (!user || !replyContent.trim() || !replyTarget) return;
 
     try {
       setIsSubmittingReply(parentId);
@@ -126,30 +254,47 @@ export default function CommentSection({ postId, postAuthorId }: CommentSectionP
         postId,
         content: replyContent.trim(),
         parentId,
+        replyToUserId: replyTarget.authorId,
       });
 
       const newReply = response.data.data;
-      
-      setComments((prev) =>
-        prev.map((c) => {
-          if (c.id === parentId) {
-            return {
-              ...c,
-              replies: [...(c.replies || []), newReply],
-            };
-          }
-          return c;
-        })
-      );
-      
+      setComments((current) => {
+        const exists = commentsContain(current, newReply.id);
+        if (!exists) {
+          setTotalCount((count) => count + 1);
+        }
+        return upsertReply(current, newReply);
+      });
       setReplyContent("");
       setActiveReplyCommentId(null);
-      setTotalCount((prev) => prev + 1);
+      setReplyTarget(null);
     } catch (err: any) {
       console.error("Failed to post reply:", err);
       setError(err.response?.data?.message || "Không thể gửi câu trả lời lúc này.");
     } finally {
       setIsSubmittingReply(null);
+    }
+  };
+
+  const handleUpdate = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!editingComment || !editingContent.trim()) return;
+
+    try {
+      setIsUpdating(true);
+      setError(null);
+      const response = await api.patch<{ data: Comment }>(`/comments/${editingComment.id}`, {
+        content: editingContent.trim(),
+      });
+
+      setComments((current) => updateCommentInTree(current, response.data.data));
+      setEditingComment(null);
+      setEditingContent("");
+    } catch (err: any) {
+      console.error("Failed to update comment:", err);
+      setError(err.response?.data?.message || "Không thể cập nhật bình luận.");
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -159,47 +304,37 @@ export default function CommentSection({ postId, postAuthorId }: CommentSectionP
     try {
       setDeletingId(commentId);
       setError(null);
-      await api.delete(`/comments/${commentId}`);
-      
-      setComments((prev) =>
-        prev
-          .filter((c) => c.id !== commentId)
-          .map((c) => ({
-            ...c,
-            replies: c.replies ? c.replies.filter((r) => r.id !== commentId) : [],
-          }))
-      );
-      setTotalCount((prev) => Math.max(0, prev - 1));
+      const response = await api.delete<{ data: DeletePayload }>(`/comments/${commentId}`);
+      const payload = response.data.data;
+      setComments((current) => {
+        const exists = commentsContain(current, payload.commentId);
+        if (exists) {
+          setTotalCount((count) => Math.max(0, count - payload.deletedCount));
+        }
+        return removeCommentFromTree(current, payload);
+      });
     } catch (err: any) {
       console.error("Failed to delete comment:", err);
-      setError("Không thể xoá bình luận. Vui lòng thử lại.");
+      setError(err.response?.data?.message || "Không thể xoá bình luận. Vui lòng thử lại.");
     } finally {
       setDeletingId(null);
     }
   };
 
-  const formatCommentDate = (dateStr: string) => {
-    try {
-      const date = new Date(dateStr);
-      return date.toLocaleDateString("vi-VN", {
-        hour: "2-digit",
-        minute: "2-digit",
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      });
-    } catch {
-      return dateStr;
-    }
+  const startEditing = (comment: Comment) => {
+    setEditingComment(comment);
+    setEditingContent(comment.content);
   };
 
+  const totalLabel = useMemo(() => new Intl.NumberFormat("vi-VN").format(totalCount), [totalCount]);
+
   return (
-    <div className="glass-card p-6 md:p-7 space-y-6">
-      <div className="flex items-center gap-2 border-b border-white/10 pb-4">
-        <MessageSquare className="h-5 w-5 text-blue-400" />
-        <h2 className="text-2xl font-semibold text-white">
-          Bình luận ({totalCount})
-        </h2>
+    <section className="glass-card space-y-6 p-6 md:p-7">
+      <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-4">
+        <div className="flex items-center gap-2">
+          <MessageSquare className="h-5 w-5 text-blue-400" />
+          <h2 className="text-2xl font-semibold text-white">Bình luận ({totalLabel})</h2>
+        </div>
       </div>
 
       {error && (
@@ -208,240 +343,93 @@ export default function CommentSection({ postId, postAuthorId }: CommentSectionP
         </div>
       )}
 
-      {/* Form viết bình luận gốc */}
       {user ? (
         <form onSubmit={handleSubmit} className="flex gap-4">
-          <div className="relative shrink-0">
-            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-blue-500/30 bg-blue-500/10 text-sm font-semibold text-blue-200">
-              {user.avatarUrl ? (
-                <img src={user.avatarUrl} alt={user.fullName || user.name} className="h-full w-full object-cover" />
-              ) : (
-                (user.fullName || user.name || "?").charAt(0).toUpperCase()
-              )}
-            </div>
-          </div>
+          <Avatar name={user.fullName || user.name} imageUrl={user.avatarUrl} size="md" />
           <div className="flex-1 space-y-3">
             <textarea
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={(event) => setContent(event.target.value)}
               placeholder="Chia sẻ ý kiến của bạn về bất động sản này..."
               rows={3}
               maxLength={1000}
-              className="input-dark w-full text-sm py-2 px-3 focus:ring-1 focus:ring-blue-500"
+              className="input-dark w-full px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500"
             />
             <div className="flex justify-end">
               <button
                 type="submit"
                 disabled={isSubmitting || !content.trim()}
-                className="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isSubmitting ? (
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
+                {isSubmitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 Gửi bình luận
               </button>
             </div>
           </div>
         </form>
       ) : (
-        <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center bg-slate-950/20">
-          <p className="text-gray-400 text-sm mb-3">Vui lòng đăng nhập để lại bình luận và thảo luận cùng mọi người.</p>
+        <div className="rounded-2xl border border-dashed border-white/10 bg-slate-950/20 p-6 text-center">
+          <p className="mb-3 text-sm text-gray-400">Vui lòng đăng nhập để để lại bình luận và thảo luận cùng mọi người.</p>
           <Link href="/auth/login" className="btn-primary inline-flex px-5 py-2 text-sm font-medium">
             Đăng nhập ngay
           </Link>
         </div>
       )}
 
-      {/* Danh sách bình luận */}
       <div className="space-y-4">
-        {comments.length === 0 && !isLoading ? (
-          <p className="text-center py-6 text-sm text-gray-500">
-            Chưa có bình luận nào cho bài viết này. Hãy là người đầu tiên để lại ý kiến!
+        {isLoading ? (
+          <div className="flex min-h-28 items-center justify-center text-sm text-gray-300">
+            <LoaderCircle className="mr-2 h-4 w-4 animate-spin text-blue-300" />
+            Đang tải bình luận...
+          </div>
+        ) : comments.length === 0 ? (
+          <p className="py-6 text-center text-sm text-gray-500">
+            Chưa có bình luận nào cho bài viết này. Hãy là người đầu tiên để lại ý kiến.
           </p>
         ) : (
-          <div className="divide-y divide-white/5 space-y-4">
-            {comments.map((comment, index) => {
-              const isCommentAuthor = user && user.id === comment.authorId;
-              const isAdmin = user && user.role === "ADMIN";
-              const isPostAuthor = postAuthorId && comment.authorId === postAuthorId;
-              const hasReplies = comment.replies && comment.replies.length > 0;
-              
-              return (
-                <div key={comment.id} className={`flex gap-4 pt-4 ${index === 0 ? "pt-0 border-t-0" : ""}`}>
-                  <div className="shrink-0">
-                    <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-white/5 text-sm font-semibold text-gray-300">
-                      {comment.author.avatarUrl ? (
-                        <img src={comment.author.avatarUrl} alt={comment.author.fullName} className="h-full w-full object-cover" />
-                      ) : (
-                        comment.author.fullName.charAt(0).toUpperCase()
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        <span className="font-semibold text-sm text-white">{comment.author.fullName}</span>
-                        {isPostAuthor && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-blue-500/20 border border-blue-500/30 text-blue-300 font-medium">
-                            Chủ bài đăng
-                          </span>
-                        )}
-                        <span className="text-xs text-gray-500">
-                          {formatCommentDate(comment.createdAt)}
-                        </span>
-                      </div>
-                      
-                      {(isCommentAuthor || isAdmin) && (
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(comment.id)}
-                          disabled={deletingId === comment.id}
-                          className="text-gray-500 hover:text-red-400 transition p-1"
-                          title="Xoá bình luận"
-                        >
-                          {deletingId === comment.id ? (
-                            <LoaderCircle className="h-3.5 w-3.5 animate-spin text-red-400" />
-                          ) : (
-                            <Trash2 className="h-3.5 w-3.5" />
-                          )}
-                        </button>
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap break-words">
-                      {comment.content}
-                    </p>
-                    
-                    {/* Action panel (Trả lời) */}
-                    <div className="flex items-center gap-4 mt-2">
-                      {user && (
-                        <button
-                          type="button"
-                          onClick={() => handleReplyClick(comment)}
-                          className="text-xs text-gray-400 hover:text-blue-400 transition"
-                        >
-                          Trả lời
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Form trả lời của bình luận này */}
-                    {activeReplyCommentId === comment.id && (
-                      <form onSubmit={(e) => handleReplySubmit(e, comment.id)} className="flex gap-3 mt-3 pl-4 border-l-2 border-blue-500/30">
-                        <div className="flex-1 space-y-2">
-                          <textarea
-                            value={replyContent}
-                            onChange={(e) => setReplyContent(e.target.value)}
-                            placeholder={`Trả lời ${comment.author.fullName}...`}
-                            rows={2}
-                            maxLength={1000}
-                            className="input-dark w-full text-xs py-1.5 px-3 focus:ring-1 focus:ring-blue-500"
-                          />
-                          <div className="flex justify-end gap-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setActiveReplyCommentId(null);
-                                setReplyContent("");
-                              }}
-                              className="text-xs text-gray-400 hover:text-white px-3 py-1 rounded-lg border border-white/5 transition"
-                            >
-                              Hủy
-                            </button>
-                            <button
-                              type="submit"
-                              disabled={isSubmittingReply === comment.id || !replyContent.trim()}
-                              className="btn-primary inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium disabled:opacity-50"
-                            >
-                              {isSubmittingReply === comment.id ? (
-                                <LoaderCircle className="h-3 w-3 animate-spin" />
-                              ) : (
-                                <Send className="h-3 w-3" />
-                              )}
-                              Trả lời
-                            </button>
-                          </div>
-                        </div>
-                      </form>
-                    )}
-
-                    {/* Danh sách các bình luận con (Replies) */}
-                    {hasReplies && (
-                      <div className="mt-4 pl-6 border-l-2 border-white/5 space-y-4">
-                        {comment.replies!.map((reply) => {
-                          const isReplyAuthor = user && user.id === reply.authorId;
-                          const isReplyPostAuthor = postAuthorId && reply.authorId === postAuthorId;
-
-                          return (
-                            <div key={reply.id} className="flex gap-3 pt-2">
-                              <div className="shrink-0">
-                                <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-white/5 text-xs font-semibold text-gray-300">
-                                  {reply.author.avatarUrl ? (
-                                    <img src={reply.author.avatarUrl} alt={reply.author.fullName} className="h-full w-full object-cover" />
-                                  ) : (
-                                    reply.author.fullName.charAt(0).toUpperCase()
-                                  )}
-                                </div>
-                              </div>
-                              <div className="flex-1 space-y-1">
-                                <div className="flex items-center justify-between gap-2">
-                                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                                    <span className="font-semibold text-xs text-white">{reply.author.fullName}</span>
-                                    {isReplyPostAuthor && (
-                                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/20 border border-blue-500/30 text-blue-300 font-medium">
-                                        Chủ bài đăng
-                                      </span>
-                                    )}
-                                    <span className="text-[10px] text-gray-500">
-                                      {formatCommentDate(reply.createdAt)}
-                                    </span>
-                                  </div>
-
-                                  {(isReplyAuthor || isAdmin) && (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDelete(reply.id)}
-                                      disabled={deletingId === reply.id}
-                                      className="text-gray-500 hover:text-red-400 transition p-1"
-                                      title="Xoá câu trả lời"
-                                    >
-                                      {deletingId === reply.id ? (
-                                        <LoaderCircle className="h-3 w-3 animate-spin text-red-400" />
-                                      ) : (
-                                        <Trash2 className="h-3 w-3" />
-                                      )}
-                                    </button>
-                                  )}
-                                </div>
-                                <p className="text-xs text-gray-300 leading-relaxed whitespace-pre-wrap break-words">
-                                  {reply.content}
-                                </p>
-                                <div className="flex items-center gap-4 mt-1">
-                                  {user && (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleReplyClick(reply)}
-                                      className="text-[10px] text-gray-400 hover:text-blue-400 transition"
-                                    >
-                                      Trả lời
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+          <div className="space-y-4 divide-y divide-white/5">
+            {comments.map((comment, index) => (
+              <CommentItem
+                key={comment.id}
+                comment={comment}
+                index={index}
+                postAuthorId={postAuthorId}
+                currentUserId={user?.id}
+                isAdmin={Boolean(isAdmin)}
+                deletingId={deletingId}
+                activeReplyCommentId={activeReplyCommentId}
+                replyContent={replyContent}
+                isSubmittingReply={isSubmittingReply}
+                replyTarget={replyTarget}
+                editingCommentId={editingComment?.id ?? null}
+                editingContent={editingContent}
+                isUpdating={isUpdating}
+                onReply={(targetComment) => {
+                  setActiveReplyCommentId(targetComment.parentId || targetComment.id);
+                  setReplyTarget(targetComment);
+                  setReplyContent("");
+                }}
+                onReplyContentChange={setReplyContent}
+                onReplySubmit={handleReplySubmit}
+                onCancelReply={() => {
+                  setActiveReplyCommentId(null);
+                  setReplyTarget(null);
+                  setReplyContent("");
+                }}
+                onEdit={startEditing}
+                onEditingContentChange={setEditingContent}
+                onUpdateSubmit={handleUpdate}
+                onCancelEdit={() => {
+                  setEditingComment(null);
+                  setEditingContent("");
+                }}
+                onDelete={handleDelete}
+                formatCommentDate={formatCommentDate}
+              />
+            ))}
           </div>
         )}
 
-        {/* Nút Xem thêm */}
         {hasMore && (
           <div className="flex justify-center pt-4">
             <button
@@ -454,6 +442,337 @@ export default function CommentSection({ postId, postAuthorId }: CommentSectionP
           </div>
         )}
       </div>
+    </section>
+  );
+}
+
+function CommentItem({
+  comment,
+  index,
+  postAuthorId,
+  currentUserId,
+  isAdmin,
+  deletingId,
+  activeReplyCommentId,
+  replyContent,
+  isSubmittingReply,
+  replyTarget,
+  editingCommentId,
+  editingContent,
+  isUpdating,
+  onReply,
+  onReplyContentChange,
+  onReplySubmit,
+  onCancelReply,
+  onEdit,
+  onEditingContentChange,
+  onUpdateSubmit,
+  onCancelEdit,
+  onDelete,
+  formatCommentDate,
+}: {
+  comment: Comment;
+  index: number;
+  postAuthorId?: string;
+  currentUserId?: string;
+  isAdmin: boolean;
+  deletingId: string | null;
+  activeReplyCommentId: string | null;
+  replyContent: string;
+  isSubmittingReply: string | null;
+  replyTarget: Comment | null;
+  editingCommentId: string | null;
+  editingContent: string;
+  isUpdating: boolean;
+  onReply: (comment: Comment) => void;
+  onReplyContentChange: (content: string) => void;
+  onReplySubmit: (event: React.FormEvent, parentId: string) => void;
+  onCancelReply: () => void;
+  onEdit: (comment: Comment) => void;
+  onEditingContentChange: (content: string) => void;
+  onUpdateSubmit: (event: React.FormEvent) => void;
+  onCancelEdit: () => void;
+  onDelete: (commentId: string) => void;
+  formatCommentDate: (dateStr: string) => string;
+}) {
+  const isAuthor = currentUserId === comment.authorId;
+  const canManage = isAuthor || isAdmin;
+  const isPostAuthor = postAuthorId === comment.authorId;
+  const hasReplies = Boolean(comment.replies?.length);
+
+  return (
+    <div className={`flex gap-4 pt-4 ${index === 0 ? "border-t-0 pt-0" : ""}`}>
+      <Avatar name={getAuthorName(comment.author)} imageUrl={comment.author.avatarUrl} size="md" />
+      <div className="min-w-0 flex-1 space-y-2">
+        <CommentHeader
+          comment={comment}
+          isPostAuthor={isPostAuthor}
+          canManage={canManage}
+          deletingId={deletingId}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          formatCommentDate={formatCommentDate}
+        />
+
+        {editingCommentId === comment.id ? (
+          <EditForm
+            value={editingContent}
+            isSubmitting={isUpdating}
+            onChange={onEditingContentChange}
+            onSubmit={onUpdateSubmit}
+            onCancel={onCancelEdit}
+          />
+        ) : (
+          <>
+            <ReplyTargetLabel comment={comment} />
+            <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-gray-300">{comment.content}</p>
+          </>
+        )}
+
+        {currentUserId && editingCommentId !== comment.id && (
+          <button type="button" onClick={() => onReply(comment)} className="text-xs text-gray-400 transition hover:text-blue-400">
+            Trả lời
+          </button>
+        )}
+
+        {activeReplyCommentId === comment.id && (
+          <ReplyForm
+            value={replyContent}
+            placeholder={`Trả lời ${getAuthorName(comment.author)}...`}
+            targetName={getAuthorName(replyTarget?.author)}
+            isSubmitting={isSubmittingReply === comment.id}
+            onChange={onReplyContentChange}
+            onSubmit={(event) => onReplySubmit(event, comment.id)}
+            onCancel={onCancelReply}
+          />
+        )}
+
+        {hasReplies && (
+          <div className="mt-4 space-y-4 border-l-2 border-white/5 pl-6">
+            {comment.replies!.map((reply) => {
+              const canManageReply = currentUserId === reply.authorId || isAdmin;
+              const isReplyPostAuthor = postAuthorId === reply.authorId;
+
+              return (
+                <div key={reply.id} className="flex gap-3 pt-2">
+                  <Avatar name={getAuthorName(reply.author)} imageUrl={reply.author.avatarUrl} size="sm" />
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <CommentHeader
+                      comment={reply}
+                      isPostAuthor={isReplyPostAuthor}
+                      canManage={canManageReply}
+                      deletingId={deletingId}
+                      onEdit={onEdit}
+                      onDelete={onDelete}
+                      formatCommentDate={formatCommentDate}
+                      compact
+                    />
+                    {editingCommentId === reply.id ? (
+                      <EditForm
+                        value={editingContent}
+                        isSubmitting={isUpdating}
+                        onChange={onEditingContentChange}
+                        onSubmit={onUpdateSubmit}
+                        onCancel={onCancelEdit}
+                        compact
+                      />
+                    ) : (
+                      <>
+                        <ReplyTargetLabel comment={reply} compact />
+                        <p className="whitespace-pre-wrap break-words text-xs leading-relaxed text-gray-300">{reply.content}</p>
+                      </>
+                    )}
+                    {currentUserId && editingCommentId !== reply.id && (
+                      <button type="button" onClick={() => onReply(reply)} className="text-[10px] text-gray-400 transition hover:text-blue-400">
+                        Trả lời
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
+}
+
+function CommentHeader({
+  comment,
+  isPostAuthor,
+  canManage,
+  deletingId,
+  onEdit,
+  onDelete,
+  formatCommentDate,
+  compact = false,
+}: {
+  comment: Comment;
+  isPostAuthor: boolean;
+  canManage: boolean;
+  deletingId: string | null;
+  onEdit: (comment: Comment) => void;
+  onDelete: (commentId: string) => void;
+  formatCommentDate: (dateStr: string) => string;
+  compact?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span className={`${compact ? "text-xs" : "text-sm"} font-semibold text-white`}>{getAuthorName(comment.author)}</span>
+        {isPostAuthor && (
+          <span className={`${compact ? "text-[9px]" : "text-[10px]"} rounded-md border border-blue-500/30 bg-blue-500/20 px-1.5 py-0.5 font-medium text-blue-300`}>
+            Chủ bài đăng
+          </span>
+        )}
+        <span className={`${compact ? "text-[10px]" : "text-xs"} text-gray-500`}>{formatCommentDate(comment.createdAt)}</span>
+      </div>
+
+      {canManage && (
+        <div className="flex items-center gap-1">
+          <button type="button" onClick={() => onEdit(comment)} className="p-1 text-gray-500 transition hover:text-blue-300" title="Sửa bình luận">
+            <Edit3 className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
+          </button>
+          <button
+            type="button"
+            onClick={() => onDelete(comment.id)}
+            disabled={deletingId === comment.id}
+            className="p-1 text-gray-500 transition hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-60"
+            title="Xóa bình luận"
+          >
+            {deletingId === comment.id ? (
+              <LoaderCircle className={`${compact ? "h-3 w-3" : "h-3.5 w-3.5"} animate-spin text-red-400`} />
+            ) : (
+              <Trash2 className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
+            )}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ReplyTargetLabel({ comment, compact = false }: { comment: Comment; compact?: boolean }) {
+  if (!comment.replyToUser || !comment.parentId) {
+    return null;
+  }
+
+  return (
+    <p className={`${compact ? "text-[10px]" : "text-xs"} text-gray-500`}>
+      Đang trả lời <span className="font-medium text-blue-300">{getAuthorName(comment.replyToUser)}</span>
+    </p>
+  );
+}
+
+function ReplyForm({
+  value,
+  placeholder,
+  targetName,
+  isSubmitting,
+  onChange,
+  onSubmit,
+  onCancel,
+}: {
+  value: string;
+  placeholder: string;
+  targetName: string;
+  isSubmitting: boolean;
+  onChange: (content: string) => void;
+  onSubmit: (event: React.FormEvent) => void;
+  onCancel: () => void;
+}) {
+  return (
+    <form onSubmit={onSubmit} className="mt-3 flex gap-3 border-l-2 border-blue-500/30 pl-4">
+      <div className="flex-1 space-y-2">
+        <p className="text-xs text-gray-400">
+          Đang trả lời <span className="font-semibold text-blue-300">{targetName}</span>
+        </p>
+        <textarea
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          rows={2}
+          maxLength={1000}
+          className="input-dark w-full px-3 py-1.5 text-xs focus:ring-1 focus:ring-blue-500"
+        />
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onCancel} className="rounded-lg border border-white/5 px-3 py-1 text-xs text-gray-400 transition hover:text-white">
+            Hủy
+          </button>
+          <button type="submit" disabled={isSubmitting || !value.trim()} className="btn-primary inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium disabled:opacity-50">
+            {isSubmitting ? <LoaderCircle className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+            Trả lời
+          </button>
+        </div>
+      </div>
+    </form>
+  );
+}
+
+function EditForm({
+  value,
+  isSubmitting,
+  onChange,
+  onSubmit,
+  onCancel,
+  compact = false,
+}: {
+  value: string;
+  isSubmitting: boolean;
+  onChange: (content: string) => void;
+  onSubmit: (event: React.FormEvent) => void;
+  onCancel: () => void;
+  compact?: boolean;
+}) {
+  return (
+    <form onSubmit={onSubmit} className="space-y-2">
+      <textarea
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        rows={compact ? 2 : 3}
+        maxLength={1000}
+        className={`input-dark w-full px-3 py-2 ${compact ? "text-xs" : "text-sm"} focus:ring-1 focus:ring-blue-500`}
+      />
+      <div className="flex justify-end gap-2">
+        <button type="button" onClick={onCancel} className="inline-flex items-center gap-1 rounded-lg border border-white/5 px-3 py-1.5 text-xs text-gray-400 transition hover:text-white">
+          <X className="h-3 w-3" />
+          Hủy
+        </button>
+        <button type="submit" disabled={isSubmitting || !value.trim()} className="btn-primary inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium disabled:opacity-50">
+          {isSubmitting ? <LoaderCircle className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+          Lưu
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function Avatar({ name, imageUrl, size }: { name?: string | null; imageUrl?: string | null; size: "sm" | "md" }) {
+  const sizeClass = size === "sm" ? "h-8 w-8 text-xs" : "h-10 w-10 text-sm";
+  const displayName = name || "Người dùng";
+
+  return (
+    <div className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-white/5 font-semibold text-gray-300 ${sizeClass}`}>
+      {imageUrl ? (
+        <img src={imageUrl} alt={displayName} className="h-full w-full object-cover" />
+      ) : (
+        displayName.charAt(0).toUpperCase()
+      )}
+    </div>
+  );
+}
+
+function commentsContain(items: Comment[], commentId: string) {
+  return items.some((item) => item.id === commentId || (item.replies ?? []).some((reply) => reply.id === commentId));
+}
+
+function mergeCommentPages(current: Comment[], nextItems: Comment[]) {
+  return nextItems.reduce((items, comment) => {
+    if (commentsContain(items, comment.id)) {
+      return items;
+    }
+
+    return [...items, comment];
+  }, current);
 }
