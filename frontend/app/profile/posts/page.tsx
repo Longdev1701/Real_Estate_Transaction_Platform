@@ -172,15 +172,6 @@ export default function ProfilePostsPage() {
           <button className="whitespace-nowrap border-b-2 border-blue-500 bg-blue-500/5 px-6 py-4 font-medium text-blue-400">
             {isOwnProfile ? "Bài đăng của tôi" : "Bài đăng"}
           </button>
-          <Link
-            href="/profile/saved"
-            className="whitespace-nowrap border-b-2 border-transparent px-6 py-4 font-medium text-gray-400 transition-colors hover:bg-white/5 hover:text-gray-200"
-          >
-            Bài đã lưu
-          </Link>
-          <button className="whitespace-nowrap border-b-2 border-transparent px-6 py-4 font-medium text-gray-400 transition-colors hover:bg-white/5 hover:text-gray-200">
-            Yêu thích
-          </button>
           <button className="whitespace-nowrap border-b-2 border-transparent px-6 py-4 font-medium text-gray-400 transition-colors hover:bg-white/5 hover:text-gray-200">
             Lịch sử xem
           </button>

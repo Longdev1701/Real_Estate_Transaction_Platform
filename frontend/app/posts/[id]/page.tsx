@@ -41,6 +41,12 @@ import {
   Home,
   Dog,
   HelpCircle,
+  Hash,
+  User,
+  Map,
+  Activity,
+  Copy,
+  Check,
 } from "lucide-react";
 
 import { api } from "@/lib/api";
@@ -50,6 +56,8 @@ import {
   formatPrice,
   postTypeLabels,
   propertyTypeLabels,
+  statusLabels,
+  statusColors,
   type Post,
 } from "@/lib/posts";
 import { useAuthStore } from "@/stores/auth.store";
@@ -110,6 +118,10 @@ export default function PostDetailPage() {
   const [isSaveSubmitting, setIsSaveSubmitting] = useState(false);
   const [isStartingConversation, setIsStartingConversation] = useState(false);
   const [conversationError, setConversationError] = useState<string | null>(null);
+
+  // Copy state
+  const [isCopied, setIsCopied] = useState(false);
+
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -213,6 +225,12 @@ export default function PostDetailPage() {
     } finally {
       setIsSaveSubmitting(false);
     }
+  };
+  const handleCopyId = () => {
+    if (!post) return;
+    navigator.clipboard.writeText(post.id);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
   };
 
   const handleDelete = async () => {
@@ -483,7 +501,7 @@ export default function PostDetailPage() {
                 <p className="mt-1 text-sm text-gray-400">Loại tin</p>
               </div>
               <div className="shrink-0">
-                <p className="text-2xl font-semibold text-white break-words">{post.city}</p>
+                <p className="text-2xl font-semibold text-white break-words">{post.city.replace(/^(Tỉnh|Thành phố)\s+/i, "")}</p>
                 <p className="mt-1 text-sm text-gray-400">Khu vực</p>
               </div>
             </div>
@@ -498,28 +516,53 @@ export default function PostDetailPage() {
                 <h2 className="text-2xl font-semibold text-white">Thông tin chi tiết</h2>
                 <dl className="mt-5 grid gap-4 sm:grid-cols-2">
                   <div>
-                    <dt className="text-sm text-gray-400">Mã tin</dt>
-                    <dd className="mt-1 font-medium text-white break-all">{post.id}</dd>
+                    <dt className="flex items-center gap-2 text-sm text-gray-400">
+                      <Hash className="h-4 w-4" /> Mã tin
+                    </dt>
+                    <dd className="mt-1 flex items-center gap-2 font-medium text-white break-all">
+                      #{post.id.slice(-8).toUpperCase()}
+                      <button
+                        onClick={handleCopyId}
+                        className="inline-flex h-6 w-6 items-center justify-center rounded bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white transition-colors"
+                        title="Copy mã tin"
+                      >
+                        {isCopied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                      </button>
+                    </dd>
                   </div>
                   <div>
-                    <dt className="text-sm text-gray-400">Người đăng</dt>
+                    <dt className="flex items-center gap-2 text-sm text-gray-400">
+                      <User className="h-4 w-4" /> Người đăng
+                    </dt>
                     <dd className="mt-1 font-medium text-white break-words">{post.author.fullName}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm text-gray-400">Địa chỉ</dt>
+                    <dt className="flex items-center gap-2 text-sm text-gray-400">
+                      <MapPin className="h-4 w-4" /> Địa chỉ
+                    </dt>
                     <dd className="mt-1 font-medium text-white break-words">{post.address}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm text-gray-400">Quận / huyện</dt>
+                    <dt className="flex items-center gap-2 text-sm text-gray-400">
+                      <Map className="h-4 w-4" /> Quận / huyện
+                    </dt>
                     <dd className="mt-1 font-medium text-white break-words">{post.district}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm text-gray-400">Tỉnh / thành</dt>
+                    <dt className="flex items-center gap-2 text-sm text-gray-400">
+                      <Map className="h-4 w-4" /> Tỉnh / thành
+                    </dt>
                     <dd className="mt-1 font-medium text-white break-words">{post.city}</dd>
                   </div>
                   <div>
-                    <dt className="text-sm text-gray-400">Trạng thái</dt>
-                    <dd className="mt-1 font-medium text-white break-words">{post.status}</dd>
+                    <dt className="flex items-center gap-2 text-sm text-gray-400">
+                      <Activity className="h-4 w-4" /> Trạng thái
+                    </dt>
+                    <dd className="mt-1">
+                      <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusColors[post.status] || "bg-gray-500/10 text-gray-300 border-gray-500/20"}`}>
+                        {statusLabels[post.status] || post.status}
+                      </span>
+                    </dd>
                   </div>
                 </dl>
               </div>
