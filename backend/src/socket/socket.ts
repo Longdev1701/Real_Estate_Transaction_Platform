@@ -1,7 +1,10 @@
 import { Server as SocketIOServer, Socket } from "socket.io";
 import { Server as HTTPServer } from "http";
+import { NotificationType } from "@prisma/client";
 import { verifyAccessToken } from "../utils/jwt.js";
 import { prisma } from "../prisma/prisma.service.js";
+import { createNotification } from "../utils/notification.helper.js";
+import { setRealtimeServer } from "../utils/realtime.helper.js";
 
 export interface AuthenticatedSocket extends Socket {
   user?: {
@@ -17,10 +20,11 @@ const onlineUsers = new Map<string, number>();
 export function initializeSocket(httpServer: HTTPServer) {
   const io = new SocketIOServer(httpServer, {
     cors: {
-      origin: "*", // Adjust for production
-      methods: ["GET", "POST"]
-    }
+      origin: "*",
+      methods: ["GET", "POST"],
+    },
   });
+  setRealtimeServer(io);
 
   io.use(async (socket: AuthenticatedSocket, next) => {
     try {
@@ -32,7 +36,7 @@ export function initializeSocket(httpServer: HTTPServer) {
       const payload = verifyAccessToken(token);
       const user = await prisma.user.findUnique({
         where: { id: payload.sub },
-        select: { id: true, email: true, fullName: true, avatarUrl: true }
+        select: { id: true, email: true, fullName: true, avatarUrl: true },
       });
 
       if (!user) {
@@ -51,26 +55,24 @@ export function initializeSocket(httpServer: HTTPServer) {
     if (!user) return;
 
     console.log(`User connected to socket: ${user.fullName} (${user.id})`);
-    
-    // Handle Online Status
+
     const count = onlineUsers.get(user.id) || 0;
     onlineUsers.set(user.id, count + 1);
     if (count === 0) {
       io.emit("user_online", user.id);
     }
-    
+
     socket.on("check_online_status", (userId: string) => {
       socket.emit("online_status_result", {
         userId,
-        isOnline: onlineUsers.has(userId) && (onlineUsers.get(userId) || 0) > 0
+        isOnline: onlineUsers.has(userId) && (onlineUsers.get(userId) || 0) > 0,
       });
     });
 
-    // Auto-join personal room to receive messages anywhere
     socket.join(user.id);
 
     socket.on("join_room", (conversationId: string) => {
-      socket.join(conversationId); // Still keep this for backwards compatibility or specific needs
+      socket.join(conversationId);
       console.log(`User ${user.id} joined conversation: ${conversationId}`);
     });
 
@@ -79,7 +81,7 @@ export function initializeSocket(httpServer: HTTPServer) {
         const { conversationId, content, messageType = "TEXT" } = data;
 
         const conversation = await prisma.conversation.findUnique({
-          where: { id: conversationId }
+          where: { id: conversationId },
         });
 
         if (!conversation || (conversation.buyerId !== user.id && conversation.sellerId !== user.id)) {
@@ -98,18 +100,26 @@ export function initializeSocket(httpServer: HTTPServer) {
               select: {
                 id: true,
                 fullName: true,
-                avatarUrl: true
-              }
-            }
-          }
+                avatarUrl: true,
+              },
+            },
+          },
         });
 
         await prisma.conversation.update({
           where: { id: conversationId },
-          data: { updatedAt: new Date() }
+          data: { updatedAt: new Date() },
         });
 
-        // Emit to both buyer and seller personal rooms
+        const recipientId = conversation.buyerId === user.id ? conversation.sellerId : conversation.buyerId;
+        void createNotification({
+          userId: recipientId,
+          type: NotificationType.MESSAGE,
+          relatedId: conversationId,
+          title: `Bạn có tin nhắn mới từ ${user.fullName}`,
+          content: messageType === "IMAGE" ? "Đã gửi một hình ảnh." : content.slice(0, 180),
+        });
+
         io.to(conversation.buyerId).emit("receive_message", message);
         io.to(conversation.sellerId).emit("receive_message", message);
       } catch (error) {
@@ -119,37 +129,37 @@ export function initializeSocket(httpServer: HTTPServer) {
     });
 
     socket.on("typing", (data: { conversationId: string }) => {
-      socket.to(data.conversationId).emit("user_typing", { 
-        conversationId: data.conversationId, 
-        userId: user.id 
+      socket.to(data.conversationId).emit("user_typing", {
+        conversationId: data.conversationId,
+        userId: user.id,
       });
     });
 
     socket.on("stop_typing", (data: { conversationId: string }) => {
-      socket.to(data.conversationId).emit("user_stop_typing", { 
-        conversationId: data.conversationId, 
-        userId: user.id 
+      socket.to(data.conversationId).emit("user_stop_typing", {
+        conversationId: data.conversationId,
+        userId: user.id,
       });
     });
 
     socket.on("mark_read", (data: { conversationId: string }) => {
-      socket.to(data.conversationId).emit("messages_read", { 
-        conversationId: data.conversationId, 
-        userId: user.id 
+      socket.to(data.conversationId).emit("messages_read", {
+        conversationId: data.conversationId,
+        userId: user.id,
       });
     });
 
-    socket.on("edit_message", async (data: { messageId: string, conversationId: string, content: string }) => {
+    socket.on("edit_message", async (data: { messageId: string; conversationId: string; content: string }) => {
       try {
         const message = await prisma.message.findFirst({
-          where: { id: data.messageId, conversationId: data.conversationId, senderId: user.id }
+          where: { id: data.messageId, conversationId: data.conversationId, senderId: user.id },
         });
         if (!message || message.messageType !== "TEXT") return;
 
         const updatedMessage = await prisma.message.update({
           where: { id: data.messageId },
           data: { content: data.content, isEdited: true },
-          include: { sender: { select: { id: true, fullName: true, avatarUrl: true } } }
+          include: { sender: { select: { id: true, fullName: true, avatarUrl: true } } },
         });
 
         const conversation = await prisma.conversation.findUnique({ where: { id: data.conversationId } });
@@ -162,10 +172,10 @@ export function initializeSocket(httpServer: HTTPServer) {
       }
     });
 
-    socket.on("delete_message", async (data: { messageId: string, conversationId: string }) => {
+    socket.on("delete_message", async (data: { messageId: string; conversationId: string }) => {
       try {
         const message = await prisma.message.findFirst({
-          where: { id: data.messageId, conversationId: data.conversationId, senderId: user.id }
+          where: { id: data.messageId, conversationId: data.conversationId, senderId: user.id },
         });
         if (!message) return;
 
@@ -189,10 +199,10 @@ export function initializeSocket(httpServer: HTTPServer) {
         if (!conversation.deletedByIds.includes(user.id)) {
           await prisma.conversation.update({
             where: { id: data.conversationId },
-            data: { deletedByIds: { push: user.id } }
+            data: { deletedByIds: { push: user.id } },
           });
         }
-        
+
         io.to(user.id).emit("conversation_deleted", { conversationId: data.conversationId });
       } catch (error) {
         console.error("Error deleting conversation:", error);

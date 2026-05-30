@@ -1,9 +1,10 @@
-import { PostStatus } from "@prisma/client";
+import { NotificationType, PostStatus } from "@prisma/client";
 
 import type { AuthenticatedUser } from "../types/auth.type.js";
 
 import { AppError } from "../middlewares/error.middleware.js";
 import { prisma } from "../prisma/prisma.service.js";
+import { createNotification } from "../utils/notification.helper.js";
 
 const savedPostInclude = {
   post: {
@@ -80,6 +81,8 @@ const getExistingPost = async (postId: string) => {
     },
     select: {
       id: true,
+      title: true,
+      authorId: true,
       status: true,
     },
   });
@@ -123,6 +126,16 @@ export const savePost = async (postId: string, user?: AuthenticatedUser) => {
     },
     include: savedPostInclude,
   });
+
+  if (post.authorId !== actor.id) {
+    void createNotification({
+      userId: post.authorId,
+      type: NotificationType.POST,
+      relatedId: post.id,
+      title: "Có người đã lưu bài đăng của bạn",
+      content: `${actor.fullName} đã lưu bài "${post.title}".`,
+    });
+  }
 
   return {
     ...savedPost,
