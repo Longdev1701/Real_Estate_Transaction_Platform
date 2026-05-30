@@ -104,7 +104,7 @@ const samplePosts: SeedPostInput[] = [
     latitude: 10.8017,
     longitude: 106.7146,
     propertyType: PropertyType.ROOM,
-    postType: PostType.FIND,
+    postType: PostType.RENT,
     images: [
       {
         imageUrl: "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85",
@@ -225,30 +225,30 @@ const main = async () => {
   // Seed property features
   const featuresData = [
     // Tiện nghi (Amenities)
-    { name: "Wifi / Internet", icon: "wifi", category: "Tiện nghi", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.ROOM] },
-    { name: "Điều hòa nhiệt độ", icon: "wind", category: "Tiện nghi", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.ROOM] },
-    { name: "Đầy đủ nội thất", icon: "armchair", category: "Tiện nghi", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.ROOM] },
-    { name: "Máy giặt", icon: "droplets", category: "Tiện nghi", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.ROOM] },
-    { name: "Tủ lạnh", icon: "snowflake", category: "Tiện nghi", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.ROOM] },
-    { name: "Máy nước nóng", icon: "thermometer-sun", category: "Tiện nghi", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.ROOM] },
+    { name: "Wifi / Internet", icon: "wifi", category: "Tiện nghi", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.ROOM, PropertyType.VILLA, PropertyType.OFFICE, PropertyType.SHOPHOUSE, PropertyType.WAREHOUSE] },
+    { name: "Điều hòa nhiệt độ", icon: "wind", category: "Tiện nghi", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.ROOM, PropertyType.VILLA, PropertyType.OFFICE, PropertyType.SHOPHOUSE] },
+    { name: "Đầy đủ nội thất", icon: "armchair", category: "Tiện nghi", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.ROOM, PropertyType.VILLA, PropertyType.OFFICE, PropertyType.SHOPHOUSE] },
+    { name: "Máy giặt", icon: "droplets", category: "Tiện nghi", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.ROOM, PropertyType.VILLA] },
+    { name: "Tủ lạnh", icon: "snowflake", category: "Tiện nghi", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.ROOM, PropertyType.VILLA, PropertyType.OFFICE] },
+    { name: "Máy nước nóng", icon: "thermometer-sun", category: "Tiện nghi", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.ROOM, PropertyType.VILLA] },
 
     // Tiện ích (Facilities)
-    { name: "Bể bơi", icon: "waves", category: "Tiện ích", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT] },
-    { name: "Thang máy", icon: "arrow-up-down", category: "Tiện ích", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT] },
-    { name: "Bãi đỗ xe ô tô", icon: "car", category: "Tiện ích", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT] },
-    { name: "Chỗ đỗ xe máy", icon: "bike", category: "Tiện ích", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.ROOM] },
-    { name: "Bảo vệ 24/7", icon: "shield", category: "Tiện ích", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT] },
-    { name: "Sân vườn / Cảnh quan", icon: "trees", category: "Tiện ích", propertyTypes: [PropertyType.HOUSE, PropertyType.LAND] },
-    { name: "Sân thượng / Rooftop", icon: "building", category: "Tiện ích", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT] },
+    { name: "Bể bơi", icon: "waves", category: "Tiện ích", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.VILLA] },
+    { name: "Thang máy", icon: "arrow-up-down", category: "Tiện ích", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.VILLA, PropertyType.OFFICE, PropertyType.SHOPHOUSE] },
+    { name: "Bãi đỗ xe ô tô", icon: "car", category: "Tiện ích", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.VILLA, PropertyType.OFFICE, PropertyType.SHOPHOUSE, PropertyType.WAREHOUSE] },
+    { name: "Chỗ đỗ xe máy", icon: "bike", category: "Tiện ích", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.ROOM, PropertyType.VILLA, PropertyType.OFFICE, PropertyType.SHOPHOUSE, PropertyType.WAREHOUSE] },
+    { name: "Bảo vệ 24/7", icon: "shield", category: "Tiện ích", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.VILLA, PropertyType.OFFICE, PropertyType.SHOPHOUSE, PropertyType.WAREHOUSE] },
+    { name: "Sân vườn / Cảnh quan", icon: "trees", category: "Tiện ích", propertyTypes: [PropertyType.HOUSE, PropertyType.LAND, PropertyType.VILLA] },
+    { name: "Sân thượng / Rooftop", icon: "building", category: "Tiện ích", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.VILLA, PropertyType.SHOPHOUSE] },
 
     // Pháp lý & Vị thế (Legal & Geography)
-    { name: "Sổ đỏ / Sổ hồng sẵn sàng", icon: "scroll", category: "Pháp lý & Vị thế", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.LAND] },
-    { name: "Mặt tiền đường chính", icon: "milestone", category: "Pháp lý & Vị thế", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.LAND] },
-    { name: "Đất thổ cư 100%", icon: "home", category: "Pháp lý & Vị thế", propertyTypes: [PropertyType.HOUSE, PropertyType.LAND] },
-    { name: "Nở hậu", icon: "expand", category: "Pháp lý & Vị thế", propertyTypes: [PropertyType.HOUSE, PropertyType.LAND] },
+    { name: "Sổ đỏ / Sổ hồng sẵn sàng", icon: "scroll", category: "Pháp lý & Vị thế", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.LAND, PropertyType.VILLA, PropertyType.SHOPHOUSE, PropertyType.WAREHOUSE] },
+    { name: "Mặt tiền đường chính", icon: "milestone", category: "Pháp lý & Vị thế", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.LAND, PropertyType.VILLA, PropertyType.OFFICE, PropertyType.SHOPHOUSE, PropertyType.WAREHOUSE] },
+    { name: "Đất thổ cư 100%", icon: "home", category: "Pháp lý & Vị thế", propertyTypes: [PropertyType.HOUSE, PropertyType.LAND, PropertyType.VILLA, PropertyType.SHOPHOUSE] },
+    { name: "Nở hậu", icon: "expand", category: "Pháp lý & Vị thế", propertyTypes: [PropertyType.HOUSE, PropertyType.LAND, PropertyType.VILLA, PropertyType.SHOPHOUSE, PropertyType.WAREHOUSE] },
 
     // Quy định (Rules)
-    { name: "Cho phép nuôi thú cưng", icon: "dog", category: "Quy định", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.ROOM] },
+    { name: "Cho phép nuôi thú cưng", icon: "dog", category: "Quy định", propertyTypes: [PropertyType.HOUSE, PropertyType.APARTMENT, PropertyType.ROOM, PropertyType.VILLA] },
   ];
 
   for (const feature of featuresData) {

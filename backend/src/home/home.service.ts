@@ -32,10 +32,14 @@ const postInclude = {
 };
 
 const propertyTypeLabels: Record<PropertyType, string> = {
-  APARTMENT: "C\u0103n h\u1ed9",
-  HOUSE: "Nh\u00e0 ri\u00eang",
-  LAND: "\u0110\u1ea5t n\u1ec1n",
-  ROOM: "Ph\u00f2ng",
+  APARTMENT: "Căn hộ / Chung cư",
+  HOUSE: "Nhà riêng",
+  LAND: "Đất",
+  ROOM: "Phòng trọ / Cho thuê phòng",
+  VILLA: "Biệt thự",
+  OFFICE: "Văn phòng",
+  SHOPHOUSE: "Shophouse / Mặt bằng kinh doanh",
+  WAREHOUSE: "Kho / Xưởng",
 };
 
 const sortPropertyTypes: PropertyType[] = [
@@ -43,6 +47,10 @@ const sortPropertyTypes: PropertyType[] = [
   PropertyType.HOUSE,
   PropertyType.LAND,
   PropertyType.ROOM,
+  PropertyType.VILLA,
+  PropertyType.OFFICE,
+  PropertyType.SHOPHOUSE,
+  PropertyType.WAREHOUSE,
 ];
 
 export const getHomeData = async () => {
