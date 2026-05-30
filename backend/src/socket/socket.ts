@@ -2,6 +2,8 @@ import { Server as SocketIOServer, Socket } from "socket.io";
 import { Server as HTTPServer } from "http";
 import { verifyAccessToken } from "../utils/jwt.js";
 import { prisma } from "../prisma/prisma.service.js";
+import { createAdapter } from "@socket.io/redis-adapter";
+import { pubClient, subClient, redisClient } from "../config/redis.js";
 
 export interface AuthenticatedSocket extends Socket {
   user?: {
@@ -12,14 +14,13 @@ export interface AuthenticatedSocket extends Socket {
   };
 }
 
-const onlineUsers = new Map<string, number>();
-
 export function initializeSocket(httpServer: HTTPServer) {
   const io = new SocketIOServer(httpServer, {
     cors: {
       origin: "*", // Adjust for production
       methods: ["GET", "POST"]
-    }
+    },
+    adapter: createAdapter(pubClient, subClient)
   });
 
   io.use(async (socket: AuthenticatedSocket, next) => {
@@ -52,18 +53,31 @@ export function initializeSocket(httpServer: HTTPServer) {
 
     console.log(`User connected to socket: ${user.fullName} (${user.id})`);
     
-    // Handle Online Status
-    const count = onlineUsers.get(user.id) || 0;
-    onlineUsers.set(user.id, count + 1);
-    if (count === 0) {
-      io.emit("user_online", user.id);
-    }
+    // Handle Online Status via Redis
+    (async () => {
+      try {
+        const countStr = await redisClient.hGet("onlineUsers", user.id);
+        const count = countStr ? parseInt(countStr, 10) : 0;
+        await redisClient.hSet("onlineUsers", user.id, count + 1);
+        if (count === 0) {
+          io.emit("user_online", user.id);
+        }
+      } catch (err) {
+        console.error("Redis error on connect", err);
+      }
+    })();
     
-    socket.on("check_online_status", (userId: string) => {
-      socket.emit("online_status_result", {
-        userId,
-        isOnline: onlineUsers.has(userId) && (onlineUsers.get(userId) || 0) > 0
-      });
+    socket.on("check_online_status", async (userId: string) => {
+      try {
+        const countStr = await redisClient.hGet("onlineUsers", userId);
+        const count = countStr ? parseInt(countStr, 10) : 0;
+        socket.emit("online_status_result", {
+          userId,
+          isOnline: count > 0
+        });
+      } catch (err) {
+        // Fallback or ignore
+      }
     });
 
     // Auto-join personal room to receive messages anywhere
@@ -74,44 +88,88 @@ export function initializeSocket(httpServer: HTTPServer) {
       console.log(`User ${user.id} joined conversation: ${conversationId}`);
     });
 
-    socket.on("send_message", async (data: { conversationId: string; content: string; messageType?: string }) => {
+    socket.on("send_message", async (data: { conversationId: string; content: string; messageType?: string; tempId?: string }) => {
       try {
-        const { conversationId, content, messageType = "TEXT" } = data;
+        const { conversationId, content, messageType = "TEXT", tempId } = data;
 
-        const conversation = await prisma.conversation.findUnique({
-          where: { id: conversationId }
-        });
+        // 1. Check permissions
+        const cacheKey = `conv_auth:${conversationId}`;
+        let authorized = false;
+        let buyerId = "";
+        let sellerId = "";
+        
+        try {
+          const cachedAuth = await redisClient.get(cacheKey);
+          if (cachedAuth) {
+            const parsed = JSON.parse(cachedAuth);
+            buyerId = parsed.buyerId;
+            sellerId = parsed.sellerId;
+            authorized = (buyerId === user.id || sellerId === user.id);
+          }
+        } catch (e) { console.error(e); }
 
-        if (!conversation || (conversation.buyerId !== user.id && conversation.sellerId !== user.id)) {
-          return socket.emit("error", { message: "Unauthorized or conversation not found" });
+        if (!buyerId || !sellerId) {
+          const conversation = await prisma.conversation.findUnique({
+            where: { id: conversationId },
+            select: { buyerId: true, sellerId: true }
+          });
+          if (!conversation || (conversation.buyerId !== user.id && conversation.sellerId !== user.id)) {
+            return socket.emit("error", { message: "Unauthorized or conversation not found" });
+          }
+          buyerId = conversation.buyerId;
+          sellerId = conversation.sellerId;
+          authorized = true;
+          // Cache for 1 hour
+          redisClient.setEx(cacheKey, 3600, JSON.stringify({ buyerId, sellerId })).catch(console.error);
         }
 
-        const message = await prisma.message.create({
-          data: {
-            conversationId,
-            senderId: user.id,
-            content,
-            messageType: messageType as any,
-          },
-          include: {
-            sender: {
-              select: {
-                id: true,
-                fullName: true,
-                avatarUrl: true
-              }
+        if (!authorized) return socket.emit("error", { message: "Unauthorized" });
+
+        // Generate optimistic message for emit
+        const tempMessage = {
+          id: tempId || `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+          conversationId,
+          senderId: user.id,
+          content,
+          messageType,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          isRead: false,
+          isEdited: false,
+          sender: {
+            id: user.id,
+            fullName: user.fullName,
+            avatarUrl: user.avatarUrl
+          }
+        };
+
+        // 2. Emit immediately (Fire and Forget)
+        io.to(buyerId).emit("receive_message", tempMessage);
+        io.to(sellerId).emit("receive_message", tempMessage);
+
+        // 3. Persist to DB in the background
+        Promise.allSettled([
+          prisma.message.create({
+            data: {
+              id: tempId ? undefined : tempMessage.id,
+              conversationId,
+              senderId: user.id,
+              content,
+              messageType: messageType as any,
             }
+          }),
+          prisma.conversation.update({
+            where: { id: conversationId },
+            data: { updatedAt: new Date() }
+          })
+        ]).then((results) => {
+          if (results[0].status === "rejected") {
+            console.error("Failed to persist message:", results[0].reason);
+            // Optionally emit rollback to sender
+            socket.emit("error", { message: "Failed to persist message", tempId });
           }
         });
 
-        await prisma.conversation.update({
-          where: { id: conversationId },
-          data: { updatedAt: new Date() }
-        });
-
-        // Emit to both buyer and seller personal rooms
-        io.to(conversation.buyerId).emit("receive_message", message);
-        io.to(conversation.sellerId).emit("receive_message", message);
       } catch (error) {
         console.error("Error sending message:", error);
         socket.emit("error", { message: "Failed to send message" });
@@ -142,21 +200,43 @@ export function initializeSocket(httpServer: HTTPServer) {
     socket.on("edit_message", async (data: { messageId: string, conversationId: string, content: string }) => {
       try {
         const message = await prisma.message.findFirst({
-          where: { id: data.messageId, conversationId: data.conversationId, senderId: user.id }
+          where: { id: data.messageId, conversationId: data.conversationId, senderId: user.id },
+          include: { sender: { select: { id: true, fullName: true, avatarUrl: true } } }
         });
         if (!message || message.messageType !== "TEXT") return;
 
-        const updatedMessage = await prisma.message.update({
-          where: { id: data.messageId },
-          data: { content: data.content, isEdited: true },
-          include: { sender: { select: { id: true, fullName: true, avatarUrl: true } } }
-        });
+        // Emit immediately (Emit-First)
+        const updatedMessage = { ...message, content: data.content, isEdited: true };
+        
+        const cacheKey = `conv_auth:${data.conversationId}`;
+        let buyerId = "";
+        let sellerId = "";
+        try {
+          const cachedAuth = await redisClient.get(cacheKey);
+          if (cachedAuth) {
+            const parsed = JSON.parse(cachedAuth);
+            buyerId = parsed.buyerId;
+            sellerId = parsed.sellerId;
+          }
+        } catch (e) {}
 
-        const conversation = await prisma.conversation.findUnique({ where: { id: data.conversationId } });
-        if (conversation) {
-          io.to(conversation.buyerId).emit("message_edited", updatedMessage);
-          io.to(conversation.sellerId).emit("message_edited", updatedMessage);
+        if (buyerId && sellerId) {
+          io.to(buyerId).emit("message_edited", updatedMessage);
+          io.to(sellerId).emit("message_edited", updatedMessage);
+        } else {
+          const conversation = await prisma.conversation.findUnique({ where: { id: data.conversationId } });
+          if (conversation) {
+            io.to(conversation.buyerId).emit("message_edited", updatedMessage);
+            io.to(conversation.sellerId).emit("message_edited", updatedMessage);
+          }
         }
+
+        // Persist to DB in background
+        prisma.message.update({
+          where: { id: data.messageId },
+          data: { content: data.content, isEdited: true }
+        }).catch(console.error);
+
       } catch (error) {
         console.error("Error editing message:", error);
       }
@@ -164,18 +244,35 @@ export function initializeSocket(httpServer: HTTPServer) {
 
     socket.on("delete_message", async (data: { messageId: string, conversationId: string }) => {
       try {
-        const message = await prisma.message.findFirst({
-          where: { id: data.messageId, conversationId: data.conversationId, senderId: user.id }
-        });
-        if (!message) return;
+        // Emit immediately (Emit-First)
+        const cacheKey = `conv_auth:${data.conversationId}`;
+        let buyerId = "";
+        let sellerId = "";
+        try {
+          const cachedAuth = await redisClient.get(cacheKey);
+          if (cachedAuth) {
+            const parsed = JSON.parse(cachedAuth);
+            buyerId = parsed.buyerId;
+            sellerId = parsed.sellerId;
+          }
+        } catch (e) {}
 
-        await prisma.message.delete({ where: { id: data.messageId } });
-
-        const conversation = await prisma.conversation.findUnique({ where: { id: data.conversationId } });
-        if (conversation) {
-          io.to(conversation.buyerId).emit("message_deleted", { messageId: data.messageId, conversationId: data.conversationId });
-          io.to(conversation.sellerId).emit("message_deleted", { messageId: data.messageId, conversationId: data.conversationId });
+        if (buyerId && sellerId) {
+          io.to(buyerId).emit("message_deleted", { messageId: data.messageId, conversationId: data.conversationId });
+          io.to(sellerId).emit("message_deleted", { messageId: data.messageId, conversationId: data.conversationId });
+        } else {
+          const conversation = await prisma.conversation.findUnique({ where: { id: data.conversationId } });
+          if (conversation) {
+            io.to(conversation.buyerId).emit("message_deleted", { messageId: data.messageId, conversationId: data.conversationId });
+            io.to(conversation.sellerId).emit("message_deleted", { messageId: data.messageId, conversationId: data.conversationId });
+          }
         }
+
+        // Persist to DB in background
+        prisma.message.deleteMany({
+          where: { id: data.messageId, conversationId: data.conversationId, senderId: user.id }
+        }).catch(console.error);
+
       } catch (error) {
         console.error("Error deleting message:", error);
       }
@@ -199,14 +296,19 @@ export function initializeSocket(httpServer: HTTPServer) {
       }
     });
 
-    socket.on("disconnect", () => {
+    socket.on("disconnect", async () => {
       console.log(`User disconnected from socket: ${user.fullName} (${user.id})`);
-      const count = onlineUsers.get(user.id) || 0;
-      if (count <= 1) {
-        onlineUsers.delete(user.id);
-        io.emit("user_offline", user.id);
-      } else {
-        onlineUsers.set(user.id, count - 1);
+      try {
+        const countStr = await redisClient.hGet("onlineUsers", user.id);
+        const count = countStr ? parseInt(countStr, 10) : 0;
+        if (count <= 1) {
+          await redisClient.hDel("onlineUsers", user.id);
+          io.emit("user_offline", user.id);
+        } else {
+          await redisClient.hSet("onlineUsers", user.id, count - 1);
+        }
+      } catch (err) {
+        console.error("Redis error on disconnect", err);
       }
     });
   });
