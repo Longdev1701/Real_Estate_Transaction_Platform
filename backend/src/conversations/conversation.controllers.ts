@@ -70,38 +70,56 @@ export const createOrGetConversation = async (req: Request, res: Response, next:
 export const getConversations = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = req.user!.id;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const skip = (page - 1) * limit;
 
-    const conversations = await prisma.conversation.findMany({
-      where: {
-        OR: [
-          { buyerId: userId },
-          { sellerId: userId }
-        ],
-        NOT: { deletedByIds: { has: userId } }
-      },
-      include: {
-        buyer: { select: { id: true, fullName: true, avatarUrl: true } },
-        seller: { select: { id: true, fullName: true, avatarUrl: true } },
-        post: { select: { id: true, title: true, price: true, images: { take: 1, select: { imageUrl: true } } } },
-        messages: {
-          orderBy: { createdAt: "desc" },
-          take: 1
+    const [conversations, total] = await Promise.all([
+      prisma.conversation.findMany({
+        where: {
+          OR: [
+            { buyerId: userId },
+            { sellerId: userId }
+          ],
+          NOT: { deletedByIds: { has: userId } }
         },
-        _count: {
-          select: {
-            messages: {
-              where: {
-                isRead: false,
-                NOT: { senderId: userId }
+        take: limit,
+        skip: skip,
+        include: {
+          buyer: { select: { id: true, fullName: true, avatarUrl: true } },
+          seller: { select: { id: true, fullName: true, avatarUrl: true } },
+          post: { select: { id: true, title: true, price: true, images: { take: 1, select: { imageUrl: true } } } },
+          messages: {
+            orderBy: { createdAt: "desc" },
+            take: 1
+          },
+          _count: {
+            select: {
+              messages: {
+                where: {
+                  isRead: false,
+                  NOT: { senderId: userId }
+                }
               }
             }
           }
+        },
+        orderBy: { updatedAt: "desc" }
+      }),
+      prisma.conversation.count({
+        where: {
+          OR: [
+            { buyerId: userId },
+            { sellerId: userId }
+          ],
+          NOT: { deletedByIds: { has: userId } }
         }
-      },
-      orderBy: { updatedAt: "desc" }
-    });
+      })
+    ]);
 
-    sendSuccess(res, { conversations }, "Conversations fetched successfully");
+    const hasMore = skip + conversations.length < total;
+
+    sendSuccess(res, { conversations, pagination: { page, limit, total, hasMore } }, "Conversations fetched successfully");
   } catch (error) {
     next(error);
   }
@@ -125,9 +143,15 @@ export const getConversationMessages = async (req: Request, res: Response, next:
       throw new AppError("Conversation not found, unauthorized, or deleted.", 404);
     }
 
+    const cursor = req.query.cursor as string;
+    const limit = parseInt(req.query.limit as string) || 50;
+
     const messages = await prisma.message.findMany({
       where: { conversationId: id },
-      orderBy: { createdAt: "asc" },
+      take: limit,
+      skip: cursor ? 1 : 0,
+      cursor: cursor ? { id: cursor } : undefined,
+      orderBy: { createdAt: "desc" },
       include: {
         sender: {
           select: { id: true, fullName: true, avatarUrl: true }
@@ -135,7 +159,10 @@ export const getConversationMessages = async (req: Request, res: Response, next:
       }
     });
 
-    sendSuccess(res, { conversation, messages }, "Messages fetched successfully");
+    const reversedMessages = messages.reverse();
+    const nextCursor = messages.length === limit ? reversedMessages[0].id : null;
+
+    sendSuccess(res, { conversation, messages: reversedMessages, nextCursor }, "Messages fetched successfully");
   } catch (error) {
     next(error);
   }
