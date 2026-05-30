@@ -104,18 +104,37 @@ export const postTypeLabels: Record<PostType, string> = {
 };
 
 export const propertyTypeLabels: Record<PropertyType, string> = {
-  HOUSE: "Nh\u00e0",
-  APARTMENT: "C\u0103n h\u1ed9",
-  LAND: "\u0110\u1ea5t",
-  ROOM: "Ph\u00f2ng",
+  HOUSE: "Nhà",
+  APARTMENT: "Căn hộ",
+  LAND: "Đất",
+  ROOM: "Phòng",
 };
 
-export const formatPrice = (price: number) =>
-  new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-    maximumFractionDigits: 0,
-  }).format(price);
+export const statusLabels: Record<string, string> = {
+  ACTIVE: "Đang hiển thị",
+  INACTIVE: "Đã ẩn",
+  PENDING: "Chờ duyệt",
+  SOLD: "Đã bán/cho thuê",
+  DRAFT: "Bản nháp",
+  REJECTED: "Từ chối",
+};
+
+export const statusColors: Record<string, string> = {
+  ACTIVE: "text-emerald-400 bg-emerald-400/10 border-emerald-400/20",
+  INACTIVE: "text-gray-400 bg-gray-400/10 border-gray-400/20",
+  PENDING: "text-amber-400 bg-amber-400/10 border-amber-400/20",
+  SOLD: "text-blue-400 bg-blue-400/10 border-blue-400/20",
+  DRAFT: "text-slate-400 bg-slate-400/10 border-slate-400/20",
+  REJECTED: "text-red-400 bg-red-400/10 border-red-400/20",
+};
+
+export const formatPrice = (price: number) => {
+  // Ensure thousands are separated by '.' and append VND currency symbol
+  const formattedNumber = price
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return `${formattedNumber} ₫`;
+};
 
 export const formatArea = (area: number) =>
   `${new Intl.NumberFormat("vi-VN", {
