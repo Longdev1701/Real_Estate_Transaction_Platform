@@ -299,7 +299,13 @@ export default function PostDetailPage() {
         postId: post.id,
         sellerId: post.author.id
       });
-      router.push(`/messages/${response.data.data.conversation.id}`);
+      const conversation = response.data.data.conversation;
+      writeSessionCache(`messages_${conversation.id}`, {
+        conversation,
+        messages: [],
+        nextCursor: null,
+      });
+      router.push(`/messages/${conversation.id}`);
     } catch (err) {
       const axiosError = err as AxiosError<{ message?: string }>;
       setConversationError(
