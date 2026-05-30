@@ -20,6 +20,7 @@ import { api } from "@/lib/api";
 import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
 import {
   formatPrice,
+  PROPERTY_TYPES,
   postTypeLabels,
   propertyTypeLabels,
   type SavedPost,
@@ -286,10 +287,11 @@ export default function SavedPostsPage() {
               className="input-dark"
             >
               <option value="">Tất cả loại BĐS</option>
-              <option value="HOUSE">Nhà</option>
-              <option value="APARTMENT">Căn hộ</option>
-              <option value="LAND">Đất</option>
-              <option value="ROOM">Phòng</option>
+              {PROPERTY_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {propertyTypeLabels[type]}
+                </option>
+              ))}
             </select>
 
             <select
@@ -300,7 +302,6 @@ export default function SavedPostsPage() {
               <option value="">Tất cả giao dịch</option>
               <option value="SELL">Bán</option>
               <option value="RENT">Cho thuê</option>
-              <option value="FIND">Cần tìm</option>
             </select>
 
             <select

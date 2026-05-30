@@ -32,9 +32,31 @@
     @apply bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all w-full placeholder-gray-400;
   }
 
+  select.input-dark {
+    color-scheme: dark;
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+
   .input-dark option {
     background-color: #0b1120;
     color: #ffffff;
+  }
+
+  .input-dark option:checked,
+  .input-dark option:hover {
+    background-color: #1d4ed8;
+    color: #ffffff;
+  }
+
+  .input-dark[type="number"] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+
+  .input-dark[type="number"]::-webkit-inner-spin-button,
+  .input-dark[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
   }
 
   .no-scrollbar,
