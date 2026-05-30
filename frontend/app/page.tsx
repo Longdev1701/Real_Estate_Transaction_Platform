@@ -3,6 +3,7 @@ import {
   Building2,
   ChevronRight,
   Home,
+  Landmark,
   LandPlot,
   MapPin,
   Ruler,
@@ -10,7 +11,9 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Sparkles,
+  Store,
   UsersRound,
+  Warehouse,
   type LucideIcon,
 } from "lucide-react";
 
@@ -21,6 +24,7 @@ import {
   formatPrice,
   getPrimaryImage,
   postTypeLabels,
+  PROPERTY_TYPES,
   propertyTypeLabels,
   type Post,
   type PropertyType,
@@ -36,6 +40,10 @@ const propertyIcons: Record<PropertyType, LucideIcon> = {
   HOUSE: Home,
   LAND: LandPlot,
   ROOM: Home,
+  VILLA: Landmark,
+  OFFICE: Building2,
+  SHOPHOUSE: Store,
+  WAREHOUSE: Warehouse,
 };
 
 const categoryColors: Record<PropertyType, string> = {
@@ -43,6 +51,10 @@ const categoryColors: Record<PropertyType, string> = {
   HOUSE: "text-emerald-300 bg-emerald-500/10 border-emerald-400/30",
   LAND: "text-lime-300 bg-lime-500/10 border-lime-400/30",
   ROOM: "text-violet-300 bg-violet-500/10 border-violet-400/30",
+  VILLA: "text-rose-300 bg-rose-500/10 border-rose-400/30",
+  OFFICE: "text-cyan-300 bg-cyan-500/10 border-cyan-400/30",
+  SHOPHOUSE: "text-amber-300 bg-amber-500/10 border-amber-400/30",
+  WAREHOUSE: "text-slate-300 bg-slate-500/10 border-slate-400/30",
 };
 
 const formatCompactNumber = (value: number) =>
@@ -64,7 +76,7 @@ function SelectField({
       <Icon className="h-5 w-5 shrink-0 text-gray-300" />
       <span className="min-w-0 flex-1">
         <span className="block text-xs text-gray-400">{label}</span>
-        <select name={name} className="mt-1 w-full bg-transparent text-sm font-medium text-white outline-none">
+        <select name={name} className="hero-select mt-1 w-full bg-transparent text-sm font-medium text-white outline-none">
           {children}
         </select>
       </span>
@@ -170,17 +182,6 @@ export default async function HomePage() {
           </div>
 
           <form action="/posts" className="mt-7 w-full max-w-[1360px] rounded-2xl border border-white/10 bg-slate-950/75 p-4 shadow-2xl shadow-blue-950/30 backdrop-blur-xl">
-            <div className="mb-4 flex flex-wrap gap-2">
-              <label className="cursor-pointer rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-[0_0_20px_rgba(37,99,235,0.35)]">
-                <input className="sr-only" type="radio" name="postType" value="SELL" defaultChecked />
-                {"Mua b\u00e1n"}
-              </label>
-              <label className="cursor-pointer rounded-xl border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-gray-200 transition hover:bg-white/10">
-                <input className="sr-only" type="radio" name="postType" value="RENT" />
-                {"Cho thu\u00ea"}
-              </label>
-            </div>
-
             <div className="grid gap-3 lg:grid-cols-[1.15fr_1fr_1fr_1fr_auto]">
               <label className="flex min-h-16 items-center gap-3 rounded-xl border border-white/10 bg-slate-950/45 px-4 transition hover:bg-white/10">
                 <MapPin className="h-5 w-5 shrink-0 text-gray-300" />
@@ -192,10 +193,11 @@ export default async function HomePage() {
 
               <SelectField icon={Home} label={"Lo\u1ea1i b\u1ea5t \u0111\u1ed9ng s\u1ea3n"} name="propertyType">
                 <option value="">{"Ch\u1ecdn lo\u1ea1i"}</option>
-                <option value="APARTMENT">{"C\u0103n h\u1ed9"}</option>
-                <option value="HOUSE">{"Nh\u00e0"}</option>
-                <option value="LAND">{"\u0110\u1ea5t"}</option>
-                <option value="ROOM">{"Ph\u00f2ng"}</option>
+                {PROPERTY_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {propertyTypeLabels[type]}
+                  </option>
+                ))}
               </SelectField>
 
               <SelectField icon={SlidersHorizontal} label={"Kho\u1ea3ng gi\u00e1"} name="maxPrice">
@@ -300,6 +302,26 @@ export default async function HomePage() {
           </div>
         </section>
       )}
+
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            .hero-select {
+              color-scheme: dark;
+            }
+
+            .hero-select option {
+              background-color: #0b1120;
+              color: #ffffff;
+            }
+
+            .hero-select option:checked {
+              background-color: #1d4ed8;
+              color: #ffffff;
+            }
+          `,
+        }}
+      />
     </div>
   );
 }

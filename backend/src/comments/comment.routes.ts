@@ -6,11 +6,13 @@ import {
   createCommentController,
   deleteCommentController,
   getCommentsController,
+  updateCommentController,
 } from "./comment.controller.js";
 import {
   commentIdParamSchema,
   createCommentSchema,
   getCommentsQuerySchema,
+  updateCommentSchema,
 } from "./comment.validation.js";
 
 export const commentRoutes = Router();
@@ -28,6 +30,13 @@ commentRoutes.post(
   authenticate,
   validateRequest({ body: createCommentSchema }),
   createCommentController,
+);
+
+commentRoutes.patch(
+  "/:id",
+  authenticate,
+  validateRequest({ params: commentIdParamSchema, body: updateCommentSchema }),
+  updateCommentController,
 );
 
 // DELETE requires authentication to delete comments

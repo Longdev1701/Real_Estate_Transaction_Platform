@@ -32,7 +32,6 @@ enum PropertyType {
 enum PostType {
   SELL
   RENT
-  FIND
 }
 
 enum PostStatus {
@@ -69,14 +68,15 @@ model User {
   role         UserRole   @default(USER)
   status       UserStatus @default(ACTIVE)
 
-  posts         PropertyPost[]
-  sentMessages  Message[]
-  notifications Notification[]
-  reports       Report[]
-  savedPosts    SavedPost[]
-  refreshTokens RefreshToken[]
-  systemLogs    SystemLog[]
-  comments      Comment[]
+  posts               PropertyPost[]
+  sentMessages        Message[]
+  notifications       Notification[]
+  reports             Report[]
+  savedPosts          SavedPost[]
+  refreshTokens       RefreshToken[]
+  systemLogs          SystemLog[]
+  comments            Comment[]
+  commentReplyTargets Comment[]      @relation("CommentReplyTarget")
 
   buyerConversations  Conversation[] @relation("BuyerConversation")
   sellerConversations Conversation[] @relation("SellerConversation")
@@ -275,21 +275,26 @@ model RefreshToken {
 }
 
 model Comment {
-  id        String       @id @default(cuid())
-  postId    String
-  post      PropertyPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-  authorId  String
-  author    User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  content   String
-  parentId  String?
-  parent    Comment?     @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies   Comment[]    @relation("CommentReplies")
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  id            String       @id @default(cuid())
+  postId        String
+  post          PropertyPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId      String
+  author        User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  content       String
+  parentId      String?
+  parent        Comment?     @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies       Comment[]    @relation("CommentReplies")
+  replyToUserId String?
+  replyToUser   User?        @relation("CommentReplyTarget", fields: [replyToUserId], references: [id], onDelete: SetNull)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
   @@index([postId])
   @@index([authorId])
   @@index([parentId])
+  @@index([replyToUserId])
+  @@index([postId, parentId, createdAt])
+  @@index([parentId, createdAt])
 }
 
 model PropertyFeature {
@@ -317,4 +322,3 @@ model PropertyPostFeature {
   @@index([postId])
   @@index([featureId])
 }
-

@@ -29,6 +29,7 @@ import { useSound } from "@/hooks/useSound";
 import { api } from "@/lib/api";
 import { writeSessionCache } from "@/lib/client-cache";
 import { useAuthStore } from "@/stores/auth.store";
+import CommentSection from "@/components/comment/CommentSection";
 
 const imageFallback =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 760'><rect width='1200' height='760' fill='%230b1120'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-family='Arial' font-size='48'>TrustEstate</text></svg>";
@@ -110,7 +111,7 @@ export function PostCard({ post }: { post: Post }) {
   const location = formatLocation(post) || post.address || post.city;
   const engagementSeed = post.id.split("").reduce((total, char) => total + char.charCodeAt(0), 0);
   const likeCount = 48 + (engagementSeed % 96);
-  const commentCount = 8 + (engagementSeed % 28);
+  const commentCount = post.commentCount ?? 0;
 
   const openImageViewer = (index: number) => {
     setActiveImageIndex(index);
@@ -556,7 +557,10 @@ export function PostCard({ post }: { post: Post }) {
                 <Metric icon={MapPin} label="Vị trí" value={location} />
               </div>
 
-              <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-4">
+              <div className="mt-4">
+                <CommentSection postId={post.id} postAuthorId={post.author.id} />
+              </div>
+              <div className="hidden">
                 <div className="mb-3 flex items-center justify-between">
                   <h4 className="font-semibold text-white">Bình luận ({commentCount})</h4>
                   <span className="text-xs text-gray-400">Mới nhất</span>

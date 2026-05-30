@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AxiosError } from "axios";
 import {
@@ -21,43 +20,59 @@ import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
 import {
   buildPostQuery,
   defaultPostFilter,
+  normalizePostFilter,
   POST_TYPES,
   PROPERTY_TYPES,
+  postTypeLabels,
+  propertyTypeLabels,
   type Post,
   type PostFilterValue,
   type PostListData,
+  type PostType,
+  type PropertyType,
 } from "@/lib/posts";
 import { PostCard } from "./PostCard";
 import { PostFilter } from "./PostFilter";
 
 const PAGE_SIZE = 8;
 
-const propertyChips = [
-  { value: "", label: "T\u1ea5t c\u1ea3" },
-  { value: "APARTMENT", label: "C\u0103n h\u1ed9" },
-  { value: "HOUSE", label: "Nh\u00e0 ri\u00eang" },
-  { value: "LAND", label: "\u0110\u1ea5t n\u1ec1n" },
-  { value: "ROOM", label: "Ph\u00f2ng" },
-] as const;
-
 const leftNavItems = [
-  { icon: Newspaper, label: "B\u1ea3ng tin", active: true },
+  { icon: Newspaper, label: "Bảng tin", active: true },
 ];
 
-const categoryItems = [
-  { icon: Building2, label: "C\u0103n h\u1ed9 chung c\u01b0" },
-  { icon: House, label: "Nh\u00e0 ri\u00eang" },
-  { icon: Landmark, label: "Bi\u1ec7t th\u1ef1" },
-  { icon: MapPinned, label: "\u0110\u1ea5t n\u1ec1n" },
-  { icon: Gem, label: "Nh\u00e0 m\u1eb7t ph\u1ed1" },
-  { icon: Warehouse, label: "V\u0103n ph\u00f2ng" },
+const categoryIconMap: Record<PropertyType, React.ComponentType<{ className?: string }>> = {
+  APARTMENT: Building2,
+  HOUSE: House,
+  LAND: MapPinned,
+  ROOM: House,
+  VILLA: Landmark,
+  OFFICE: Building2,
+  SHOPHOUSE: Gem,
+  WAREHOUSE: Warehouse,
+};
+
+const categoryItems: Array<{ value: "" | PropertyType; label: string; icon: React.ComponentType<{ className?: string }> }> = [
+  { value: "", label: "Tất cả", icon: Newspaper },
+  ...PROPERTY_TYPES.map((propertyType) => ({
+    value: propertyType,
+    label: propertyTypeLabels[propertyType],
+    icon: categoryIconMap[propertyType],
+  })),
+];
+
+const transactionItems: Array<{ value: "" | PostType; label: string }> = [
+  { value: "", label: "Tất cả" },
+  ...POST_TYPES.map((postType) => ({
+    value: postType,
+    label: postTypeLabels[postType],
+  })),
 ];
 
 const getInitialFilter = (searchParams: URLSearchParams): PostFilterValue => {
   const postType = searchParams.get("postType");
   const propertyType = searchParams.get("propertyType");
 
-  return {
+  return normalizePostFilter({
     ...defaultPostFilter,
     keyword: searchParams.get("keyword") ?? "",
     city: searchParams.get("city") ?? "",
@@ -73,7 +88,7 @@ const getInitialFilter = (searchParams: URLSearchParams): PostFilterValue => {
     minArea: searchParams.get("minArea") ?? "",
     maxArea: searchParams.get("maxArea") ?? "",
     featureIds: searchParams.get("featureIds") ?? "",
-  };
+  });
 };
 
 export function PostList() {
@@ -130,9 +145,7 @@ export function PostList() {
           return;
         }
 
-        setPosts((currentPosts) =>
-          append ? [...currentPosts, ...payload.items] : payload.items,
-        );
+        setPosts((currentPosts) => (append ? [...currentPosts, ...payload.items] : payload.items));
         setPage(payload.meta.page);
         setHasMore(payload.meta.hasMore);
         setTotal(payload.meta.total ?? payload.items.length);
@@ -142,7 +155,7 @@ export function PostList() {
       } catch (err) {
         const axiosError = err as AxiosError<{ message?: string }>;
         if (requestId === requestIdRef.current) {
-          setError(axiosError.response?.data?.message ?? "Kh\u00f4ng th\u1ec3 t\u1ea3i danh s\u00e1ch b\u00e0i \u0111\u0103ng.");
+          setError(axiosError.response?.data?.message ?? "Không thể tải danh sách bài đăng.");
           if (!append) {
             setPosts([]);
             setTotal(0);
@@ -193,6 +206,24 @@ export function PostList() {
     return () => observer.disconnect();
   }, [activeFilter, fetchPosts, hasMore, isLoading, isLoadingMore, page]);
 
+  const applyCategory = (propertyType: "" | PropertyType) => {
+    const nextValue = normalizePostFilter({
+      ...draftFilter,
+      propertyType,
+    });
+    setDraftFilter(nextValue);
+    setActiveFilter(nextValue);
+  };
+
+  const applyPostType = (postType: "" | PostType) => {
+    const nextValue = normalizePostFilter({
+      ...draftFilter,
+      postType,
+    });
+    setDraftFilter(nextValue);
+    setActiveFilter(nextValue);
+  };
+
   return (
     <div className="grid min-h-0 flex-1 gap-6 xl:grid-cols-[260px_minmax(0,1fr)_340px] 2xl:grid-cols-[280px_minmax(0,1fr)_360px]">
       <aside className="hidden min-h-0 xl:block">
@@ -217,18 +248,27 @@ export function PostList() {
           </div>
 
           <div className="glass-card p-5">
-            <h2 className="mb-4 text-xl font-semibold text-blue-300">{"Danh m\u1ee5c"}</h2>
+            <h2 className="mb-4 text-xl font-semibold text-blue-300">Danh mục</h2>
             <div className="space-y-2">
-              {categoryItems.map((item) => (
-                <button
-                  key={item.label}
-                  type="button"
-                  className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-gray-200 transition hover:bg-white/5"
-                >
-                  <item.icon className="h-4 w-4 text-blue-300" />
-                  {item.label}
-                </button>
-              ))}
+              {categoryItems.map((item) => {
+                const active = draftFilter.propertyType === item.value;
+
+                return (
+                  <button
+                    key={item.value || "all"}
+                    type="button"
+                    onClick={() => applyCategory(item.value)}
+                    className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition ${
+                      active
+                        ? "border border-blue-500/40 bg-blue-500/10 text-blue-200 shadow-[0_0_24px_rgba(37,99,235,0.18)]"
+                        : "text-gray-200 hover:bg-white/5"
+                    }`}
+                  >
+                    <item.icon className="h-4 w-4 shrink-0 text-blue-300" />
+                    <span className="line-clamp-1">{item.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -237,9 +277,9 @@ export function PostList() {
       <section className="no-scrollbar h-full max-h-[calc(100vh-100px)] min-w-0 overflow-y-auto pr-1">
         <div className="space-y-5">
           <section className="flex flex-wrap items-center gap-2 text-sm text-gray-400">
-            <span>{"Trang ch\u1ee7"}</span>
+            <span>Trang chủ</span>
             <span>/</span>
-            <span className="text-white">{"B\u00e0i \u0111\u0103ng"}</span>
+            <span className="text-white">Bài đăng</span>
           </section>
 
           <div className="glass-card p-5 md:p-6">
@@ -249,12 +289,15 @@ export function PostList() {
               </div>
               <div className="flex-1">
                 <form
-                  className="flex flex-col gap-3 sm:flex-row"
+                  className="space-y-4"
                   onSubmit={(event) => {
                     event.preventDefault();
-                    setActiveFilter({ ...draftFilter });
+                    const normalizedFilter = normalizePostFilter(draftFilter);
+                    setDraftFilter(normalizedFilter);
+                    setActiveFilter(normalizedFilter);
                   }}
                 >
+                  <div className="flex flex-col gap-3 sm:flex-row">
                   <div className="relative flex-1">
                     <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-300" />
                     <input
@@ -262,55 +305,47 @@ export function PostList() {
                       value={draftFilter.keyword}
                       onChange={(event) => setDraftFilter({ ...draftFilter, keyword: event.target.value })}
                       className="input-dark pl-11 text-base"
-                      placeholder={"B\u1ea1n \u0111ang t\u00ecm ki\u1ebfm b\u1ea5t \u0111\u1ed9ng s\u1ea3n n\u00e0o?"}
+                      placeholder="Bạn đang tìm kiếm bất động sản nào?"
                     />
                   </div>
-                  <Link href="/posts/create" className="btn-primary inline-flex items-center justify-center px-6 py-3">
-                    {"\u0110\u0103ng b\u00e0i"}
-                  </Link>
+                  <button type="submit" className="btn-primary inline-flex items-center justify-center gap-2 px-6 py-3">
+                    <Search className="h-4 w-4" />
+                    Tìm kiếm
+                  </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {transactionItems.map((item) => {
+                      const isActive = draftFilter.postType === item.value;
+                      return (
+                        <button
+                          key={item.value || "all"}
+                          type="button"
+                          onClick={() => applyPostType(item.value)}
+                          className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                            isActive
+                              ? "border-blue-500/50 bg-blue-600 text-white shadow-[0_0_18px_rgba(37,99,235,0.28)]"
+                              : "border-white/10 bg-white/5 text-gray-300 hover:border-blue-400/30 hover:bg-blue-500/10 hover:text-white"
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </form>
               </div>
             </div>
           </div>
 
-          <div className="glass-card p-4">
-            <div className="flex flex-wrap items-center gap-3">
-              {propertyChips.map((chip) => {
-                const active = draftFilter.propertyType === chip.value;
-                return (
-                  <button
-                    key={chip.label}
-                    type="button"
-                    onClick={() => {
-                      const nextValue = {
-                        ...draftFilter,
-                        propertyType: chip.value as PostFilterValue["propertyType"],
-                      };
-                      setDraftFilter(nextValue);
-                      setActiveFilter(nextValue);
-                    }}
-                    className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                      active
-                        ? "bg-blue-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.35)]"
-                        : "border border-white/10 bg-white/5 text-gray-200 hover:bg-white/10"
-                    }`}
-                  >
-                    {chip.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
           <div className="flex items-center justify-between gap-4 px-1">
             <div>
-              <h2 className="text-2xl font-semibold text-white">{"B\u1ea3ng tin b\u1ea5t \u0111\u1ed9ng s\u1ea3n"}</h2>
+              <h2 className="text-2xl font-semibold text-white">Bảng tin bất động sản</h2>
               <p className="mt-1 text-sm text-gray-400">
                 {posts.length > 0
-                  ? (total > 0
-                    ? `${total} b\u00e0i \u0111\u0103ng \u0111ang hi\u1ec3n th\u1ecb`
-                    : `${posts.length} b\u00e0i \u0111\u0103ng \u0111ang hi\u1ec3n th\u1ecb`)
-                  : "Ch\u01b0a c\u00f3 b\u00e0i \u0111\u0103ng ph\u00f9 h\u1ee3p."}
+                  ? total > 0
+                    ? `${total} bài đăng đang hiển thị`
+                    : `${posts.length} bài đăng đang hiển thị`
+                  : "Chưa có bài đăng phù hợp."}
               </p>
             </div>
           </div>
@@ -325,12 +360,12 @@ export function PostList() {
             <div className="flex min-h-[280px] items-center justify-center rounded-3xl border border-white/10 bg-white/5">
               <div className="inline-flex items-center gap-3 text-gray-300">
                 <LoaderCircle className="h-5 w-5 animate-spin text-blue-300" />
-                {"\u0110ang t\u1ea3i b\u00e0i \u0111\u0103ng..."}
+                Đang tải bài đăng...
               </div>
             </div>
           ) : posts.length === 0 ? (
             <div className="glass-card flex min-h-[280px] items-center justify-center p-10 text-center text-gray-300">
-              {"Kh\u00f4ng t\u00ecm th\u1ea5y b\u00e0i \u0111\u0103ng n\u00e0o kh\u1edbp b\u1ed9 l\u1ecdc hi\u1ec7n t\u1ea1i."}
+              Không tìm thấy bài đăng nào khớp bộ lọc hiện tại.
             </div>
           ) : (
             <>
@@ -344,12 +379,12 @@ export function PostList() {
                 {isLoadingMore ? (
                   <div className="inline-flex items-center gap-3 text-sm text-gray-300">
                     <LoaderCircle className="h-4 w-4 animate-spin text-blue-300" />
-                    {"\u0110ang t\u1ea3i th\u00eam..."}
+                    Đang tải thêm...
                   </div>
                 ) : hasMore ? (
-                  <span className="text-sm text-gray-500">{"Cu\u1ed9n \u0111\u1ec3 t\u1ea3i th\u00eam b\u00e0i \u0111\u0103ng"}</span>
+                  <span className="text-sm text-gray-500">Cuộn để tải thêm bài đăng</span>
                 ) : (
-                  <span className="text-sm text-gray-500">{"\u0110\u00e3 hi\u1ec3n th\u1ecb to\u00e0n b\u1ed9 b\u00e0i \u0111\u0103ng"}</span>
+                  <span className="text-sm text-gray-500">Đã hiển thị toàn bộ bài đăng</span>
                 )}
               </div>
             </>
@@ -363,7 +398,11 @@ export function PostList() {
             value={draftFilter}
             isLoading={isLoading}
             onChange={setDraftFilter}
-            onSubmit={() => setActiveFilter({ ...draftFilter })}
+            onSubmit={() => {
+              const normalizedFilter = normalizePostFilter(draftFilter);
+              setDraftFilter(normalizedFilter);
+              setActiveFilter(normalizedFilter);
+            }}
             onReset={() => {
               setDraftFilter(defaultPostFilter);
               setActiveFilter(defaultPostFilter);

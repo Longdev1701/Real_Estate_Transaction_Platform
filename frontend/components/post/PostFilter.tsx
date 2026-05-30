@@ -1,33 +1,34 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import {
+  ArrowUpDown,
+  Bike,
+  Building,
+  Car,
   ChevronDown,
+  ChevronUp,
   Filter,
+  HelpCircle,
+  Home,
+  Milestone,
   Search,
+  Shield,
+  Snowflake,
+  Trees,
+  Waves,
   Wifi,
   Wind,
   Armchair,
   Droplets,
-  Snowflake,
   ThermometerSun,
-  Waves,
-  ArrowUpDown,
-  Car,
-  Bike,
-  Shield,
-  Trees,
-  Building,
   Scroll,
-  Milestone,
-  Home,
   Dog,
-  HelpCircle,
 } from "lucide-react";
 
 import { api } from "@/lib/api";
 import {
-  POST_TYPES,
   PROPERTY_TYPES,
-  postTypeLabels,
   propertyTypeLabels,
   type PostFilterValue,
 } from "@/lib/posts";
@@ -37,6 +38,16 @@ interface Feature {
   name: string;
   icon: string | null;
   category: string | null;
+}
+
+interface Province {
+  code: number;
+  name: string;
+}
+
+interface District {
+  code: number;
+  name: string;
 }
 
 const featureIconMap: Record<string, React.ComponentType<any>> = {
@@ -59,10 +70,64 @@ const featureIconMap: Record<string, React.ComponentType<any>> = {
   dog: Dog,
 };
 
+const clampNumericText = (value: string) => value.replace(/\D/g, "");
+
 const FeatureIcon = ({ name, className }: { name: string; className?: string }) => {
   const IconComponent = featureIconMap[name] || HelpCircle;
   return <IconComponent className={className} />;
 };
+
+function StepperInput({
+  value,
+  onChange,
+  placeholder,
+  step,
+  label,
+}: {
+  value: string;
+  onChange: (nextValue: string) => void;
+  placeholder: string;
+  step: number;
+  label: string;
+}) {
+  const updateByStep = (direction: 1 | -1) => {
+    const currentValue = Number(value) || 0;
+    const nextValue = Math.max(0, currentValue + step * direction);
+    onChange(nextValue > 0 ? String(nextValue) : "");
+  };
+
+  return (
+    <div className="relative">
+      <input
+        type="text"
+        inputMode="numeric"
+        value={value}
+        onChange={(event) => onChange(clampNumericText(event.target.value))}
+        className="input-dark border-white/15 bg-slate-900/80 pr-9"
+        placeholder={placeholder}
+      />
+      <div className="absolute right-1.5 top-1/2 flex -translate-y-1/2 flex-col overflow-hidden rounded-md border border-white/10 bg-slate-950/70">
+        <button
+          type="button"
+          onClick={() => updateByStep(1)}
+          className="flex h-4 w-6 items-center justify-center text-gray-300 transition hover:bg-blue-500/20 hover:text-white"
+          aria-label={`Tăng ${label}`}
+        >
+          <ChevronUp className="h-3.5 w-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={() => updateByStep(-1)}
+          disabled={!Number(value)}
+          className="flex h-4 w-6 items-center justify-center border-t border-white/10 text-gray-300 transition hover:bg-blue-500/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent disabled:hover:text-gray-300"
+          aria-label={`Giảm ${label}`}
+        >
+          <ChevronDown className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 type PostFilterProps = {
   value: PostFilterValue;
@@ -80,6 +145,10 @@ export function PostFilter({
   onReset,
 }: PostFilterProps) {
   const [features, setFeatures] = useState<Feature[]>([]);
+  const [provinces, setProvinces] = useState<Province[]>([]);
+  const [districts, setDistricts] = useState<District[]>([]);
+  const [selectedProvinceCode, setSelectedProvinceCode] = useState("");
+  const [selectedDistrictCode, setSelectedDistrictCode] = useState("");
 
   useEffect(() => {
     const fetchFeatures = async () => {
@@ -94,14 +163,63 @@ export function PostFilter({
     fetchFeatures();
   }, [value.propertyType]);
 
-  const selectedIds = value.featureIds ? value.featureIds.split(",").filter(Boolean) : [];
+  useEffect(() => {
+    const fetchProvinces = async () => {
+      try {
+        const response = await fetch("https://production.cas.so/address-kit/2025-07-01/provinces");
+        const payload = await response.json();
+        const nextProvinces: Province[] = (payload.provinces || []).map((province: any) => ({
+          code: province.code,
+          name: province.name,
+        }));
+        setProvinces(nextProvinces);
 
-  const toggleFeatureId = (id: string) => {
-    const nextIds = selectedIds.includes(id)
-      ? selectedIds.filter((item) => item !== id)
-      : [...selectedIds, id];
-    updateField("featureIds", nextIds.join(","));
-  };
+        if (value.city) {
+          const matchedProvince = nextProvinces.find((province) => province.name === value.city);
+          if (matchedProvince) {
+            setSelectedProvinceCode(String(matchedProvince.code));
+          }
+        }
+      } catch (err) {
+        console.error("Lỗi tải danh sách tỉnh/thành:", err);
+      }
+    };
+
+    fetchProvinces();
+  }, []);
+
+  useEffect(() => {
+    const fetchDistricts = async () => {
+      if (!selectedProvinceCode) {
+        setDistricts([]);
+        setSelectedDistrictCode("");
+        return;
+      }
+
+      try {
+        const response = await fetch(`https://production.cas.so/address-kit/2025-07-01/provinces/${selectedProvinceCode}/communes`);
+        const payload = await response.json();
+        const nextDistricts: District[] = (payload.communes || [])
+          .map((district: any) => ({
+            code: district.code,
+            name: String(district.name).replace(/\n/g, "").trim(),
+          }))
+          .sort((left: District, right: District) => left.name.localeCompare(right.name, "vi"));
+        setDistricts(nextDistricts);
+
+        if (value.district) {
+          const matchedDistrict = nextDistricts.find((district) => district.name === value.district);
+          setSelectedDistrictCode(matchedDistrict ? String(matchedDistrict.code) : "");
+        }
+      } catch (err) {
+        console.error("Lỗi tải danh sách quận/huyện:", err);
+      }
+    };
+
+    fetchDistricts();
+  }, [selectedProvinceCode, value.district]);
+
+  const selectedIds = value.featureIds ? value.featureIds.split(",").filter(Boolean) : [];
 
   const updateField = <K extends keyof PostFilterValue>(key: K, fieldValue: PostFilterValue[K]) => {
     onChange({
@@ -110,72 +228,107 @@ export function PostFilter({
     });
   };
 
+  const toggleFeatureId = (id: string) => {
+    const nextIds = selectedIds.includes(id)
+      ? selectedIds.filter((item) => item !== id)
+      : [...selectedIds, id];
+    updateField("featureIds", nextIds.join(","));
+  };
+
+  const handleProvinceChange = (provinceCode: string) => {
+    setSelectedProvinceCode(provinceCode);
+    setSelectedDistrictCode("");
+    const city = provinces.find((province) => String(province.code) === provinceCode)?.name ?? "";
+    onChange({
+      ...value,
+      city,
+      district: "",
+    });
+  };
+
+  const handleDistrictChange = (districtCode: string) => {
+    setSelectedDistrictCode(districtCode);
+    const district = districts.find((item) => String(item.code) === districtCode)?.name ?? "";
+    updateField("district", district);
+  };
+
   return (
-    <section className="glass-card p-5 md:p-6">
+    <section className="glass-card border-white/10 bg-slate-950/55 p-5 md:p-6">
       <div className="mb-6 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="rounded-2xl border border-blue-400/20 bg-blue-500/10 p-2 text-blue-300">
             <Filter className="h-5 w-5" />
           </div>
-          <h2 className="text-xl font-semibold text-white">{"B\u1ed9 l\u1ecdc t\u00ecm ki\u1ebfm"}</h2>
+          <h2 className="text-xl font-semibold text-white">Bộ lọc tìm kiếm</h2>
         </div>
         <button type="button" onClick={onReset} className="text-sm font-medium text-blue-300 transition hover:text-blue-200">
-          {"\u0110\u1eb7t l\u1ea1i"}
+          Đặt lại
         </button>
       </div>
 
       <div className="space-y-5">
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-200">{"T\u1eeb kh\u00f3a"}</label>
+          <label className="mb-2 block text-sm font-medium text-gray-200">Từ khóa</label>
           <div className="relative">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-300" />
             <input
               type="text"
               value={value.keyword}
               onChange={(event) => updateField("keyword", event.target.value)}
-              className="input-dark pl-11"
-              placeholder={"T\u00ean b\u00e0i \u0111\u0103ng, \u0111\u1ecba ch\u1ec9..."}
+              className="input-dark border-white/15 bg-slate-900/80 pl-11"
+              placeholder="Tên bài đăng, địa chỉ..."
             />
           </div>
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-200">{"V\u1ecb tr\u00ed"}</label>
+          <label className="mb-2 block text-sm font-medium text-gray-200">Vị trí</label>
           <div className="space-y-3">
             <div className="relative">
-              <input
-                type="text"
-                value={value.city}
-                onChange={(event) => updateField("city", event.target.value)}
-                className="input-dark pr-10"
-                placeholder={"Ch\u1ecdn t\u1ec9nh / th\u00e0nh ph\u1ed1"}
-              />
+              <select
+                value={selectedProvinceCode}
+                onChange={(event) => handleProvinceChange(event.target.value)}
+                className="input-dark appearance-none border-white/15 bg-slate-900/80 pr-10"
+              >
+                <option value="">Chọn tỉnh / thành phố</option>
+                {provinces.map((province) => (
+                  <option key={province.code} value={province.code}>
+                    {province.name}
+                  </option>
+                ))}
+              </select>
               <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
             </div>
             <div className="relative">
-              <input
-                type="text"
-                value={value.district}
-                onChange={(event) => updateField("district", event.target.value)}
-                className="input-dark pr-10"
-                placeholder={"Ch\u1ecdn qu\u1eadn / huy\u1ec7n"}
-              />
+              <select
+                value={selectedDistrictCode}
+                onChange={(event) => handleDistrictChange(event.target.value)}
+                disabled={!selectedProvinceCode}
+                className="input-dark appearance-none border-white/15 bg-slate-900/80 pr-10 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <option value="">Chọn quận / huyện</option>
+                {districts.map((district) => (
+                  <option key={district.code} value={district.code}>
+                    {district.name}
+                  </option>
+                ))}
+              </select>
               <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
             </div>
           </div>
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-200">{"Lo\u1ea1i b\u1ea5t \u0111\u1ed9ng s\u1ea3n"}</label>
+          <label className="mb-2 block text-sm font-medium text-gray-200">Loại bất động sản</label>
           <div className="relative">
             <select
               value={value.propertyType}
               onChange={(event) =>
                 updateField("propertyType", event.target.value as PostFilterValue["propertyType"])
               }
-              className="input-dark appearance-none pr-10"
+              className="input-dark appearance-none border-white/15 bg-slate-900/80 pr-10"
             >
-              <option value="">{"Ch\u1ecdn lo\u1ea1i"}</option>
+              <option value="">Chọn loại</option>
               {PROPERTY_TYPES.map((propertyType) => (
                 <option key={propertyType} value={propertyType}>
                   {propertyTypeLabels[propertyType]}
@@ -187,74 +340,51 @@ export function PostFilter({
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-200">{"Lo\u1ea1i giao d\u1ecbch"}</label>
-          <div className="relative">
-            <select
-              value={value.postType}
-              onChange={(event) => updateField("postType", event.target.value as PostFilterValue["postType"])}
-              className="input-dark appearance-none pr-10"
-            >
-              <option value="">{"T\u1ea5t c\u1ea3 giao d\u1ecbch"}</option>
-              {POST_TYPES.map((postType) => (
-                <option key={postType} value={postType}>
-                  {postTypeLabels[postType]}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-          </div>
-        </div>
-
-        <div>
-          <label className="mb-2 block text-sm font-medium text-gray-200">{"Kho\u1ea3ng gi\u00e1"}</label>
+          <label className="mb-2 block text-sm font-medium text-gray-200">Khoảng giá</label>
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-            <input
-              type="number"
-              min="0"
+            <StepperInput
               value={value.minPrice}
-              onChange={(event) => updateField("minPrice", event.target.value)}
-              className="input-dark"
-              placeholder={"T\u1eeb"}
+              placeholder="Từ"
+              step={1_000_000}
+              label="giá thấp nhất"
+              onChange={(nextValue) => updateField("minPrice", nextValue)}
             />
             <span className="text-gray-500">-</span>
-            <input
-              type="number"
-              min="0"
+            <StepperInput
               value={value.maxPrice}
-              onChange={(event) => updateField("maxPrice", event.target.value)}
-              className="input-dark"
-              placeholder={"\u0110\u1ebfn"}
+              placeholder="Đến"
+              step={1_000_000}
+              label="giá cao nhất"
+              onChange={(nextValue) => updateField("maxPrice", nextValue)}
             />
           </div>
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-200">{"Di\u1ec7n t\u00edch"}</label>
+          <label className="mb-2 block text-sm font-medium text-gray-200">Diện tích</label>
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-            <input
-              type="number"
-              min="0"
+            <StepperInput
               value={value.minArea}
-              onChange={(event) => updateField("minArea", event.target.value)}
-              className="input-dark"
-              placeholder={"T\u1eeb"}
+              placeholder="Từ"
+              step={10}
+              label="diện tích thấp nhất"
+              onChange={(nextValue) => updateField("minArea", nextValue)}
             />
             <span className="text-gray-500">-</span>
-            <input
-              type="number"
-              min="0"
+            <StepperInput
               value={value.maxArea}
-              onChange={(event) => updateField("maxArea", event.target.value)}
-              className="input-dark"
-              placeholder={"\u0110\u1ebfn"}
+              placeholder="Đến"
+              step={10}
+              label="diện tích cao nhất"
+              onChange={(nextValue) => updateField("maxArea", nextValue)}
             />
           </div>
         </div>
 
         {features.length > 0 && (
-          <div className="border-t border-white/10 pt-4 mt-4">
-            <label className="mb-2.5 block text-sm font-medium text-gray-200">{"Tiện ích & Đặc trưng"}</label>
-            <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+          <div className="mt-4 border-t border-white/10 pt-4">
+            <label className="mb-2.5 block text-sm font-medium text-gray-200">Tiện ích & Đặc trưng</label>
+            <div className="custom-scrollbar flex max-h-48 flex-wrap gap-2 overflow-y-auto pr-1">
               {features.map((feature) => {
                 const isSelected = selectedIds.includes(feature.id);
                 return (
@@ -262,7 +392,7 @@ export function PostFilter({
                     key={feature.id}
                     type="button"
                     onClick={() => toggleFeatureId(feature.id)}
-                    className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border transition-all duration-300 ${
+                    className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-300 ${
                       isSelected
                         ? "border-blue-500/40 bg-blue-500/10 text-blue-300"
                         : "border-white/10 bg-white/5 text-gray-400 hover:border-white/20 hover:text-gray-200"
@@ -302,7 +432,7 @@ export function PostFilter({
           disabled={isLoading}
           className="btn-primary inline-flex w-full items-center justify-center gap-2 py-3"
         >
-          {isLoading ? "\u0110ang t\u1ea3i..." : "\u00c1p d\u1ee5ng b\u1ed9 l\u1ecdc"}
+          {isLoading ? "Đang tải..." : "Áp dụng bộ lọc"}
         </button>
       </div>
     </section>

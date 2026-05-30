@@ -36,6 +36,7 @@ import {
   formatPrice,
   propertyTypeLabels,
   type Post,
+  type PropertyType,
   type SavedPost,
 } from "@/lib/posts";
 import { useAuthStore } from "@/stores/auth.store";
@@ -76,13 +77,15 @@ const getFeatureSummary = (post: Post) => {
   return post.features.map((feature) => feature.name).slice(0, 5).join(", ");
 };
 
+const bedroomBathroomExcludedTypes = new Set<PropertyType>(["LAND", "OFFICE", "SHOPHOUSE", "WAREHOUSE"]);
+
 const getEstimatedBedrooms = (post: Post) => {
-  if (post.propertyType === "LAND") return "Không áp dụng";
+  if (bedroomBathroomExcludedTypes.has(post.propertyType)) return "Không áp dụng";
   return Math.max(1, Math.min(5, Math.round(post.area / 35))).toString();
 };
 
 const getEstimatedBathrooms = (post: Post) => {
-  if (post.propertyType === "LAND") return "Không áp dụng";
+  if (bedroomBathroomExcludedTypes.has(post.propertyType)) return "Không áp dụng";
   return Math.max(1, Math.min(4, Math.round(post.area / 50))).toString();
 };
 
@@ -133,14 +136,14 @@ const compareRows: CompareRow[] = [
     label: "Phòng ngủ",
     icon: BedDouble,
     getValue: getEstimatedBedrooms,
-    getRankValue: (post) => (post.propertyType === "LAND" ? 0 : Number(getEstimatedBedrooms(post))),
+    getRankValue: (post) => (bedroomBathroomExcludedTypes.has(post.propertyType) ? 0 : Number(getEstimatedBedrooms(post))),
     best: "max",
   },
   {
     label: "Phòng tắm",
     icon: Bath,
     getValue: getEstimatedBathrooms,
-    getRankValue: (post) => (post.propertyType === "LAND" ? 0 : Number(getEstimatedBathrooms(post))),
+    getRankValue: (post) => (bedroomBathroomExcludedTypes.has(post.propertyType) ? 0 : Number(getEstimatedBathrooms(post))),
     best: "max",
   },
   {

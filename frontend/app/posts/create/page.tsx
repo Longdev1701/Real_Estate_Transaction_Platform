@@ -38,6 +38,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 
 import { api } from "@/lib/api";
+import { PROPERTY_TYPES, propertyTypeLabels } from "@/lib/posts";
 import { useAuthStore } from "@/stores/auth.store";
 
 const createPostSchema = z.object({
@@ -51,8 +52,8 @@ const createPostSchema = z.object({
   ward: z.string().optional(),
   latitude: z.coerce.number().min(-90, "Vĩ độ phải từ -90 đến 90").max(90, "Vĩ độ phải từ -90 đến 90"),
   longitude: z.coerce.number().min(-180, "Kinh độ phải từ -180 đến 180").max(180, "Kinh độ phải từ -180 đến 180"),
-  propertyType: z.enum(["HOUSE", "APARTMENT", "LAND", "ROOM"]),
-  postType: z.enum(["SELL", "RENT", "FIND"]),
+  propertyType: z.enum(PROPERTY_TYPES),
+  postType: z.enum(["SELL", "RENT"]),
 });
 
 type CreatePostFormInput = z.input<typeof createPostSchema>;
@@ -750,10 +751,11 @@ export default function CreatePostPage() {
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-300">Loại hình bất động sản</label>
                 <select {...register("propertyType")} className="input-dark py-2 text-sm">
-                  <option value="HOUSE">Nhà riêng</option>
-                  <option value="APARTMENT">Căn hộ / Chung cư</option>
-                  <option value="LAND">Đất nền</option>
-                  <option value="ROOM">Phòng trọ</option>
+                  {PROPERTY_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {propertyTypeLabels[type]}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -762,7 +764,6 @@ export default function CreatePostPage() {
                 <select {...register("postType")} className="input-dark py-2 text-sm">
                   <option value="SELL">Bán</option>
                   <option value="RENT">Cho thuê</option>
-                  <option value="FIND">Cần tìm mua/thuê</option>
                 </select>
               </div>
             </div>

@@ -1,5 +1,14 @@
-export const POST_TYPES = ["SELL", "RENT", "FIND"] as const;
-export const PROPERTY_TYPES = ["HOUSE", "APARTMENT", "LAND", "ROOM"] as const;
+export const POST_TYPES = ["SELL", "RENT"] as const;
+export const PROPERTY_TYPES = [
+  "APARTMENT",
+  "HOUSE",
+  "LAND",
+  "ROOM",
+  "VILLA",
+  "OFFICE",
+  "SHOPHOUSE",
+  "WAREHOUSE",
+] as const;
 
 export type PostType = (typeof POST_TYPES)[number];
 export type PropertyType = (typeof PROPERTY_TYPES)[number];
@@ -40,6 +49,7 @@ export type Post = {
   author: PostAuthor;
   images: PostImage[];
   imageCount?: number;
+  commentCount?: number;
   isSaved?: boolean;
   relatedPosts?: Post[];
   features: {
@@ -97,17 +107,51 @@ export const defaultPostFilter: PostFilterValue = {
   featureIds: "",
 };
 
+const normalizeNumericRange = (
+  minValue: string,
+  maxValue: string,
+): [string, string] => {
+  if (!minValue || !maxValue) {
+    return [minValue, maxValue];
+  }
+
+  const minNumber = Number(minValue);
+  const maxNumber = Number(maxValue);
+
+  if (!Number.isFinite(minNumber) || !Number.isFinite(maxNumber) || minNumber <= maxNumber) {
+    return [minValue, maxValue];
+  }
+
+  return [maxValue, minValue];
+};
+
+export const normalizePostFilter = (filter: PostFilterValue): PostFilterValue => {
+  const [minPrice, maxPrice] = normalizeNumericRange(filter.minPrice, filter.maxPrice);
+  const [minArea, maxArea] = normalizeNumericRange(filter.minArea, filter.maxArea);
+
+  return {
+    ...filter,
+    minPrice,
+    maxPrice,
+    minArea,
+    maxArea,
+  };
+};
+
 export const postTypeLabels: Record<PostType, string> = {
-  SELL: "B\u00e1n",
-  RENT: "Cho thu\u00ea",
-  FIND: "C\u1ea7n t\u00ecm",
+  SELL: "Bán",
+  RENT: "Cho thuê",
 };
 
 export const propertyTypeLabels: Record<PropertyType, string> = {
-  HOUSE: "Nhà",
-  APARTMENT: "Căn hộ",
+  APARTMENT: "Căn hộ / Chung cư",
+  HOUSE: "Nhà riêng",
   LAND: "Đất",
-  ROOM: "Phòng",
+  ROOM: "Phòng trọ / Cho thuê phòng",
+  VILLA: "Biệt thự",
+  OFFICE: "Văn phòng",
+  SHOPHOUSE: "Shophouse / Mặt bằng kinh doanh",
+  WAREHOUSE: "Kho / Xưởng",
 };
 
 export const statusLabels: Record<string, string> = {
@@ -129,11 +173,10 @@ export const statusColors: Record<string, string> = {
 };
 
 export const formatPrice = (price: number) => {
-  // Ensure thousands are separated by '.' and append VND currency symbol
   const formattedNumber = price
     .toString()
     .replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  return `${formattedNumber} ₫`;
+  return `${formattedNumber} ₫`;
 };
 
 export const formatArea = (area: number) =>
@@ -153,11 +196,12 @@ export const buildPostQuery = (
   page: number,
   limit: number,
 ) => {
+  const normalizedFilter = normalizePostFilter(filter);
   const params = new URLSearchParams();
   params.set("page", String(page));
   params.set("limit", String(limit));
 
-  Object.entries(filter).forEach(([key, rawValue]) => {
+  Object.entries(normalizedFilter).forEach(([key, rawValue]) => {
     const value = rawValue.trim();
     if (value) {
       params.set(key, value);
