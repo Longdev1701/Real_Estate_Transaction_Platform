@@ -23,6 +23,10 @@ enum PropertyType {
   APARTMENT
   LAND
   ROOM
+  VILLA
+  OFFICE
+  SHOPHOUSE
+  WAREHOUSE
 }
 
 enum PostType {
@@ -116,6 +120,7 @@ model PropertyPost {
   updatedAt DateTime @updatedAt
 
   @@index([authorId])
+  @@index([status, createdAt(sort: Desc)])
 }
 
 model PropertyImage {
@@ -155,6 +160,8 @@ model Conversation {
   @@index([buyerId])
   @@index([sellerId])
   @@index([postId])
+  @@index([buyerId, updatedAt(sort: Desc)])
+  @@index([sellerId, updatedAt(sort: Desc)])
 }
 
 model Message {
@@ -177,6 +184,7 @@ model Message {
 
   @@index([conversationId])
   @@index([senderId])
+  @@index([conversationId, createdAt(sort: Desc)])
 }
 
 model Notification {
