@@ -3,15 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useAuthStore } from "@/stores/auth.store";
-import { UserMenu } from "./UserMenu";
 import { Bell, Bookmark, MessageSquare } from "lucide-react";
+
 import { api } from "@/lib/api";
-import type { NotificationListData } from "@/lib/notifications";
+import type { NotificationItem, NotificationListData } from "@/lib/notifications";
+import { useAuthStore } from "@/stores/auth.store";
+import { useSocketStore } from "@/stores/socket.store";
+import { UserMenu } from "./UserMenu";
 
 export function Header() {
   const pathname = usePathname();
   const { user, hasHydrated } = useAuthStore();
+  const socket = useSocketStore((state) => state.socket);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   useEffect(() => {
@@ -42,6 +45,36 @@ export function Header() {
     };
   }, [hasHydrated, pathname, user]);
 
+  useEffect(() => {
+    const handleUnreadCountChanged = (event: Event) => {
+      const nextCount = (event as CustomEvent<number>).detail;
+      if (typeof nextCount === "number") {
+        setUnreadNotifications(nextCount);
+      }
+    };
+
+    window.addEventListener("notifications:unread-count", handleUnreadCountChanged);
+    return () => {
+      window.removeEventListener("notifications:unread-count", handleUnreadCountChanged);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!socket || !user) return;
+
+    const handleNotificationCreated = (notification: NotificationItem) => {
+      if (notification.userId === user.id && !notification.isRead) {
+        setUnreadNotifications((current) => current + 1);
+      }
+    };
+
+    socket.on("notification_created", handleNotificationCreated);
+
+    return () => {
+      socket.off("notification_created", handleNotificationCreated);
+    };
+  }, [socket, user]);
+
   if (pathname?.startsWith("/messages")) {
     return null;
   }
@@ -59,13 +92,13 @@ export function Header() {
 
           <nav className="hidden items-center gap-6 text-sm font-medium text-gray-300 md:flex">
             <Link href="/" className="transition-colors hover:text-blue-400">
-              {"Trang ch\u1ee7"}
+              {"Trang chủ"}
             </Link>
             <Link href="/posts" className="transition-colors hover:text-blue-400">
-              {"B\u00e0i \u0111\u0103ng"}
+              {"Bài đăng"}
             </Link>
             <Link href="/compare" className="transition-colors hover:text-blue-400">
-              {"So s\u00e1nh"}
+              {"So sánh"}
             </Link>
           </nav>
         </div>
@@ -101,7 +134,7 @@ export function Header() {
           </Link>
 
           <Link href="/posts/create" className="btn-primary ml-2 hidden sm:block">
-            {"+ \u0110\u0103ng b\u00e0i"}
+            {"+ Đăng bài"}
           </Link>
 
           <div className="mx-2 h-8 w-px bg-white/10" />

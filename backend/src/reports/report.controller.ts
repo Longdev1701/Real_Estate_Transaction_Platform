@@ -1,10 +1,11 @@
 import type { Request, Response, NextFunction } from "express";
 import { z } from "zod";
-import { ReportStatus, PostStatus } from "@prisma/client";
+import { NotificationType, ReportStatus, PostStatus, UserRole } from "@prisma/client";
 
 import { prisma } from "../prisma/prisma.service.js";
 import { sendSuccess } from "../utils/response.js";
 import { AppError } from "../middlewares/error.middleware.js";
+import { createNotification } from "../utils/notification.helper.js";
 import { createSystemLog } from "../utils/system-log.helper.js";
 
 const createReportSchema = z.object({
@@ -52,6 +53,25 @@ export const createReport = async (req: Request, res: Response, next: NextFuncti
         description,
       },
     });
+
+    const admins = await prisma.user.findMany({
+      where: { role: UserRole.ADMIN },
+      select: { id: true },
+    });
+
+    void Promise.allSettled(
+      admins
+        .filter((admin) => admin.id !== userId)
+        .map((admin) =>
+          createNotification({
+            userId: admin.id,
+            type: NotificationType.REPORT,
+            relatedId: report.id,
+            title: "Có báo cáo bài đăng mới",
+            content: `Một bài đăng vừa bị báo cáo với lý do: ${reason}.`,
+          }),
+        ),
+    );
 
     sendSuccess(res, { report }, "Report submitted successfully", 201);
   } catch (error) {
@@ -152,6 +172,17 @@ export const resolveReport = async (req: Request, res: Response, next: NextFunct
       targetType: "Report",
       targetId: id,
       description: `Admin ${status.toLowerCase()} report #${id} for post #${report.postId}`,
+    });
+
+    void createNotification({
+      userId: report.reporterId,
+      type: NotificationType.REPORT,
+      relatedId: report.postId,
+      title: status === "RESOLVED" ? "Báo cáo của bạn đã được xử lý" : "Báo cáo của bạn đã bị từ chối",
+      content:
+        status === "RESOLVED"
+          ? "Cảm ơn bạn đã báo cáo. Nội dung vi phạm đã được xử lý."
+          : "Báo cáo của bạn đã được xem xét nhưng chưa đủ điều kiện xử lý.",
     });
 
     sendSuccess(res, { report: updatedReport }, `Report ${status.toLowerCase()} successfully`);

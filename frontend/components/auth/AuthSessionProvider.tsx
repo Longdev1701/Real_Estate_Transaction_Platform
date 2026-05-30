@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { api } from "@/lib/api";
 import { useAuthStore, type User } from "@/stores/auth.store";
@@ -31,9 +31,16 @@ export const normalizeUser = (user: BackendUser): User => ({
 export function AuthSessionProvider({ children }: { children: React.ReactNode }) {
   const { accessToken, hasHydrated, user, setUser, setIsLoadingUser, logout } =
     useAuthStore();
+  const [isSessionVerified, setIsSessionVerified] = useState(false);
 
   useEffect(() => {
-    if (!hasHydrated || !accessToken || user) {
+    if (!hasHydrated) {
+      return;
+    }
+
+    if (!accessToken) {
+      setIsSessionVerified(false);
+      setIsLoadingUser(false);
       return;
     }
 
@@ -41,13 +48,15 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
 
     const restoreSession = async () => {
       try {
-        setIsLoadingUser(true);
+        setIsLoadingUser(!user);
         const response = await api.get("/auth/me");
         if (isMounted) {
           setUser(normalizeUser(response.data.data));
+          setIsSessionVerified(true);
         }
       } catch {
         if (isMounted) {
+          setIsSessionVerified(false);
           logout();
         }
       } finally {
@@ -62,20 +71,20 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
     return () => {
       isMounted = false;
     };
-  }, [accessToken, hasHydrated, logout, setIsLoadingUser, setUser, user]);
+  }, [accessToken, hasHydrated, logout, setIsLoadingUser, setUser]);
 
   useEffect(() => {
     if (!hasHydrated) {
       return;
     }
 
-    if (accessToken && user) {
+    if (accessToken && user && isSessionVerified) {
       useSocketStore.getState().connect();
       return;
     }
 
     useSocketStore.getState().disconnect();
-  }, [accessToken, hasHydrated, user]);
+  }, [accessToken, hasHydrated, isSessionVerified, user]);
 
   return children;
 }
