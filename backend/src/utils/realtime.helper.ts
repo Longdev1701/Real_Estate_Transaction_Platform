@@ -9,3 +9,7 @@ export const setRealtimeServer = (io: SocketIOServer) => {
 export const emitToUser = (userId: string, event: string, payload: unknown) => {
   ioInstance?.to(userId).emit(event, payload);
 };
+
+export const emitToRoom = (roomId: string, event: string, payload: unknown) => {
+  ioInstance?.to(roomId).emit(event, payload);
+};

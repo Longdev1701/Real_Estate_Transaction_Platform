@@ -78,6 +78,7 @@ const postListSelect = {
   _count: {
     select: {
       images: true,
+      comments: true,
     },
   },
 } satisfies Prisma.PropertyPostSelect;
@@ -183,6 +184,7 @@ const attachSavedStateToListItems = async (
     return {
       ...rest,
       imageCount: _count.images,
+      commentCount: _count.comments,
       isSaved: savedPostIds.has(item.id),
     };
   });

@@ -76,6 +76,16 @@ export function initializeSocket(httpServer: HTTPServer) {
       console.log(`User ${user.id} joined conversation: ${conversationId}`);
     });
 
+    socket.on("join_post_comments", (postId: string) => {
+      if (!postId) return;
+      socket.join(`post_comments:${postId}`);
+    });
+
+    socket.on("leave_post_comments", (postId: string) => {
+      if (!postId) return;
+      socket.leave(`post_comments:${postId}`);
+    });
+
     socket.on("send_message", async (data: { conversationId: string; content: string; messageType?: string }) => {
       try {
         const { conversationId, content, messageType = "TEXT" } = data;
