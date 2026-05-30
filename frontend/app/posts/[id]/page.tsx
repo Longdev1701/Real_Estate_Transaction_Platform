@@ -201,35 +201,32 @@ export default function PostDetailPage() {
     try {
       setIsSaveSubmitting(true);
       setError(null);
+      const nextSaved = !post.isSaved;
+      setPost((currentPost) => {
+        if (!currentPost) return currentPost;
+        const nextPost = {
+          ...currentPost,
+          isSaved: nextSaved,
+        };
+        writeSessionCache(getPostDetailCacheKey(nextPost.id), nextPost);
+        return nextPost;
+      });
 
       if (post.isSaved) {
         await api.delete(`/saved-posts/${post.id}`);
-        setPost((currentPost) =>
-          {
-            if (!currentPost) return currentPost;
-            const nextPost = {
-              ...currentPost,
-              isSaved: false,
-            };
-            writeSessionCache(getPostDetailCacheKey(nextPost.id), nextPost);
-            return nextPost;
-          },
-        );
       } else {
         await api.post("/saved-posts", { postId: post.id });
-        setPost((currentPost) =>
-          {
-            if (!currentPost) return currentPost;
-            const nextPost = {
-              ...currentPost,
-              isSaved: true,
-            };
-            writeSessionCache(getPostDetailCacheKey(nextPost.id), nextPost);
-            return nextPost;
-          },
-        );
       }
     } catch (err) {
+      setPost((currentPost) => {
+        if (!currentPost) return currentPost;
+        const nextPost = {
+          ...currentPost,
+          isSaved: post.isSaved,
+        };
+        writeSessionCache(getPostDetailCacheKey(nextPost.id), nextPost);
+        return nextPost;
+      });
       const axiosError = err as AxiosError<{ message?: string }>;
       setError(axiosError.response?.data?.message ?? "Không thể cập nhật bài đã lưu.");
     } finally {
