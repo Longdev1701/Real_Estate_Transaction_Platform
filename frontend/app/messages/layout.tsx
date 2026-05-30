@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -15,10 +15,10 @@ import {
   SlidersHorizontal,
   Trash2,
 } from "lucide-react";
-
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth.store";
 import { useSocketStore } from "@/stores/socket.store";
+import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
 
 export interface ConversationListItem {
   id: string;
@@ -78,26 +78,49 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
   const [activeTab, setActiveTab] = useState<"all" | "unread">("all");
   const [openConvMenuId, setOpenConvMenuId] = useState<string | null>(null);
 
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
   useEffect(() => {
     if (hasHydrated && !user) {
       router.push("/auth/login");
     }
   }, [hasHydrated, router, user]);
 
-  useEffect(() => {
-    const fetchConversations = async () => {
-      try {
-        const { data } = await api.get("/conversations");
-        setConversations(data.data.conversations);
-      } catch (error) {
-        console.error("Failed to fetch conversations", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchConversations = async (pageNum: number, isLoadMore = false) => {
+    try {
+      if (!isLoadMore) setLoading(true);
+      else setIsLoadingMore(true);
 
+      const { data } = await api.get(`/conversations?page=${pageNum}&limit=20`);
+
+      if (isLoadMore) {
+        setConversations((prev) => [...prev, ...data.data.conversations]);
+      } else {
+        setConversations(data.data.conversations);
+      }
+      setHasMore(data.data.pagination?.hasMore ?? false);
+    } catch (error) {
+      console.error("Failed to fetch conversations", error);
+    } finally {
+      setLoading(false);
+      setIsLoadingMore(false);
+    }
+  };
+
+  useEffect(() => {
     if (user) {
-      fetchConversations();
+      fetchConversations(1, false);
+      setPage(1);
     }
   }, [user]);
 
@@ -105,28 +128,25 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
     if (!socket || !isConnected) return;
 
     const handleReceiveMessage = (message: any) => {
-      setConversations((prev) =>
-        prev
-          .map((conversation) => {
-            if (conversation.id !== message.conversationId) {
-              return conversation;
-            }
+      setConversations((prev) => {
+        const index = prev.findIndex((c) => c.id === message.conversationId);
+        if (index === -1) return prev; // Optionally fetch if not found
 
-            const isIncoming = message.senderId !== user?.id;
-            return {
-              ...conversation,
-              messages: [message],
-              _count: {
-                messages: isIncoming ? conversation._count.messages + 1 : conversation._count.messages,
-              },
-            };
-          })
-          .sort((a, b) => {
-            const timeA = new Date(a.messages[0]?.createdAt || 0).getTime();
-            const timeB = new Date(b.messages[0]?.createdAt || 0).getTime();
-            return timeB - timeA;
-          }),
-      );
+        const conversation = prev[index];
+        const isIncoming = message.senderId !== user?.id;
+        const updatedConversation = {
+          ...conversation,
+          messages: [message],
+          _count: {
+            messages: isIncoming ? conversation._count.messages + 1 : conversation._count.messages,
+          },
+        };
+
+        const newConversations = [...prev];
+        newConversations.splice(index, 1);
+        newConversations.unshift(updatedConversation);
+        return newConversations;
+      });
     };
 
     socket.on("receive_message", handleReceiveMessage);
@@ -151,16 +171,28 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
     );
   }, [pathname]);
 
+  const filteredConversations = useMemo(() => {
+    if (!user) return [];
+    return conversations.filter((conversation) => {
+      const otherUser = conversation.buyer.id === user.id ? conversation.seller : conversation.buyer;
+      const matchesSearch =
+        otherUser.fullName.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+        conversation.post.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
+      const matchesTab = activeTab === "all" || conversation._count.messages > 0;
+      return matchesSearch && matchesTab;
+    });
+  }, [conversations, debouncedSearchQuery, activeTab, user]);
+
   if (!hasHydrated || !user) return null;
 
-  const filteredConversations = conversations.filter((conversation) => {
-    const otherUser = conversation.buyer.id === user.id ? conversation.seller : conversation.buyer;
-    const matchesSearch =
-      otherUser.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      conversation.post.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesTab = activeTab === "all" || conversation._count.messages > 0;
-    return matchesSearch && matchesTab;
-  });
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollHeight - scrollTop <= clientHeight * 1.5 && hasMore && !isLoadingMore) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      fetchConversations(nextPage, true);
+    }
+  };
 
   const isMobileDetailView = pathname !== "/messages";
 
@@ -199,18 +231,16 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`group relative flex items-center justify-center rounded-[20px] px-2 py-3 transition ${
-                    isActive
+                  className={`group relative flex items-center justify-center rounded-[20px] px-2 py-3 transition ${isActive
                       ? "bg-[linear-gradient(135deg,rgba(64,86,255,0.24),rgba(130,91,255,0.2))] text-white shadow-[0_0_0_1px_rgba(129,140,248,0.45),0_16px_40px_rgba(79,70,229,0.25)]"
                       : "text-slate-400 hover:bg-white/5 hover:text-white"
-                  }`}
+                    }`}
                   aria-label={item.label}
                   title={item.label}
                 >
                   <span
-                    className={`flex h-11 w-11 items-center justify-center rounded-[16px] border ${
-                      isActive ? "border-blue-300/40 bg-white/10" : "border-white/10 bg-white/[0.03]"
-                    }`}
+                    className={`flex h-11 w-11 items-center justify-center rounded-[16px] border ${isActive ? "border-blue-300/40 bg-white/10" : "border-white/10 bg-white/[0.03]"
+                      }`}
                   >
                     <Icon className="h-[18px] w-[18px]" />
                   </span>
@@ -251,9 +281,8 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
         </aside>
 
         <section
-          className={`min-h-0 w-full shrink-0 border-r border-white/10 bg-[linear-gradient(180deg,rgba(10,22,44,0.96),rgba(6,18,37,0.98))] md:w-[350px] ${
-            isMobileDetailView ? "hidden lg:flex" : "flex"
-          } flex-col`}
+          className={`min-h-0 w-full shrink-0 border-r border-white/10 bg-[linear-gradient(180deg,rgba(10,22,44,0.96),rgba(6,18,37,0.98))] md:w-[350px] ${isMobileDetailView ? "hidden lg:flex" : "flex"
+            } flex-col`}
         >
           <div className="border-b border-white/10 px-4 py-4">
             <div className="mb-4">
@@ -281,25 +310,26 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
               <button
                 type="button"
                 onClick={() => setActiveTab("all")}
-                className={`flex-1 rounded-[14px] px-4 py-2 text-sm transition ${
-                  activeTab === "all" ? "bg-white/10 text-white" : "text-slate-400 hover:text-white"
-                }`}
+                className={`flex-1 rounded-[14px] px-4 py-2 text-sm transition ${activeTab === "all" ? "bg-white/10 text-white" : "text-slate-400 hover:text-white"
+                  }`}
               >
                 Tất cả
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab("unread")}
-                className={`flex-1 rounded-[14px] px-4 py-2 text-sm transition ${
-                  activeTab === "unread" ? "bg-white/10 text-white" : "text-slate-400 hover:text-white"
-                }`}
+                className={`flex-1 rounded-[14px] px-4 py-2 text-sm transition ${activeTab === "unread" ? "bg-white/10 text-white" : "text-slate-400 hover:text-white"
+                  }`}
               >
                 Chưa đọc
               </button>
             </div>
           </div>
 
-          <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-3 py-2.5">
+          <div
+            className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-3 py-2.5"
+            onScroll={handleScroll}
+          >
             {loading ? (
               <div className="space-y-3 px-2 py-2">
                 {Array.from({ length: 5 }).map((_, index) => (
@@ -329,11 +359,39 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
                   <Link
                     key={conversation.id}
                     href={`/messages/${conversation.id}`}
-                    className={`group relative mb-2.5 block overflow-hidden rounded-[20px] border px-3.5 py-3.5 transition ${
-                      isActive
+                    onMouseEnter={() => {
+                      const cacheKey = `messages_${conversation.id}`;
+                      if (!readSessionCache(cacheKey)) {
+                        api.get(`/conversations/${conversation.id}/messages?limit=20`)
+                          .then(({ data }) => {
+                            writeSessionCache(cacheKey, {
+                              messages: data.data.messages,
+                              conversation: data.data.conversation,
+                              nextCursor: data.data.nextCursor,
+                            });
+                          })
+                          .catch(() => { });
+                      }
+                    }}
+                    onClick={() => {
+                      const cacheKey = `messages_${conversation.id}`;
+                      if (!readSessionCache(cacheKey)) {
+                        writeSessionCache(cacheKey, {
+                          conversation: {
+                            id: conversation.id,
+                            buyer: conversation.buyer,
+                            seller: conversation.seller,
+                            post: conversation.post,
+                          },
+                          messages: conversation.messages || [],
+                          nextCursor: null,
+                        });
+                      }
+                    }}
+                    className={`group relative mb-2.5 block overflow-hidden rounded-[20px] border px-3.5 py-3.5 transition ${isActive
                         ? "border-blue-400/50 bg-[linear-gradient(135deg,rgba(41,78,220,0.22),rgba(122,77,255,0.16))] shadow-[0_12px_40px_rgba(59,130,246,0.18)]"
                         : "border-white/[0.06] bg-white/[0.03] hover:border-white/[0.12] hover:bg-white/[0.05]"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-start gap-3">
                       <div className="relative mt-0.5 h-12 w-12 shrink-0 overflow-hidden rounded-full border border-white/10 bg-slate-800">
@@ -393,6 +451,12 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
                   </Link>
                 );
               })
+            )}
+
+            {isLoadingMore && (
+              <div className="py-4 text-center">
+                <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-blue-400 border-t-transparent" />
+              </div>
             )}
           </div>
         </section>

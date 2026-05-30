@@ -25,14 +25,21 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import { format, isToday, isYesterday } from "date-fns";
 import { vi } from "date-fns/locale";
-import EmojiPicker, { Theme } from "emoji-picker-react";
+import dynamic from "next/dynamic";
+import { Theme } from "emoji-picker-react";
+
+const EmojiPicker = dynamic(() => import("emoji-picker-react"), { ssr: false });
 
 import { api } from "@/lib/api";
 import { useSound } from "@/hooks/useSound";
 import { useAuthStore } from "@/stores/auth.store";
 import { useSocketStore } from "@/stores/socket.store";
+import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
+import { memo } from "react";
 
 type Message = {
+  isHistory?: boolean;
+  isOptimistic?: boolean;
   id: string;
   senderId: string;
   content: string;
@@ -170,8 +177,36 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
   const { playPop, playDing } = useSound();
   const router = useRouter();
 
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [conversation, setConversation] = useState<ConversationData | null>(null);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    if (typeof window !== "undefined") {
+      const cached = readSessionCache<any>(`messages_${conversationId}`);
+      return cached?.messages || [];
+    }
+    return [];
+  });
+  const [conversation, setConversation] = useState<ConversationData | null>(() => {
+    if (typeof window !== "undefined") {
+      const cached = readSessionCache<any>(`messages_${conversationId}`);
+      return cached?.conversation || null;
+    }
+    return null;
+  });
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [isLoadingMoreMessages, setIsLoadingMoreMessages] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  
+  const [prevConversationId, setPrevConversationId] = useState(conversationId);
+
+  if (conversationId !== prevConversationId) {
+    setPrevConversationId(conversationId);
+    if (typeof window !== "undefined") {
+      const cached = readSessionCache<any>(`messages_${conversationId}`);
+      setMessages(cached?.messages || []);
+      setConversation(cached?.conversation || null);
+      setNextCursor(cached?.nextCursor || null);
+      setHasMoreMessages(!!cached?.nextCursor);
+    }
+  }
   const [inputValue, setInputValue] = useState("");
   const [otherUserTyping, setOtherUserTyping] = useState(false);
   const [isOtherUserOnline, setIsOtherUserOnline] = useState(false);
@@ -244,9 +279,33 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
     const fetchMessages = async () => {
       try {
         setLoadError(null);
-        const { data } = await api.get(`/conversations/${conversationId}/messages`);
+
+        // --- CLIENT CACHING: Read from session cache first (SWR Pattern) ---
+        const cacheKey = `messages_${conversationId}`;
+        const cachedData = readSessionCache<any>(cacheKey);
+
+        if (cachedData) {
+          // Render instantly using cached data
+          setMessages(cachedData.messages);
+          setConversation(cachedData.conversation);
+          setNextCursor(cachedData.nextCursor);
+          setHasMoreMessages(!!cachedData.nextCursor);
+        }
+
+        const { data } = await api.get(`/conversations/${conversationId}/messages?limit=20`);
+
+        // --- CLIENT CACHING: Write to session cache ---
+        writeSessionCache(cacheKey, {
+          messages: data.data.messages,
+          conversation: data.data.conversation,
+          nextCursor: data.data.nextCursor,
+        });
+
+        // Always update state with fresh data from server
         setMessages(data.data.messages);
         setConversation(data.data.conversation);
+        setNextCursor(data.data.nextCursor);
+        setHasMoreMessages(!!data.data.nextCursor);
 
         await api.patch(`/conversations/${conversationId}/read`);
         if (socket && isConnected) {
@@ -262,6 +321,33 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
       fetchMessages();
     }
   }, [conversationId, isConnected, socket, user]);
+
+  const loadMoreMessages = async () => {
+    if (!nextCursor || isLoadingMoreMessages || !hasMoreMessages) return;
+
+    try {
+      setIsLoadingMoreMessages(true);
+
+      const container = messagesContainerRef.current;
+      const previousScrollHeight = container ? container.scrollHeight : 0;
+
+      const { data } = await api.get(`/conversations/${conversationId}/messages?cursor=${nextCursor}&limit=20`);
+
+      setMessages((prev) => [...data.data.messages, ...prev]);
+      setNextCursor(data.data.nextCursor);
+      setHasMoreMessages(!!data.data.nextCursor);
+
+      requestAnimationFrame(() => {
+        if (container) {
+          container.scrollTop = container.scrollHeight - previousScrollHeight + container.scrollTop;
+        }
+      });
+    } catch (error) {
+      console.error("Failed to load more messages", error);
+    } finally {
+      setIsLoadingMoreMessages(false);
+    }
+  };
 
   useEffect(() => {
     if (!socket || !isConnected || !conversation || !user) return;
@@ -317,9 +403,9 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
 
       const isAtBottom = messagesContainerRef.current
         ? messagesContainerRef.current.scrollHeight -
-            messagesContainerRef.current.scrollTop -
-            messagesContainerRef.current.clientHeight <
-          120
+        messagesContainerRef.current.scrollTop -
+        messagesContainerRef.current.clientHeight <
+        120
         : true;
 
       if (message.senderId !== user.id && !isAtBottom) {
@@ -387,6 +473,10 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
     const isAtBottom = scrollHeight - scrollTop - clientHeight < 120;
     setShowScrollButton(!isAtBottom);
 
+    if (scrollTop < 150 && hasMoreMessages && !isLoadingMoreMessages) {
+      loadMoreMessages();
+    }
+
     if (isAtBottom) {
       setUnreadCount(0);
       api.patch(`/conversations/${conversationId}/read`).catch(console.error);
@@ -448,6 +538,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
 
     if (selectedImages.length > 0) {
       setIsUploading(true);
+      let tempId = "";
 
       try {
         const uploadPromises = selectedImages.map(async (file) => {
@@ -463,7 +554,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
 
         const imageUrls = await Promise.all(uploadPromises);
         const content = JSON.stringify(imageUrls);
-        const tempId = `temp_${Date.now()}_${Math.random()}`;
+        tempId = `temp_${Date.now()}_${Math.random()}`;
 
         setMessages((prev) => [
           ...prev,
@@ -487,6 +578,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
       } catch (error) {
         console.error("Upload failed", error);
         window.alert("Tải ảnh thất bại. Vui lòng thử lại.");
+        setMessages(prev => prev.filter(m => m.id !== tempId));
       } finally {
         setIsUploading(false);
       }
@@ -582,6 +674,35 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
       );
     }
 
+    if (hasHydrated && user && !conversation && !loadError) {
+      return (
+        <div className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-[26px] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(37,99,235,0.12),transparent_34%),linear-gradient(180deg,#071326_0%,#06101f_100%)]">
+          <header className="flex h-[78px] shrink-0 items-center border-b border-white/10 bg-white/[0.03] px-5 lg:px-6">
+            <div className="h-12 w-12 animate-pulse rounded-full bg-slate-800/50" />
+            <div className="ml-3 flex flex-col gap-2">
+              <div className="h-4 w-32 animate-pulse rounded-md bg-slate-800/50" />
+              <div className="h-3 w-20 animate-pulse rounded-md bg-slate-800/50" />
+            </div>
+          </header>
+          <div className="flex flex-1 flex-col justify-end gap-6 p-6">
+            <div className="flex w-full justify-end">
+              <div className="h-12 w-[60%] animate-pulse rounded-[26px] rounded-br-lg bg-slate-800/40" />
+            </div>
+            <div className="flex w-full items-end justify-start gap-2">
+              <div className="h-8 w-8 animate-pulse rounded-full bg-slate-800/50" />
+              <div className="h-12 w-[50%] animate-pulse rounded-[26px] rounded-bl-lg bg-slate-800/30" />
+            </div>
+            <div className="flex w-full justify-end">
+              <div className="h-12 w-[40%] animate-pulse rounded-[26px] rounded-br-lg bg-slate-800/40" />
+            </div>
+          </div>
+          <div className="h-[84px] shrink-0 border-t border-white/10 p-4">
+            <div className="h-full w-full animate-pulse rounded-[24px] bg-slate-800/40" />
+          </div>
+        </div>
+      );
+    }
+
     return null;
   }
 
@@ -619,9 +740,8 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                 </div>
               )}
               <span
-                className={`absolute bottom-1 right-1 h-3.5 w-3.5 rounded-full border-2 border-[#09172d] ${
-                  isOtherUserOnline ? "bg-emerald-400" : "bg-slate-500"
-                }`}
+                className={`absolute bottom-1 right-1 h-3.5 w-3.5 rounded-full border-2 border-[#09172d] ${isOtherUserOnline ? "bg-emerald-400" : "bg-slate-500"
+                  }`}
               />
             </div>
 
@@ -677,7 +797,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
 
                   <div className="flex min-w-0 flex-1 flex-col justify-between gap-4">
                     <div>
-                      <p className="text-sm font-medium text-blue-300">Bat dong san dang trao doi</p>
+                      <p className="text-sm font-medium text-blue-300">Bất động sản đang trao đổi</p>
                       <h3 className="mt-1.5 text-[1.25rem] font-semibold leading-tight text-white">{conversation.post.title}</h3>
                       <p className="mt-2 text-[1.5rem] font-semibold text-blue-400">{formatPrice(conversation.post.price)}</p>
                     </div>
@@ -701,19 +821,23 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                         href={`/posts/${conversation.post.id}`}
                         className="inline-flex items-center justify-center rounded-[18px] border border-blue-400/40 px-4 py-2.5 text-sm font-medium text-blue-300 transition hover:bg-blue-500/10 hover:text-white"
                       >
-                        Xem chi tiet
+                        Xem chi tiết
                       </Link>
                     </div>
                   </div>
                 </div>
               </div>
 
+              {isLoadingMoreMessages && (
+                <div className="flex justify-center py-4">
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-400 border-t-transparent" />
+                </div>
+              )}
+
               <AnimatePresence initial={false}>
                 {messages.map((message, index) => {
-                  const isMine = message.senderId === user.id;
                   const previousMessage = messages[index - 1];
                   const nextMessage = messages[index + 1];
-                  const imageUrls = message.messageType === "IMAGE" ? parseImages(message.content) : [];
 
                   const showDateDivider =
                     !previousMessage ||
@@ -728,159 +852,22 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                     new Date(nextMessage.createdAt).toDateString() === new Date(message.createdAt).toDateString();
 
                   return (
-                    <div key={message.id}>
-                      {showDateDivider && index !== 0 && (
-                        <div className="my-6 flex items-center gap-4 text-xs font-medium text-slate-500">
-                          <span className="h-px flex-1 bg-white/10" />
-                          <span>{formatMessageDayLabel(message.createdAt)}</span>
-                          <span className="h-px flex-1 bg-white/10" />
-                        </div>
-                      )}
-
-                      <motion.div
-                        initial={{ opacity: 0, y: 14 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className={`group/message flex w-full ${isMine ? "justify-end" : "justify-start"} ${
-                          isGroupedWithNext ? "mb-2" : "mb-5"
-                        }`}
-                      >
-                        <div className={`flex max-w-[99%] items-end gap-2 ${isMine ? "flex-row-reverse" : "flex-row"} lg:max-w-[88%]`}>
-                          {!isMine && (
-                            <div className="flex h-10 w-10 shrink-0 items-end justify-center">
-                              {!isGroupedWithNext && (
-                                <div className="h-9 w-9 overflow-hidden rounded-full border border-white/10 bg-slate-800">
-                                  {otherUser.avatarUrl ? (
-                                    <img src={otherUser.avatarUrl} alt={otherUser.fullName} className="h-full w-full object-cover" />
-                                  ) : (
-                                    <div className="flex h-full w-full items-center justify-center text-sm font-medium text-slate-300">
-                                      {otherUser.fullName.charAt(0)}
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          <div className={`flex flex-col ${isMine ? "items-end" : "items-start"}`}>
-                            <div className={`flex items-center gap-2 ${isMine ? "flex-row-reverse" : "flex-row"}`}>
-                              <div
-                                className={`relative overflow-hidden ${
-                                  message.messageType === "IMAGE"
-                                  ? ""
-                                  : `px-4 py-3.5 ${
-                                        isMine
-                                          ? "bg-[linear-gradient(135deg,#6366f1,#8b5cf6)] text-white"
-                                          : "bg-white/[0.08] text-slate-100"
-                                      }`
-                                } ${
-                                  isMine
-                                    ? isGroupedWithPrevious
-                                      ? "rounded-[26px] rounded-tr-lg"
-                                      : "rounded-[26px] rounded-br-lg"
-                                    : isGroupedWithPrevious
-                                      ? "rounded-[26px] rounded-tl-lg"
-                                      : "rounded-[26px] rounded-bl-lg"
-                                } shadow-[0_16px_40px_rgba(2,6,23,0.15)]`}
-                              >
-                                {message.messageType === "IMAGE" ? (
-                                  <div
-                                    className={`overflow-hidden rounded-[24px] ${
-                                      imageUrls.length === 1
-                                        ? "w-[min(360px,76vw)] md:w-[400px]"
-                                        : "w-[min(340px,74vw)] md:w-[390px]"
-                                    }`}
-                                  >
-                                    {imageUrls.length === 1 ? (
-                                      <ChatImageTile
-                                        src={imageUrls[0]}
-                                        alt="Anh da gui"
-                                        onClick={() => setLightboxImage(imageUrls[0])}
-                                        wrapperClassName="relative block w-full overflow-hidden rounded-[24px] bg-slate-900"
-                                        className="h-full w-full object-cover transition hover:scale-[1.01]"
-                                      />
-                                    ) : (
-                                      <div className="grid grid-cols-2 gap-1">
-                                        {imageUrls.slice(0, 4).map((url, imageIndex) => (
-                                          <button
-                                            key={url + imageIndex}
-                                            type="button"
-                                            onClick={() => setLightboxImage(url)}
-                                            className={`relative overflow-hidden bg-slate-900 ${
-                                              imageUrls.length === 3 && imageIndex === 0 ? "col-span-2 aspect-[2.2/1]" : "aspect-[1/1]"
-                                            }`}
-                                          >
-                                            <FallbackMedia
-                                              src={url}
-                                              alt="Anh da gui"
-                                              className="h-full w-full object-cover transition hover:scale-[1.01]"
-                                              wrapperClassName="h-full w-full"
-                                            />
-                                            {imageUrls.length > 4 && imageIndex === 3 && (
-                                              <div className="absolute inset-0 flex items-center justify-center bg-black/55 text-lg font-semibold text-white">
-                                                +{imageUrls.length - 4}
-                                              </div>
-                                            )}
-                                          </button>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <div className="space-y-2">
-                                    {message.isEdited && (
-                                      <p className={`text-[11px] ${isMine ? "text-blue-100/80" : "text-slate-400"}`}>
-                                        Da chinh sua
-                                      </p>
-                                    )}
-                                    <p className="whitespace-pre-wrap break-words text-[14px] leading-6">{message.content}</p>
-                                  </div>
-                                )}
-                              </div>
-
-                              {isMine && !message.id.startsWith("temp_") && (
-                                <div className="relative opacity-0 transition group-hover/message:opacity-100">
-                                  <button
-                                    type="button"
-                                    onClick={() => setOpenMenuId(openMenuId === message.id ? null : message.id)}
-                                    className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-slate-400 transition hover:text-white"
-                                  >
-                                    <MoreVertical className="h-4 w-4" />
-                                  </button>
-
-                                  {openMenuId === message.id && (
-                                    <div className="absolute bottom-10 right-0 z-20 w-40 overflow-hidden rounded-2xl border border-white/10 bg-[#13213b] p-1 shadow-2xl">
-                                      {message.messageType === "TEXT" && (
-                                        <button
-                                          type="button"
-                                          onClick={() => handleEditMessage(message)}
-                                          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-slate-200 transition hover:bg-white/5"
-                                        >
-                                          <Edit2 className="h-4 w-4" />
-                                          Chinh sua
-                                        </button>
-                                      )}
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDeleteMessage(message.id)}
-                                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-red-300 transition hover:bg-red-500/10"
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                        Thu hoi
-                                      </button>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-
-                            <div className={`mt-2 flex items-center gap-2 px-1 text-xs ${isMine ? "justify-end" : "justify-start"} text-slate-500`}>
-                              <span>{formatMessageTime(message.createdAt)}</span>
-                              {isMine && index === messages.length - 1 && message.isRead && <span className="text-blue-300">Da xem</span>}
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    </div>
+                    <MessageBubble
+                      key={message.id}
+                      message={message}
+                      index={index}
+                      isMine={message.senderId === user.id}
+                      otherUser={otherUser}
+                      isGroupedWithPrevious={isGroupedWithPrevious}
+                      isGroupedWithNext={isGroupedWithNext}
+                      showDateDivider={showDateDivider}
+                      openMenuId={openMenuId}
+                      setOpenMenuId={setOpenMenuId}
+                      setLightboxImage={setLightboxImage}
+                      handleEditMessage={handleEditMessage}
+                      handleDeleteMessage={handleDeleteMessage}
+                      isLastRead={message.senderId === user.id && index === messages.length - 1 && message.isRead}
+                    />
                   );
                 })}
               </AnimatePresence>
@@ -999,9 +986,8 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isUploading}
-                  className={`flex h-10 w-10 items-center justify-center rounded-full transition ${
-                    selectedImages.length > 0 ? "bg-blue-500/15 text-blue-300" : "bg-white/[0.04] text-slate-400 hover:text-white"
-                  }`}
+                  className={`flex h-10 w-10 items-center justify-center rounded-full transition ${selectedImages.length > 0 ? "bg-blue-500/15 text-blue-300" : "bg-white/[0.04] text-slate-400 hover:text-white"
+                    }`}
                 >
                   <ImageIcon className="h-5 w-5" />
                 </button>
@@ -1010,9 +996,8 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                   <button
                     type="button"
                     onClick={() => setShowEmojiPicker((prev) => !prev)}
-                  className={`flex h-10 w-10 items-center justify-center rounded-full transition ${
-                      showEmojiPicker ? "bg-blue-500/15 text-blue-300" : "bg-white/[0.04] text-slate-400 hover:text-white"
-                    }`}
+                    className={`flex h-10 w-10 items-center justify-center rounded-full transition ${showEmojiPicker ? "bg-blue-500/15 text-blue-300" : "bg-white/[0.04] text-slate-400 hover:text-white"
+                      }`}
                   >
                     <Smile className="h-5 w-5" />
                   </button>
@@ -1103,9 +1088,8 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                         </div>
                       )}
                       <span
-                        className={`absolute bottom-2 right-2 h-4 w-4 rounded-full border-2 border-[#0b1931] ${
-                          isOtherUserOnline ? "bg-emerald-400" : "bg-slate-500"
-                        }`}
+                        className={`absolute bottom-2 right-2 h-4 w-4 rounded-full border-2 border-[#0b1931] ${isOtherUserOnline ? "bg-emerald-400" : "bg-slate-500"
+                          }`}
                       />
                     </div>
 
@@ -1235,3 +1219,190 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
     </div>
   );
 }
+
+const MessageBubble = memo(({
+  message,
+  index,
+  isMine,
+  otherUser,
+  isGroupedWithPrevious,
+  isGroupedWithNext,
+  showDateDivider,
+  openMenuId,
+  setOpenMenuId,
+  setLightboxImage,
+  handleEditMessage,
+  handleDeleteMessage,
+  isLastRead
+}: any) => {
+  const imageUrls = message.messageType === "IMAGE" ? parseImages(message.content) : [];
+
+  return (
+    <div>
+      {showDateDivider && index !== 0 && (
+        <div className="my-6 flex items-center gap-4 text-xs font-medium text-slate-500">
+          <span className="h-px flex-1 bg-white/10" />
+          <span>{formatMessageDayLabel(message.createdAt)}</span>
+          <span className="h-px flex-1 bg-white/10" />
+        </div>
+      )}
+
+      <motion.div
+        initial={message.isHistory ? false : { opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={`group/message flex w-full ${isMine ? "justify-end" : "justify-start"} ${isGroupedWithNext ? "mb-2" : "mb-5"
+          }`}
+      >
+        <div className={`flex max-w-[99%] items-end gap-2 ${isMine ? "flex-row-reverse" : "flex-row"} lg:max-w-[88%]`}>
+          {!isMine && (
+            <div className="flex h-10 w-10 shrink-0 items-end justify-center">
+              {!isGroupedWithNext && (
+                <div className="h-9 w-9 overflow-hidden rounded-full border border-white/10 bg-slate-800">
+                  {otherUser.avatarUrl ? (
+                    <img src={otherUser.avatarUrl} alt={otherUser.fullName} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-sm font-medium text-slate-300">
+                      {otherUser.fullName.charAt(0)}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className={`flex flex-col ${isMine ? "items-end" : "items-start"}`}>
+            <div className={`flex items-center gap-2 ${isMine ? "flex-row-reverse" : "flex-row"}`}>
+              <div
+                className={`relative overflow-hidden ${message.messageType === "IMAGE"
+                  ? ""
+                  : `px-4 py-3.5 ${isMine
+                    ? "bg-[linear-gradient(135deg,#6366f1,#8b5cf6)] text-white"
+                    : "bg-white/[0.08] text-slate-100"
+                  }`
+                  } ${isMine
+                    ? isGroupedWithPrevious
+                      ? "rounded-[26px] rounded-tr-lg"
+                      : "rounded-[26px] rounded-br-lg"
+                    : isGroupedWithPrevious
+                      ? "rounded-[26px] rounded-tl-lg"
+                      : "rounded-[26px] rounded-bl-lg"
+                  } shadow-[0_16px_40px_rgba(2,6,23,0.15)]`}
+              >
+                {message.messageType === "IMAGE" ? (
+                  <div
+                    className={`relative overflow-hidden rounded-[24px] ${imageUrls.length === 1
+                      ? "w-[min(360px,76vw)] md:w-[400px]"
+                      : "w-[min(340px,74vw)] md:w-[390px]"
+                      }`}
+                  >
+                    {imageUrls.length === 1 ? (
+                      <ChatImageTile
+                        src={imageUrls[0]}
+                        alt="Anh da gui"
+                        onClick={() => setLightboxImage(imageUrls[0])}
+                        wrapperClassName="relative block w-full overflow-hidden rounded-[24px] bg-slate-900"
+                        className="h-full w-full object-cover transition hover:scale-[1.01]"
+                      />
+                    ) : (
+                      <div className="grid grid-cols-2 gap-1">
+                        {imageUrls.slice(0, 4).map((url, imageIndex) => (
+                          <button
+                            key={url + imageIndex}
+                            type="button"
+                            onClick={() => setLightboxImage(url)}
+                            className={`relative overflow-hidden bg-slate-900 ${imageUrls.length === 3 && imageIndex === 0 ? "col-span-2 aspect-[2.2/1]" : "aspect-[1/1]"
+                              }`}
+                          >
+                            <FallbackMedia
+                              src={url}
+                              alt="Anh da gui"
+                              className="h-full w-full object-cover transition hover:scale-[1.01]"
+                              wrapperClassName="h-full w-full"
+                            />
+                            {imageUrls.length > 4 && imageIndex === 3 && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/55 text-lg font-semibold text-white">
+                                +{imageUrls.length - 4}
+                              </div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {message.isOptimistic && (
+                      <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/80 border-t-transparent" />
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {message.isEdited && (
+                      <p className={`text-[11px] ${isMine ? "text-blue-100/80" : "text-slate-400"}`}>
+                        Da chinh sua
+                      </p>
+                    )}
+                    <p className="whitespace-pre-wrap break-words text-[14px] leading-6">{message.content}</p>
+                  </div>
+                )}
+              </div>
+
+              {isMine && !message.id.startsWith("temp_") && (
+                <div className="relative opacity-0 transition group-hover/message:opacity-100">
+                  <button
+                    type="button"
+                    onClick={() => setOpenMenuId(openMenuId === message.id ? null : message.id)}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-slate-400 transition hover:text-white"
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </button>
+
+                  {openMenuId === message.id && (
+                    <div className="absolute bottom-10 right-0 z-20 w-40 overflow-hidden rounded-2xl border border-white/10 bg-[#13213b] p-1 shadow-2xl">
+                      {message.messageType === "TEXT" && (
+                        <button
+                          type="button"
+                          onClick={() => handleEditMessage(message)}
+                          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-slate-200 transition hover:bg-white/5"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                          Chinh sua
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteMessage(message.id)}
+                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-red-300 transition hover:bg-red-500/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Thu hoi
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className={`mt-2 flex items-center gap-2 px-1 text-xs ${isMine ? "justify-end" : "justify-start"} text-slate-500`}>
+              <span>{formatMessageTime(message.createdAt)}</span>
+              {isLastRead && <span className="text-blue-300">Đã xem</span>}
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.message.id === nextProps.message.id &&
+    prevProps.message.content === nextProps.message.content &&
+    prevProps.message.isRead === nextProps.message.isRead &&
+    prevProps.message.isEdited === nextProps.message.isEdited &&
+    prevProps.isGroupedWithPrevious === nextProps.isGroupedWithPrevious &&
+    prevProps.isGroupedWithNext === nextProps.isGroupedWithNext &&
+    prevProps.showDateDivider === nextProps.showDateDivider &&
+    prevProps.openMenuId === nextProps.openMenuId &&
+    prevProps.isLastRead === nextProps.isLastRead
+  );
+});
+
