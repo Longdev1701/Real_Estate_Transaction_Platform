@@ -29,6 +29,8 @@ import {
   Expand,
   Dog,
   HelpCircle,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -219,6 +221,7 @@ export default function CreatePostPage() {
     register("city");
     register("district");
     register("ward");
+    register("price");
   }, [register]);
 
   const watchAllFields = watch();
@@ -768,28 +771,82 @@ export default function CreatePostPage() {
             <div className="grid gap-4 grid-cols-2">
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-300">Giá bán / thuê (VND) <span className="text-red-400">*</span></label>
-                <div>
+                <div className="relative">
                   <input
-                    type="number"
-                    min="0"
-                    step="1000000"
-                    {...register("price")}
+                    type="text"
+                    value={watch("price") !== undefined && watch("price") !== null ? String(watch("price")).replace(/\B(?=(\d{3})+(?!\d))/g, ".") : ""}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/\D/g, "");
+                      setValue("price", raw ? Number(raw) : 0, { shouldValidate: true, shouldDirty: true });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        setValue("price", (Number(watch("price")) || 0) + 1000000, { shouldValidate: true, shouldDirty: true });
+                      } else if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        setValue("price", Math.max(0, (Number(watch("price")) || 0) - 1000000), { shouldValidate: true, shouldDirty: true });
+                      }
+                    }}
                     placeholder="Ví dụ: 1.500.000.000"
-                    className="input-dark py-2 text-sm"
+                    className="input-dark py-2 text-sm pr-8"
                   />
+                  <div className="absolute right-1 top-0 bottom-0 flex flex-col justify-center gap-[2px]">
+                    <button 
+                      type="button" 
+                      onClick={() => setValue("price", (Number(watch("price")) || 0) + 1000000, { shouldValidate: true, shouldDirty: true })}
+                      className="text-gray-400 hover:text-white p-[2px] rounded hover:bg-gray-700/50 focus:outline-none"
+                    >
+                      <ChevronUp size={14} />
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => setValue("price", Math.max(0, (Number(watch("price")) || 0) - 1000000), { shouldValidate: true, shouldDirty: true })}
+                      className="text-gray-400 hover:text-white p-[2px] rounded hover:bg-gray-700/50 focus:outline-none"
+                    >
+                      <ChevronDown size={14} />
+                    </button>
+                  </div>
                 </div>
                 {errors.price && <p className="mt-1 text-xs text-red-400">{errors.price.message}</p>}
               </div>
 
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-300">Diện tích (m²) <span className="text-red-400">*</span></label>
-                <input
-                  type="number"
-                  step="any"
-                  {...register("area")}
-                  placeholder="Ví dụ: 75"
-                  className="input-dark py-2 text-sm"
-                />
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="any"
+                    {...register("area")}
+                    onKeyDown={(e) => {
+                      if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        setValue("area", (Number(watch("area")) || 0) + 1, { shouldValidate: true, shouldDirty: true });
+                      } else if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        setValue("area", Math.max(0, (Number(watch("area")) || 0) - 1), { shouldValidate: true, shouldDirty: true });
+                      }
+                    }}
+                    placeholder="Ví dụ: 75"
+                    className="input-dark py-2 text-sm pr-8 appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <div className="absolute right-1 top-0 bottom-0 flex flex-col justify-center gap-[2px]">
+                    <button 
+                      type="button" 
+                      onClick={() => setValue("area", (Number(watch("area")) || 0) + 1, { shouldValidate: true, shouldDirty: true })}
+                      className="text-gray-400 hover:text-white p-[2px] rounded hover:bg-gray-700/50 focus:outline-none"
+                    >
+                      <ChevronUp size={14} />
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => setValue("area", Math.max(0, (Number(watch("area")) || 0) - 1), { shouldValidate: true, shouldDirty: true })}
+                      className="text-gray-400 hover:text-white p-[2px] rounded hover:bg-gray-700/50 focus:outline-none"
+                    >
+                      <ChevronDown size={14} />
+                    </button>
+                  </div>
+                </div>
                 {errors.area && <p className="mt-1 text-xs text-red-400">{errors.area.message}</p>}
               </div>
             </div>
@@ -849,23 +906,77 @@ export default function CreatePostPage() {
             <div className="grid gap-4 grid-cols-[1fr_1fr_auto] items-end">
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-300">Vĩ độ (Lat)</label>
-                <input
-                  type="number"
-                  step="any"
-                  {...register("latitude")}
-                  className="input-dark py-2 text-sm bg-slate-950/20"
-                />
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="any"
+                    {...register("latitude")}
+                    onKeyDown={(e) => {
+                      if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        setValue("latitude", (Number(watch("latitude")) || 0) + 0.0001, { shouldValidate: true, shouldDirty: true });
+                      } else if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        setValue("latitude", (Number(watch("latitude")) || 0) - 0.0001, { shouldValidate: true, shouldDirty: true });
+                      }
+                    }}
+                    className="input-dark py-2 text-sm pr-8 bg-slate-950/20 appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <div className="absolute right-1 top-0 bottom-0 flex flex-col justify-center gap-[2px]">
+                    <button 
+                      type="button" 
+                      onClick={() => setValue("latitude", (Number(watch("latitude")) || 0) + 0.0001, { shouldValidate: true, shouldDirty: true })}
+                      className="text-gray-400 hover:text-white p-[2px] rounded hover:bg-gray-700/50 focus:outline-none"
+                    >
+                      <ChevronUp size={14} />
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => setValue("latitude", (Number(watch("latitude")) || 0) - 0.0001, { shouldValidate: true, shouldDirty: true })}
+                      className="text-gray-400 hover:text-white p-[2px] rounded hover:bg-gray-700/50 focus:outline-none"
+                    >
+                      <ChevronDown size={14} />
+                    </button>
+                  </div>
+                </div>
                 {errors.latitude && <p className="mt-1 text-xs text-red-400">{errors.latitude.message}</p>}
               </div>
 
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-300">Kinh độ (Lng)</label>
-                <input
-                  type="number"
-                  step="any"
-                  {...register("longitude")}
-                  className="input-dark py-2 text-sm bg-slate-950/20"
-                />
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="any"
+                    {...register("longitude")}
+                    onKeyDown={(e) => {
+                      if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        setValue("longitude", (Number(watch("longitude")) || 0) + 0.0001, { shouldValidate: true, shouldDirty: true });
+                      } else if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        setValue("longitude", (Number(watch("longitude")) || 0) - 0.0001, { shouldValidate: true, shouldDirty: true });
+                      }
+                    }}
+                    className="input-dark py-2 text-sm pr-8 bg-slate-950/20 appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  />
+                  <div className="absolute right-1 top-0 bottom-0 flex flex-col justify-center gap-[2px]">
+                    <button 
+                      type="button" 
+                      onClick={() => setValue("longitude", (Number(watch("longitude")) || 0) + 0.0001, { shouldValidate: true, shouldDirty: true })}
+                      className="text-gray-400 hover:text-white p-[2px] rounded hover:bg-gray-700/50 focus:outline-none"
+                    >
+                      <ChevronUp size={14} />
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => setValue("longitude", (Number(watch("longitude")) || 0) - 0.0001, { shouldValidate: true, shouldDirty: true })}
+                      className="text-gray-400 hover:text-white p-[2px] rounded hover:bg-gray-700/50 focus:outline-none"
+                    >
+                      <ChevronDown size={14} />
+                    </button>
+                  </div>
+                </div>
                 {errors.longitude && <p className="mt-1 text-xs text-red-400">{errors.longitude.message}</p>}
               </div>
 
