@@ -1,7 +1,8 @@
-import { UserRole } from "@prisma/client";
+import { NotificationType, UserRole } from "@prisma/client";
 
 import { AppError } from "../middlewares/error.middleware.js";
 import { prisma } from "../prisma/prisma.service.js";
+import { createNotification } from "../utils/notification.helper.js";
 
 const commentInclude = {
   author: {
@@ -37,7 +38,11 @@ export const createComment = async (
 ) => {
   const post = await prisma.propertyPost.findUnique({
     where: { id: postId },
-    select: { id: true, status: true },
+    select: {
+      id: true,
+      title: true,
+      authorId: true,
+    },
   });
 
   if (!post) {
@@ -47,7 +52,7 @@ export const createComment = async (
   if (parentId) {
     const parentComment = await prisma.comment.findUnique({
       where: { id: parentId },
-      select: { id: true, postId: true },
+      select: { id: true, postId: true, authorId: true },
     });
 
     if (!parentComment) {
@@ -69,6 +74,34 @@ export const createComment = async (
     include: commentInclude,
   });
 
+  const recipients = new Set<string>();
+  if (post.authorId !== authorId) {
+    recipients.add(post.authorId);
+  }
+
+  if (parentId) {
+    const parentComment = await prisma.comment.findUnique({
+      where: { id: parentId },
+      select: { authorId: true },
+    });
+
+    if (parentComment?.authorId && parentComment.authorId !== authorId) {
+      recipients.add(parentComment.authorId);
+    }
+  }
+
+  void Promise.allSettled(
+    Array.from(recipients).map((userId) =>
+      createNotification({
+        userId,
+        type: NotificationType.POST,
+        relatedId: post.id,
+        title: parentId ? "Có phản hồi mới trong bài đăng" : "Có bình luận mới trong bài đăng",
+        content: `${comment.author.fullName} đã bình luận về bài "${post.title}".`,
+      }),
+    ),
+  );
+
   return comment;
 };
 
@@ -79,7 +112,7 @@ export const getComments = async (postId: string, page: number = 1, limit: numbe
     prisma.comment.findMany({
       where: {
         postId,
-        parentId: null, // Only fetch root-level comments
+        parentId: null,
       },
       include: commentInclude,
       orderBy: { createdAt: "desc" },
@@ -118,7 +151,6 @@ export const deleteComment = async (commentId: string, actorId: string, role: Us
     throw new AppError("Comment not found.", 404);
   }
 
-  // Only the author of the comment or an admin can delete it
   if (comment.authorId !== actorId && role !== UserRole.ADMIN) {
     throw new AppError("You are not authorized to delete this comment.", 403);
   }

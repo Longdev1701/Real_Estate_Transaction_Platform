@@ -30,11 +30,10 @@ import {
   type NotificationType,
 } from "@/lib/notifications";
 import { useAuthStore } from "@/stores/auth.store";
+import { useSocketStore } from "@/stores/socket.store";
 
 type StatusFilter = "all" | "unread" | "read";
 type TimeFilter = "all" | "7d" | "30d";
-
-const cacheKey = "notifications:list";
 
 const typeOptions: Array<{ value: "all" | NotificationType; label: string }> = [
   { value: "all", label: "Tất cả loại" },
@@ -71,9 +70,15 @@ const getActionLabel = (type: NotificationType) => {
   return "Xem chi tiết";
 };
 
+const emitUnreadCountChanged = (count: number) => {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent("notifications:unread-count", { detail: count }));
+};
+
 export default function NotificationsPage() {
   const router = useRouter();
   const { user, accessToken, hasHydrated, isLoadingUser } = useAuthStore();
+  const socket = useSocketStore((state) => state.socket);
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -81,6 +86,7 @@ export default function NotificationsPage() {
   const [typeFilter, setTypeFilter] = useState<"all" | NotificationType>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("7d");
+  const cacheKey = user ? `notifications:list:${user.id}` : "notifications:list";
 
   useEffect(() => {
     if (hasHydrated && !accessToken && !user) {
@@ -104,6 +110,7 @@ export default function NotificationsPage() {
         if (cached && isMounted) {
           setItems(cached.items);
           setUnreadCount(cached.unreadCount);
+          emitUnreadCountChanged(cached.unreadCount);
           setIsLoading(false);
         }
 
@@ -111,6 +118,7 @@ export default function NotificationsPage() {
         if (isMounted) {
           setItems(response.data.data.items);
           setUnreadCount(response.data.data.unreadCount);
+          emitUnreadCountChanged(response.data.data.unreadCount);
           writeSessionCache(cacheKey, response.data.data);
         }
       } catch (err) {
@@ -130,7 +138,44 @@ export default function NotificationsPage() {
     return () => {
       isMounted = false;
     };
-  }, [hasHydrated, user]);
+  }, [cacheKey, hasHydrated, user]);
+
+  useEffect(() => {
+    if (!socket || !user) return;
+
+    const handleNotificationCreated = (notification: NotificationItem) => {
+      if (notification.userId !== user.id) return;
+
+      setItems((currentItems) => {
+        if (currentItems.some((item) => item.id === notification.id)) {
+          return currentItems;
+        }
+
+        const nextItems = [notification, ...currentItems];
+        const nextUnreadCount = nextItems.filter((item) => !item.isRead).length;
+        setUnreadCount(nextUnreadCount);
+        emitUnreadCountChanged(nextUnreadCount);
+        writeSessionCache(cacheKey, {
+          items: nextItems,
+          unreadCount: nextUnreadCount,
+          meta: {
+            page: 1,
+            limit: 50,
+            total: nextItems.length,
+            totalPages: 1,
+            hasMore: false,
+          },
+        });
+        return nextItems;
+      });
+    };
+
+    socket.on("notification_created", handleNotificationCreated);
+
+    return () => {
+      socket.off("notification_created", handleNotificationCreated);
+    };
+  }, [cacheKey, socket, user]);
 
   const counts = useMemo(() => {
     const initial: Record<"all" | NotificationType, number> = {
@@ -182,6 +227,7 @@ export default function NotificationsPage() {
     const nextUnreadCount = nextItems.filter((item) => !item.isRead).length;
     setItems(nextItems);
     setUnreadCount(nextUnreadCount);
+    emitUnreadCountChanged(nextUnreadCount);
     writeSessionCache(cacheKey, {
       items: nextItems,
       unreadCount: nextUnreadCount,
@@ -197,7 +243,7 @@ export default function NotificationsPage() {
 
   const markOneAsRead = async (notification: NotificationItem) => {
     if (!notification.isRead) {
-      const nextItems = items.map((item) => item.id === notification.id ? { ...item, isRead: true } : item);
+      const nextItems = items.map((item) => (item.id === notification.id ? { ...item, isRead: true } : item));
       updateCache(nextItems);
       await api.patch(`/notifications/${notification.id}/read`);
     }
@@ -242,7 +288,7 @@ export default function NotificationsPage() {
                     <span className="font-medium">{item.label}</span>
                   </span>
                   <span className="rounded-full bg-white/10 px-2.5 py-1 text-sm font-semibold">
-                    {item.type === "all" ? unreadCount : counts[item.type]}
+                    {counts[item.type]}
                   </span>
                 </button>
               );

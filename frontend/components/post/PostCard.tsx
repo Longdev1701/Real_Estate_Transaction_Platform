@@ -163,6 +163,7 @@ export function PostCard({ post }: { post: Post }) {
       key: (current?.key ?? 0) + 1,
       type: effectType,
     }));
+    setIsSaved(nextSaved);
     playSave();
 
     try {
@@ -172,8 +173,8 @@ export function PostCard({ post }: { post: Post }) {
         await api.delete(`/saved-posts/${post.id}`);
       }
 
-      setIsSaved(nextSaved);
     } catch (error) {
+      setIsSaved(!nextSaved);
       setSaveEffect(null);
       console.error("Failed to toggle saved post:", error);
     } finally {
