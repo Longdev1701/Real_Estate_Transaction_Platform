@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, use } from "react";
+import { forwardRef, memo, useEffect, useLayoutEffect, useRef, useState, use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -27,6 +27,7 @@ import { format, isToday, isYesterday } from "date-fns";
 import { vi } from "date-fns/locale";
 import dynamic from "next/dynamic";
 import { Theme } from "emoji-picker-react";
+import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 
 const EmojiPicker = dynamic(() => import("emoji-picker-react"), { ssr: false });
 
@@ -35,11 +36,12 @@ import { useSound } from "@/hooks/useSound";
 import { useAuthStore } from "@/stores/auth.store";
 import { useSocketStore } from "@/stores/socket.store";
 import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
-import { memo } from "react";
 
 type Message = {
   isHistory?: boolean;
   isOptimistic?: boolean;
+  uploadState?: "uploading";
+  tempId?: string;
   id: string;
   senderId: string;
   content: string;
@@ -70,6 +72,17 @@ type SharedAsset = {
   createdAt: string;
 };
 
+type CachedConversationPayload = {
+  messages: Message[];
+  conversation: ConversationData | null;
+  nextCursor: string | null;
+};
+
+const MESSAGES_CACHE_PREFIX = "messages_";
+const MARK_READ_DEBOUNCE_MS = 350;
+const INITIAL_FIRST_ITEM_INDEX = 100000;
+const DEFAULT_MESSAGE_ITEM_HEIGHT = 92;
+
 const parseImages = (content: string): string[] => {
   try {
     const parsed = JSON.parse(content);
@@ -97,6 +110,18 @@ function formatMessageTime(value: string) {
 
 function getFileLabel(index: number) {
   return `Hình ảnh ${String(index + 1).padStart(2, "0")}`;
+}
+
+function getMessagesCacheKey(conversationId: string) {
+  return `${MESSAGES_CACHE_PREFIX}${conversationId}`;
+}
+
+function readCachedConversation(conversationId: string) {
+  return readSessionCache<CachedConversationPayload>(getMessagesCacheKey(conversationId));
+}
+
+function createClientMessageId() {
+  return `msg_client_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
 function FallbackMedia({
@@ -140,7 +165,7 @@ function ChatImageTile({
   className: string;
   wrapperClassName: string;
 }) {
-  const [aspectRatio, setAspectRatio] = useState<number>(1);
+  const [aspectRatio, setAspectRatio] = useState<number>(1.18);
 
   useEffect(() => {
     let cancelled = false;
@@ -169,6 +194,23 @@ function ChatImageTile({
   );
 }
 
+const VirtuosoScroller = forwardRef<HTMLDivElement, React.ComponentPropsWithoutRef<"div">>(
+  ({ className = "", style, ...props }, ref) => (
+    <div
+      {...props}
+      ref={ref}
+      className={`no-scrollbar ${className}`}
+      style={{
+        ...style,
+        scrollbarWidth: "none",
+        msOverflowStyle: "none",
+      }}
+    />
+  ),
+);
+
+VirtuosoScroller.displayName = "VirtuosoScroller";
+
 export default function ChatWindow({ params }: { params: Promise<{ conversationId: string }> }) {
   const resolvedParams = use(params);
   const conversationId = resolvedParams.conversationId;
@@ -177,36 +219,12 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
   const { playPop, playDing } = useSound();
   const router = useRouter();
 
-  const [messages, setMessages] = useState<Message[]>(() => {
-    if (typeof window !== "undefined") {
-      const cached = readSessionCache<any>(`messages_${conversationId}`);
-      return cached?.messages || [];
-    }
-    return [];
-  });
-  const [conversation, setConversation] = useState<ConversationData | null>(() => {
-    if (typeof window !== "undefined") {
-      const cached = readSessionCache<any>(`messages_${conversationId}`);
-      return cached?.conversation || null;
-    }
-    return null;
-  });
-  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const initialCachedConversation = typeof window !== "undefined" ? readCachedConversation(conversationId) : null;
+  const [messages, setMessages] = useState<Message[]>(() => initialCachedConversation?.messages || []);
+  const [conversation, setConversation] = useState<ConversationData | null>(() => initialCachedConversation?.conversation || null);
+  const [hasMoreMessages, setHasMoreMessages] = useState(() => !!initialCachedConversation?.nextCursor);
   const [isLoadingMoreMessages, setIsLoadingMoreMessages] = useState(false);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  
-  const [prevConversationId, setPrevConversationId] = useState(conversationId);
-
-  if (conversationId !== prevConversationId) {
-    setPrevConversationId(conversationId);
-    if (typeof window !== "undefined") {
-      const cached = readSessionCache<any>(`messages_${conversationId}`);
-      setMessages(cached?.messages || []);
-      setConversation(cached?.conversation || null);
-      setNextCursor(cached?.nextCursor || null);
-      setHasMoreMessages(!!cached?.nextCursor);
-    }
-  }
+  const [nextCursor, setNextCursor] = useState<string | null>(() => initialCachedConversation?.nextCursor || null);
   const [inputValue, setInputValue] = useState("");
   const [otherUserTyping, setOtherUserTyping] = useState(false);
   const [isOtherUserOnline, setIsOtherUserOnline] = useState(false);
@@ -222,14 +240,21 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(false);
+  const [firstItemIndex, setFirstItemIndex] = useState(INITIAL_FIRST_ITEM_INDEX);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const virtuosoRef = useRef<VirtuosoHandle | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textInputRef = useRef<HTMLInputElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const previewScrollRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const markReadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const unreadPendingReadRef = useRef(false);
+  const shouldStickToBottomRef = useRef(true);
+  const isAtBottomRef = useRef(true);
+  const initialPositionSettledRef = useRef(false);
+  const bottomSnapInProgressRef = useRef(false);
+  const bottomSnapTimeoutsRef = useRef<number[]>([]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -261,12 +286,26 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
   }, [hasHydrated, router, user]);
 
   useEffect(() => {
+    const cached = readCachedConversation(conversationId);
+
+    setMessages(cached?.messages || []);
+    setConversation(cached?.conversation || null);
+    setNextCursor(cached?.nextCursor || null);
+    setHasMoreMessages(!!cached?.nextCursor);
+    setFirstItemIndex(INITIAL_FIRST_ITEM_INDEX);
+    shouldStickToBottomRef.current = true;
+    isAtBottomRef.current = true;
+    initialPositionSettledRef.current = false;
+    bottomSnapInProgressRef.current = false;
+    unreadPendingReadRef.current = false;
+
     setSelectedImages([]);
     setImagePreviewUrls([]);
     setInputValue("");
     setEditingMessageId(null);
     setOpenMenuId(null);
     setIsDetailsPanelOpen(false);
+    setShowScrollButton(false);
   }, [conversationId]);
 
   useEffect(() => {
@@ -276,16 +315,89 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
   }, [imagePreviewUrls]);
 
   useEffect(() => {
+    if (!conversation) return;
+
+    writeSessionCache(getMessagesCacheKey(conversationId), {
+      messages,
+      conversation,
+      nextCursor,
+    });
+  }, [conversation, conversationId, messages, nextCursor]);
+
+  useEffect(() => {
+    return () => {
+      if (markReadTimeoutRef.current) {
+        clearTimeout(markReadTimeoutRef.current);
+      }
+      bottomSnapTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
+      bottomSnapTimeoutsRef.current = [];
+    };
+  }, []);
+
+  const scheduleMarkAsRead = () => {
+    if (!conversationId) return;
+
+    unreadPendingReadRef.current = false;
+
+    if (markReadTimeoutRef.current) {
+      clearTimeout(markReadTimeoutRef.current);
+    }
+
+    markReadTimeoutRef.current = setTimeout(() => {
+      api.patch(`/conversations/${conversationId}/read`).catch(console.error);
+      if (socket && isConnected) {
+        socket.emit("mark_read", { conversationId });
+      }
+    }, MARK_READ_DEBOUNCE_MS);
+  };
+
+  const snapToBottom = (behavior: "auto" | "smooth" = "auto") => {
+    if (messages.length === 0) return;
+
+    bottomSnapTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
+    bottomSnapTimeoutsRef.current = [];
+
+    bottomSnapInProgressRef.current = true;
+    initialPositionSettledRef.current = false;
+    shouldStickToBottomRef.current = true;
+    isAtBottomRef.current = true;
+    setShowScrollButton(false);
+
+    const runSnap = (nextBehavior: "auto" | "smooth") => {
+      virtuosoRef.current?.scrollTo({
+        top: Number.MAX_SAFE_INTEGER,
+        behavior: nextBehavior,
+      });
+    };
+
+    runSnap(behavior);
+
+    [80, 180].forEach((delay) => {
+      const timeoutId = window.setTimeout(() => {
+        runSnap("auto");
+      }, delay);
+      bottomSnapTimeoutsRef.current.push(timeoutId);
+    });
+
+    const settleTimeoutId = window.setTimeout(() => {
+      bottomSnapInProgressRef.current = false;
+      initialPositionSettledRef.current = true;
+      shouldStickToBottomRef.current = true;
+      isAtBottomRef.current = true;
+      setShowScrollButton(false);
+      bottomSnapTimeoutsRef.current = [];
+    }, 260);
+    bottomSnapTimeoutsRef.current.push(settleTimeoutId);
+  };
+
+  useEffect(() => {
     const fetchMessages = async () => {
       try {
         setLoadError(null);
 
-        // --- CLIENT CACHING: Read from session cache first (SWR Pattern) ---
-        const cacheKey = `messages_${conversationId}`;
-        const cachedData = readSessionCache<any>(cacheKey);
+        const cachedData = readCachedConversation(conversationId);
 
         if (cachedData) {
-          // Render instantly using cached data
           setMessages(cachedData.messages);
           setConversation(cachedData.conversation);
           setNextCursor(cachedData.nextCursor);
@@ -294,23 +406,13 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
 
         const { data } = await api.get(`/conversations/${conversationId}/messages?limit=20`);
 
-        // --- CLIENT CACHING: Write to session cache ---
-        writeSessionCache(cacheKey, {
-          messages: data.data.messages,
-          conversation: data.data.conversation,
-          nextCursor: data.data.nextCursor,
-        });
-
-        // Always update state with fresh data from server
         setMessages(data.data.messages);
         setConversation(data.data.conversation);
         setNextCursor(data.data.nextCursor);
         setHasMoreMessages(!!data.data.nextCursor);
-
-        await api.patch(`/conversations/${conversationId}/read`);
-        if (socket && isConnected) {
-          socket.emit("mark_read", { conversationId });
-        }
+        unreadPendingReadRef.current = true;
+        requestAnimationFrame(() => snapToBottom("auto"));
+        scheduleMarkAsRead();
       } catch (error) {
         console.error("Failed to fetch messages", error);
         setLoadError("Không thể tải cuộc trò chuyện này.");
@@ -327,21 +429,14 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
 
     try {
       setIsLoadingMoreMessages(true);
-
-      const container = messagesContainerRef.current;
-      const previousScrollHeight = container ? container.scrollHeight : 0;
+      shouldStickToBottomRef.current = false;
 
       const { data } = await api.get(`/conversations/${conversationId}/messages?cursor=${nextCursor}&limit=20`);
 
+      setFirstItemIndex((prev) => prev - data.data.messages.length);
       setMessages((prev) => [...data.data.messages, ...prev]);
       setNextCursor(data.data.nextCursor);
       setHasMoreMessages(!!data.data.nextCursor);
-
-      requestAnimationFrame(() => {
-        if (container) {
-          container.scrollTop = container.scrollHeight - previousScrollHeight + container.scrollTop;
-        }
-      });
     } catch (error) {
       console.error("Failed to load more messages", error);
     } finally {
@@ -387,32 +482,43 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
     const handleReceiveMessage = (message: Message) => {
       setOtherUserTyping(false);
       setMessages((prev) => {
-        if (prev.some((item) => item.id === message.id)) return prev;
+        const existingIndex = prev.findIndex(
+          (item) => item.id === message.id || (message.tempId && item.id === message.tempId),
+        );
 
-        if (message.senderId === user.id) {
-          const tempMessage = prev.find((item) => item.id.startsWith("temp_") && item.content === message.content);
-          if (tempMessage) {
-            return prev.map((item) => (item.id === tempMessage.id ? message : item));
-          }
-        } else {
+        if (existingIndex >= 0) {
+          const next = [...prev];
+          next[existingIndex] = {
+            ...message,
+            isOptimistic: false,
+            uploadState: undefined,
+          };
+          return next;
+        }
+
+        if (message.senderId !== user.id) {
           playDing();
         }
 
-        return [...prev, message];
+        return [
+          ...prev,
+          {
+            ...message,
+            isOptimistic: false,
+            uploadState: undefined,
+          },
+        ];
       });
 
-      const isAtBottom = messagesContainerRef.current
-        ? messagesContainerRef.current.scrollHeight -
-        messagesContainerRef.current.scrollTop -
-        messagesContainerRef.current.clientHeight <
-        120
-        : true;
+      const isAtBottom = isAtBottomRef.current;
 
       if (message.senderId !== user.id && !isAtBottom) {
+        unreadPendingReadRef.current = true;
         setUnreadCount((prev) => prev + 1);
       } else {
-        api.patch(`/conversations/${conversationId}/read`).catch(console.error);
-        socket.emit("mark_read", { conversationId });
+        shouldStickToBottomRef.current = true;
+        unreadPendingReadRef.current = true;
+        scheduleMarkAsRead();
       }
     };
 
@@ -432,6 +538,13 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
       }
     };
 
+    const handleSocketError = (error: { message?: string; tempId?: string }) => {
+      if (!error.tempId) return;
+
+      setMessages((prev) => prev.filter((message) => message.id !== error.tempId));
+      window.alert(error.message || "KhĂ´ng thá»ƒ gá»­i tin nháº¯n. Vui lĂ²ng thá»­ láº¡i.");
+    };
+
     socket.emit("join_room", conversationId);
     socket.emit("check_online_status", otherUserId);
 
@@ -445,6 +558,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
     socket.on("message_edited", handleMessageEdited);
     socket.on("message_deleted", handleMessageDeleted);
     socket.on("conversation_deleted", handleConversationDeleted);
+    socket.on("error", handleSocketError);
 
     return () => {
       socket.off("online_status_result", handleOnlineStatusResult);
@@ -457,39 +571,55 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
       socket.off("message_edited", handleMessageEdited);
       socket.off("message_deleted", handleMessageDeleted);
       socket.off("conversation_deleted", handleConversationDeleted);
+      socket.off("error", handleSocketError);
     };
   }, [conversation, conversationId, isConnected, playDing, router, socket, user]);
 
-  useEffect(() => {
-    if (!showScrollButton) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  useLayoutEffect(() => {
+    if (shouldStickToBottomRef.current && messages.length > 0) {
+      snapToBottom("auto");
     }
-  }, [messages, otherUserTyping, showScrollButton]);
+  }, [messages.length]);
 
-  const handleScroll = () => {
-    if (!messagesContainerRef.current) return;
+  useLayoutEffect(() => {
+    if (!messages.length) return;
+    if (!isAtBottomRef.current && !shouldStickToBottomRef.current) return;
 
-    const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
-    const isAtBottom = scrollHeight - scrollTop - clientHeight < 120;
+    requestAnimationFrame(() => {
+      snapToBottom("auto");
+    });
+  }, [messages.length, otherUserTyping]);
+
+  const handleBottomStateChange = (isAtBottom: boolean) => {
+    isAtBottomRef.current = isAtBottom;
+    shouldStickToBottomRef.current = isAtBottom;
+
+    if (bottomSnapInProgressRef.current) {
+      setShowScrollButton(false);
+      return;
+    }
+
+    if (!initialPositionSettledRef.current) {
+      if (isAtBottom) {
+        setShowScrollButton(false);
+      }
+      return;
+    }
+
     setShowScrollButton(!isAtBottom);
 
-    if (scrollTop < 150 && hasMoreMessages && !isLoadingMoreMessages) {
-      loadMoreMessages();
-    }
-
-    if (isAtBottom) {
+    if (isAtBottom && unreadPendingReadRef.current) {
       setUnreadCount(0);
-      api.patch(`/conversations/${conversationId}/read`).catch(console.error);
-      if (socket && isConnected) {
-        socket.emit("mark_read", { conversationId });
-      }
+      scheduleMarkAsRead();
     }
   };
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    setShowScrollButton(false);
+    snapToBottom("smooth");
     setUnreadCount(0);
+    if (unreadPendingReadRef.current) {
+      scheduleMarkAsRead();
+    }
   };
 
   const handleEditMessage = (message: Message) => {
@@ -517,6 +647,8 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
 
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     socket.emit("stop_typing", { conversationId });
+    shouldStickToBottomRef.current = true;
+    setShowScrollButton(false);
 
     if (editingMessageId) {
       setMessages((prev) =>
@@ -538,9 +670,24 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
 
     if (selectedImages.length > 0) {
       setIsUploading(true);
-      let tempId = "";
+      const tempId = createClientMessageId();
+      const optimisticContent = JSON.stringify(imagePreviewUrls);
 
       try {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: tempId,
+            tempId,
+            senderId: user!.id,
+            content: optimisticContent,
+            messageType: "IMAGE",
+            createdAt: new Date().toISOString(),
+            isOptimistic: true,
+            uploadState: "uploading",
+          },
+        ]);
+
         const uploadPromises = selectedImages.map(async (file) => {
           const formData = new FormData();
           formData.append("image", file);
@@ -554,23 +701,23 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
 
         const imageUrls = await Promise.all(uploadPromises);
         const content = JSON.stringify(imageUrls);
-        tempId = `temp_${Date.now()}_${Math.random()}`;
-
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: tempId,
-            senderId: user!.id,
-            content,
-            messageType: "IMAGE",
-            createdAt: new Date().toISOString(),
-          },
-        ]);
+        setMessages((prev) =>
+          prev.map((message) =>
+            message.id === tempId
+              ? {
+                  ...message,
+                  content,
+                  uploadState: undefined,
+                }
+              : message,
+          ),
+        );
 
         socket.emit("send_message", {
           conversationId,
           content,
           messageType: "IMAGE",
+          tempId,
         });
 
         setSelectedImages([]);
@@ -578,23 +725,25 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
       } catch (error) {
         console.error("Upload failed", error);
         window.alert("Tải ảnh thất bại. Vui lòng thử lại.");
-        setMessages(prev => prev.filter(m => m.id !== tempId));
+        setMessages((prev) => prev.filter((message) => message.id !== tempId));
       } finally {
         setIsUploading(false);
       }
     }
 
     if (textContent) {
-      const tempId = `temp_${Date.now() + 1}`;
+      const tempId = createClientMessageId();
 
       setMessages((prev) => [
         ...prev,
         {
           id: tempId,
+          tempId,
           senderId: user!.id,
           content: textContent,
           messageType: "TEXT",
           createdAt: new Date().toISOString(),
+          isOptimistic: true,
         },
       ]);
 
@@ -602,6 +751,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
         conversationId,
         content: textContent,
         messageType: "TEXT",
+        tempId,
       });
     }
 
@@ -707,6 +857,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
   }
 
   const otherUser = conversation.buyer.id === user.id ? conversation.seller : conversation.buyer;
+  const messageItems = messages.map((message, actualIndex) => ({ message, actualIndex }));
   const sharedAssets: SharedAsset[] = messages
     .filter((message) => message.messageType === "IMAGE")
     .flatMap((message) =>
@@ -720,7 +871,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
     .reverse();
 
   return (
-    <div className="relative flex h-full min-h-0 flex-1 overflow-hidden rounded-[26px] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(37,99,235,0.12),transparent_34%),linear-gradient(180deg,#071326_0%,#06101f_100%)] shadow-[0_22px_60px_rgba(2,6,23,0.28)]">
+    <div className="relative flex h-full min-h-0 flex-1 overflow-hidden overflow-x-hidden rounded-[26px] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(37,99,235,0.12),transparent_34%),linear-gradient(180deg,#071326_0%,#06101f_100%)] shadow-[0_22px_60px_rgba(2,6,23,0.28)]">
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-[78px] shrink-0 items-center justify-between border-b border-white/10 bg-white/[0.03] px-5 lg:px-6">
           <div className="flex min-w-0 items-center gap-3">
@@ -772,130 +923,149 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
         </header>
 
         <div className="relative flex min-h-0 flex-1 flex-col">
-          <div
-            ref={messagesContainerRef}
-            onScroll={handleScroll}
-            className="no-scrollbar flex-1 overflow-y-auto px-3 py-5 lg:px-4"
-          >
-            <div className="mx-auto w-full max-w-5xl">
-              <div className="mb-6 flex items-center gap-4 text-xs font-medium text-slate-500">
-                <span className="h-px flex-1 bg-white/10" />
-                <span>{formatMessageDayLabel(new Date().toISOString())}</span>
-                <span className="h-px flex-1 bg-white/10" />
-              </div>
-
-              <div className="mb-6 overflow-hidden rounded-[22px] border border-white/10 bg-white/[0.04] shadow-[0_20px_60px_rgba(2,6,23,0.25)]">
-                <div className="flex flex-col gap-4 p-4 md:flex-row">
-                  <div className="h-36 w-full overflow-hidden rounded-[18px] bg-slate-900 md:h-40 md:w-[220px]">
-                    <FallbackMedia
-                      src={conversation.post.images[0]?.imageUrl}
-                      alt={conversation.post.title}
-                      className="h-full w-full object-cover"
-                      wrapperClassName="h-full w-full"
-                    />
+          <Virtuoso<{ message: Message; actualIndex: number }>
+            ref={virtuosoRef}
+            className="no-scrollbar flex-1 overflow-x-hidden px-4 py-5 lg:px-6 xl:px-7"
+            data={messageItems}
+            firstItemIndex={firstItemIndex}
+            initialTopMostItemIndex={{ 
+              index: Math.max(messageItems.length - 1, 0), 
+              align: "end", 
+            }}
+            startReached={loadMoreMessages}
+            atBottomStateChange={handleBottomStateChange}
+            atBottomThreshold={80}
+            alignToBottom
+            defaultItemHeight={DEFAULT_MESSAGE_ITEM_HEIGHT}
+            increaseViewportBy={{ top: 240, bottom: 320 }}
+            followOutput={false}
+            computeItemKey={(_, item) => item.message.id}
+            components={{
+              Scroller: VirtuosoScroller,
+              Header: () => (
+                <div className="mx-auto w-full max-w-[62rem]">
+                  <div className="mb-6 flex items-center gap-4 text-xs font-medium text-slate-500">
+                    <span className="h-px flex-1 bg-white/10" />
+                    <span>{formatMessageDayLabel(new Date().toISOString())}</span>
+                    <span className="h-px flex-1 bg-white/10" />
                   </div>
 
-                  <div className="flex min-w-0 flex-1 flex-col justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-blue-300">Bất động sản đang trao đổi</p>
-                      <h3 className="mt-1.5 text-[1.25rem] font-semibold leading-tight text-white">{conversation.post.title}</h3>
-                      <p className="mt-2 text-[1.5rem] font-semibold text-blue-400">{formatPrice(conversation.post.price)}</p>
-                    </div>
-
-                    <div className="grid gap-3 text-sm text-slate-300 sm:grid-cols-2">
-                      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3">
-                        {conversation.post.propertyType}
-                      </div>
-                      <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3">
-                        {conversation.post.area} m²
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                      <div className="flex items-center gap-2 text-sm text-slate-400">
-                        <MapPin className="h-4 w-4" />
-                        <span>{conversation.post.city}</span>
+                  <div className="mb-6 overflow-hidden rounded-[22px] border border-white/10 bg-white/[0.04] shadow-[0_20px_60px_rgba(2,6,23,0.25)]">
+                    <div className="flex flex-col gap-4 p-4 md:flex-row">
+                      <div className="h-36 w-full overflow-hidden rounded-[18px] bg-slate-900 md:h-40 md:w-[220px]">
+                        <FallbackMedia
+                          src={conversation.post.images[0]?.imageUrl}
+                          alt={conversation.post.title}
+                          className="h-full w-full object-cover"
+                          wrapperClassName="h-full w-full"
+                        />
                       </div>
 
-                      <Link
-                        href={`/posts/${conversation.post.id}`}
-                        className="inline-flex items-center justify-center rounded-[18px] border border-blue-400/40 px-4 py-2.5 text-sm font-medium text-blue-300 transition hover:bg-blue-500/10 hover:text-white"
-                      >
-                        Xem chi tiết
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {isLoadingMoreMessages && (
-                <div className="flex justify-center py-4">
-                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-400 border-t-transparent" />
-                </div>
-              )}
-
-              <AnimatePresence initial={false}>
-                {messages.map((message, index) => {
-                  const previousMessage = messages[index - 1];
-                  const nextMessage = messages[index + 1];
-
-                  const showDateDivider =
-                    !previousMessage ||
-                    new Date(message.createdAt).toDateString() !== new Date(previousMessage.createdAt).toDateString();
-                  const isGroupedWithPrevious =
-                    previousMessage &&
-                    previousMessage.senderId === message.senderId &&
-                    !showDateDivider;
-                  const isGroupedWithNext =
-                    nextMessage &&
-                    nextMessage.senderId === message.senderId &&
-                    new Date(nextMessage.createdAt).toDateString() === new Date(message.createdAt).toDateString();
-
-                  return (
-                    <MessageBubble
-                      key={message.id}
-                      message={message}
-                      index={index}
-                      isMine={message.senderId === user.id}
-                      otherUser={otherUser}
-                      isGroupedWithPrevious={isGroupedWithPrevious}
-                      isGroupedWithNext={isGroupedWithNext}
-                      showDateDivider={showDateDivider}
-                      openMenuId={openMenuId}
-                      setOpenMenuId={setOpenMenuId}
-                      setLightboxImage={setLightboxImage}
-                      handleEditMessage={handleEditMessage}
-                      handleDeleteMessage={handleDeleteMessage}
-                      isLastRead={message.senderId === user.id && index === messages.length - 1 && message.isRead}
-                    />
-                  );
-                })}
-              </AnimatePresence>
-
-              {otherUserTyping && (
-                <div className="mb-5 flex justify-start">
-                  <div className="flex items-end gap-3">
-                    <div className="h-10 w-10 overflow-hidden rounded-full border border-white/10 bg-slate-800">
-                      {otherUser.avatarUrl ? (
-                        <img src={otherUser.avatarUrl} alt={otherUser.fullName} className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-sm font-medium text-slate-300">
-                          {otherUser.fullName.charAt(0)}
+                      <div className="flex min-w-0 flex-1 flex-col justify-between gap-4">
+                        <div>
+                          <p className="text-sm font-medium text-blue-300">Bất động sản đang trao đổi</p>
+                          <h3 className="mt-1.5 text-[1.25rem] font-semibold leading-tight text-white">{conversation.post.title}</h3>
+                          <p className="mt-2 text-[1.5rem] font-semibold text-blue-400">{formatPrice(conversation.post.price)}</p>
                         </div>
-                      )}
+
+                        <div className="grid gap-3 text-sm text-slate-300 sm:grid-cols-2">
+                          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3">
+                            {conversation.post.propertyType}
+                          </div>
+                          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3">
+                            {conversation.post.area} m²
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                          <div className="flex items-center gap-2 text-sm text-slate-400">
+                            <MapPin className="h-4 w-4" />
+                            <span>{conversation.post.city}</span>
+                          </div>
+
+                          <Link
+                            href={`/posts/${conversation.post.id}`}
+                            className="inline-flex items-center justify-center rounded-[18px] border border-blue-400/40 px-4 py-2.5 text-sm font-medium text-blue-300 transition hover:bg-blue-500/10 hover:text-white"
+                          >
+                            Xem chi tiết
+                          </Link>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 rounded-[24px] rounded-bl-lg bg-white/[0.08] px-5 py-4">
-                      <span className="h-2 w-2 animate-bounce rounded-full bg-slate-300 [animation-delay:0ms]" />
-                      <span className="h-2 w-2 animate-bounce rounded-full bg-slate-300 [animation-delay:120ms]" />
-                      <span className="h-2 w-2 animate-bounce rounded-full bg-slate-300 [animation-delay:240ms]" />
+                  </div>
+
+                  {isLoadingMoreMessages && (
+                    <div className="flex justify-center py-4">
+                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-400 border-t-transparent" />
+                    </div>
+                  )}
+                </div>
+              ),
+              Footer: () => (
+                <div className={`mx-auto w-full max-w-[62rem] overflow-hidden transition-[height] duration-150 ${otherUserTyping ? "h-[72px]" : "h-0"}`}>
+                  <div
+                    className={`flex h-full items-end justify-start transition-opacity duration-150 ${otherUserTyping ? "opacity-100" : "opacity-0"
+                      }`}
+                    aria-hidden={!otherUserTyping}
+                  >
+                    <div className="mb-3 flex items-end gap-3">
+                      <div className="h-10 w-10 overflow-hidden rounded-full border border-white/10 bg-slate-800">
+                        {otherUser.avatarUrl ? (
+                          <img src={otherUser.avatarUrl} alt={otherUser.fullName} className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-sm font-medium text-slate-300">
+                            {otherUser.fullName.charAt(0)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 rounded-[24px] rounded-bl-lg bg-white/[0.08] px-5 py-4">
+                        <span className="h-2 w-2 animate-bounce rounded-full bg-slate-300 [animation-delay:0ms]" />
+                        <span className="h-2 w-2 animate-bounce rounded-full bg-slate-300 [animation-delay:120ms]" />
+                        <span className="h-2 w-2 animate-bounce rounded-full bg-slate-300 [animation-delay:240ms]" />
+                      </div>
                     </div>
                   </div>
                 </div>
-              )}
+              ),
+            }}
+            itemContent={(_, item) => {
+              const { message, actualIndex } = item;
+              const previousMessage = messages[actualIndex - 1];
+              const nextMessage = messages[actualIndex + 1];
 
-              <div ref={messagesEndRef} />
-            </div>
-          </div>
+              const showDateDivider =
+                !previousMessage ||
+                new Date(message.createdAt).toDateString() !== new Date(previousMessage.createdAt).toDateString();
+              const isGroupedWithPrevious =
+                previousMessage &&
+                previousMessage.senderId === message.senderId &&
+                !showDateDivider;
+              const isGroupedWithNext =
+                nextMessage &&
+                nextMessage.senderId === message.senderId &&
+                new Date(nextMessage.createdAt).toDateString() === new Date(message.createdAt).toDateString();
+
+              return (
+                <div className="w-full overflow-x-hidden">
+                  <MessageBubble
+                    message={message}
+                    index={actualIndex}
+                    isMine={message.senderId === user.id}
+                    otherUser={otherUser}
+                    isGroupedWithPrevious={isGroupedWithPrevious}
+                    isGroupedWithNext={isGroupedWithNext}
+                    showDateDivider={showDateDivider}
+                    openMenuId={openMenuId}
+                    setOpenMenuId={setOpenMenuId}
+                    setLightboxImage={setLightboxImage}
+                    handleEditMessage={handleEditMessage}
+                    handleDeleteMessage={handleDeleteMessage}
+                    isLastRead={message.senderId === user.id && actualIndex === messages.length - 1 && message.isRead}
+                  />
+                </div>
+              );
+            }}
+          />
 
           <AnimatePresence>
             {showScrollButton && (
@@ -905,7 +1075,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                 exit={{ opacity: 0, y: 8, scale: 0.94 }}
                 type="button"
                 onClick={scrollToBottom}
-                className="absolute bottom-28 right-5 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-[#12203a] text-slate-200 shadow-xl transition hover:text-white"
+                className="absolute bottom-[7.25rem] right-5 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-[#12203a] text-slate-200 shadow-xl transition hover:text-white"
               >
                 <ChevronRight className="h-4 w-4 rotate-90" />
                 {unreadCount > 0 && (
@@ -1253,9 +1423,11 @@ const MessageBubble = memo(({
         className={`group/message flex w-full ${isMine ? "justify-end" : "justify-start"} ${isGroupedWithNext ? "mb-2" : "mb-5"
           }`}
       >
-        <div className={`flex max-w-[99%] items-end gap-2 ${isMine ? "flex-row-reverse" : "flex-row"} lg:max-w-[88%]`}>
+        <div className={`flex max-w-[95%] items-end ${isMine ? "flex-row-reverse gap-2" : "flex-row gap-0.5"} md:max-w-[88%] xl:max-w-[76%]`}>
+          {isMine && <div className="h-10 w-8 shrink-0" aria-hidden="true" />}
+
           {!isMine && (
-            <div className="flex h-10 w-10 shrink-0 items-end justify-center">
+            <div className="flex h-10 w-10 shrink-0 items-end justify-start">
               {!isGroupedWithNext && (
                 <div className="h-9 w-9 overflow-hidden rounded-full border border-white/10 bg-slate-800">
                   {otherUser.avatarUrl ? (
@@ -1343,11 +1515,16 @@ const MessageBubble = memo(({
                       </p>
                     )}
                     <p className="whitespace-pre-wrap break-words text-[14px] leading-6">{message.content}</p>
+                    {message.isOptimistic && (
+                      <p className={`text-[11px] ${isMine ? "text-blue-100/80" : "text-slate-400"}`}>
+                        Dang gui...
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
 
-              {isMine && !message.id.startsWith("temp_") && (
+              {isMine && !message.isOptimistic && (
                 <div className="relative opacity-0 transition group-hover/message:opacity-100">
                   <button
                     type="button"
@@ -1398,6 +1575,8 @@ const MessageBubble = memo(({
     prevProps.message.content === nextProps.message.content &&
     prevProps.message.isRead === nextProps.message.isRead &&
     prevProps.message.isEdited === nextProps.message.isEdited &&
+    prevProps.message.isOptimistic === nextProps.message.isOptimistic &&
+    prevProps.message.uploadState === nextProps.message.uploadState &&
     prevProps.isGroupedWithPrevious === nextProps.isGroupedWithPrevious &&
     prevProps.isGroupedWithNext === nextProps.isGroupedWithNext &&
     prevProps.showDateDivider === nextProps.showDateDivider &&
@@ -1405,4 +1584,5 @@ const MessageBubble = memo(({
     prevProps.isLastRead === nextProps.isLastRead
   );
 });
+
 

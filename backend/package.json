@@ -5,7 +5,7 @@
   "description": "Express API for the real estate transaction platform.",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "docker compose up -d redis && tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",
