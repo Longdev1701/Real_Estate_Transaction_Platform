@@ -1,27 +1,29 @@
 import { createClient } from "redis";
 
-// Default Redis URL or load from environment
-const REDIS_URL = process.env.REDIS_URL || "redis://localhost:6379";
+const REDIS_URL = process.env.REDIS_URL;
+export const isRedisEnabled = Boolean(REDIS_URL);
 
-// Create Pub/Sub clients for Socket.IO Adapter
-export const pubClient = createClient({ url: REDIS_URL });
-export const subClient = pubClient.duplicate();
+export const pubClient = isRedisEnabled ? createClient({ url: REDIS_URL }) : null;
+export const subClient = pubClient?.duplicate() ?? null;
+export const redisClient = isRedisEnabled ? createClient({ url: REDIS_URL }) : null;
 
-// Create a general client for state management (e.g. online users)
-export const redisClient = createClient({ url: REDIS_URL });
+export const redisConnectPromise =
+  pubClient && subClient && redisClient
+    ? Promise.all([
+        pubClient.connect(),
+        subClient.connect(),
+        redisClient.connect(),
+      ])
+        .then(() => {
+          console.log("Connected to Redis successfully");
+          return true;
+        })
+        .catch((err) => {
+          console.warn("Redis unavailable, socket will use in-memory fallback.", err?.message ?? err);
+          return false;
+        })
+    : Promise.resolve(false);
 
-// Connect to Redis
-export const redisConnectPromise = Promise.all([
-  pubClient.connect(),
-  subClient.connect(),
-  redisClient.connect()
-]).then(() => {
-  console.log("Connected to Redis successfully");
-}).catch((err) => {
-  console.error("Redis connection error:", err);
-});
-
-// Error handling to prevent app crash
-pubClient.on("error", (err) => console.error("Redis PubClient Error", err));
-subClient.on("error", (err) => console.error("Redis SubClient Error", err));
-redisClient.on("error", (err) => console.error("Redis Client Error", err));
+pubClient?.on("error", (err) => console.warn("Redis PubClient unavailable:", err?.message ?? err));
+subClient?.on("error", (err) => console.warn("Redis SubClient unavailable:", err?.message ?? err));
+redisClient?.on("error", (err) => console.warn("Redis Client unavailable:", err?.message ?? err));

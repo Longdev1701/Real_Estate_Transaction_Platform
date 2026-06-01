@@ -15,13 +15,77 @@ export interface AuthenticatedSocket extends Socket {
   };
 }
 
+const onlineUsers = new Map<string, number>();
+const conversationAuthCache = new Map<string, { buyerId: string; sellerId: string; expiresAt: number }>();
+
+const getOnlineCount = async (userId: string) => {
+  if (redisClient?.isOpen) {
+    const countStr = await redisClient.hGet("onlineUsers", userId);
+    return countStr ? parseInt(countStr, 10) : 0;
+  }
+
+  return onlineUsers.get(userId) ?? 0;
+};
+
+const setOnlineCount = async (userId: string, count: number) => {
+  if (redisClient?.isOpen) {
+    await redisClient.hSet("onlineUsers", userId, count);
+    return;
+  }
+
+  onlineUsers.set(userId, count);
+};
+
+const deleteOnlineCount = async (userId: string) => {
+  if (redisClient?.isOpen) {
+    await redisClient.hDel("onlineUsers", userId);
+    return;
+  }
+
+  onlineUsers.delete(userId);
+};
+
+const getCachedConversationAuth = async (conversationId: string) => {
+  const cacheKey = `conv_auth:${conversationId}`;
+
+  if (redisClient?.isOpen) {
+    const cachedAuth = await redisClient.get(cacheKey);
+    return cachedAuth ? JSON.parse(cachedAuth) as { buyerId: string; sellerId: string } : null;
+  }
+
+  const cachedAuth = conversationAuthCache.get(cacheKey);
+  if (!cachedAuth || cachedAuth.expiresAt < Date.now()) {
+    conversationAuthCache.delete(cacheKey);
+    return null;
+  }
+
+  return { buyerId: cachedAuth.buyerId, sellerId: cachedAuth.sellerId };
+};
+
+const setCachedConversationAuth = async (conversationId: string, buyerId: string, sellerId: string) => {
+  const cacheKey = `conv_auth:${conversationId}`;
+
+  if (redisClient?.isOpen) {
+    await redisClient.setEx(cacheKey, 3600, JSON.stringify({ buyerId, sellerId }));
+    return;
+  }
+
+  conversationAuthCache.set(cacheKey, {
+    buyerId,
+    sellerId,
+    expiresAt: Date.now() + 3_600_000,
+  });
+};
+
 export function initializeSocket(httpServer: HTTPServer) {
   const io = new SocketIOServer(httpServer, {
     cors: {
       origin: "*",
       methods: ["GET", "POST"],
     },
-    adapter: createAdapter(pubClient, subClient),
+    ...(pubClient?.isOpen && subClient?.isOpen
+      ? { adapter: createAdapter(pubClient, subClient) }
+      : {}),
   });
 
   setRealtimeServer(io);
@@ -58,22 +122,20 @@ export function initializeSocket(httpServer: HTTPServer) {
 
     (async () => {
       try {
-        const countStr = await redisClient.hGet("onlineUsers", user.id);
-        const count = countStr ? parseInt(countStr, 10) : 0;
-        await redisClient.hSet("onlineUsers", user.id, count + 1);
+        const count = await getOnlineCount(user.id);
+        await setOnlineCount(user.id, count + 1);
 
         if (count === 0) {
           io.emit("user_online", user.id);
         }
       } catch (err) {
-        console.error("Redis error on connect", err);
+        console.error("Online status error on connect", err);
       }
     })();
 
     socket.on("check_online_status", async (userId: string) => {
       try {
-        const countStr = await redisClient.hGet("onlineUsers", userId);
-        const count = countStr ? parseInt(countStr, 10) : 0;
+        const count = await getOnlineCount(userId);
 
         socket.emit("online_status_result", {
           userId,
@@ -118,11 +180,10 @@ export function initializeSocket(httpServer: HTTPServer) {
           let sellerId = "";
 
           try {
-            const cachedAuth = await redisClient.get(cacheKey);
+            const cachedAuth = await getCachedConversationAuth(conversationId);
             if (cachedAuth) {
-              const parsed = JSON.parse(cachedAuth);
-              buyerId = parsed.buyerId;
-              sellerId = parsed.sellerId;
+              buyerId = cachedAuth.buyerId;
+              sellerId = cachedAuth.sellerId;
               authorized = buyerId === user.id || sellerId === user.id;
             }
           } catch (err) {
@@ -149,9 +210,7 @@ export function initializeSocket(httpServer: HTTPServer) {
             sellerId = conversation.sellerId;
             authorized = true;
 
-            redisClient
-              .setEx(cacheKey, 3600, JSON.stringify({ buyerId, sellerId }))
-              .catch(console.error);
+            setCachedConversationAuth(conversationId, buyerId, sellerId).catch(console.error);
           }
 
           if (!authorized) {
@@ -271,11 +330,10 @@ export function initializeSocket(httpServer: HTTPServer) {
           let sellerId = "";
 
           try {
-            const cachedAuth = await redisClient.get(cacheKey);
+            const cachedAuth = await getCachedConversationAuth(data.conversationId);
             if (cachedAuth) {
-              const parsed = JSON.parse(cachedAuth);
-              buyerId = parsed.buyerId;
-              sellerId = parsed.sellerId;
+              buyerId = cachedAuth.buyerId;
+              sellerId = cachedAuth.sellerId;
             }
           } catch {
             // ignore
@@ -316,11 +374,10 @@ export function initializeSocket(httpServer: HTTPServer) {
           let sellerId = "";
 
           try {
-            const cachedAuth = await redisClient.get(cacheKey);
+            const cachedAuth = await getCachedConversationAuth(data.conversationId);
             if (cachedAuth) {
-              const parsed = JSON.parse(cachedAuth);
-              buyerId = parsed.buyerId;
-              sellerId = parsed.sellerId;
+              buyerId = cachedAuth.buyerId;
+              sellerId = cachedAuth.sellerId;
             }
           } catch {
             // ignore
@@ -403,17 +460,16 @@ export function initializeSocket(httpServer: HTTPServer) {
       console.log(`User disconnected from socket: ${user.fullName} (${user.id})`);
 
       try {
-        const countStr = await redisClient.hGet("onlineUsers", user.id);
-        const count = countStr ? parseInt(countStr, 10) : 0;
+        const count = await getOnlineCount(user.id);
 
         if (count <= 1) {
-          await redisClient.hDel("onlineUsers", user.id);
+          await deleteOnlineCount(user.id);
           io.emit("user_offline", user.id);
         } else {
-          await redisClient.hSet("onlineUsers", user.id, count - 1);
+          await setOnlineCount(user.id, count - 1);
         }
       } catch (err) {
-        console.error("Redis error on disconnect", err);
+        console.error("Online status error on disconnect", err);
       }
     });
   });
