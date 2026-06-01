@@ -82,6 +82,8 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [typingConversationIds, setTypingConversationIds] = useState<string[]>([]);
+  const typingTimeoutsRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -134,11 +136,12 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
 
         const conversation = prev[index];
         const isIncoming = message.senderId !== user?.id;
+        const isActiveConversation = pathname === `/messages/${message.conversationId}`;
         const updatedConversation = {
           ...conversation,
           messages: [message],
           _count: {
-            messages: isIncoming ? conversation._count.messages + 1 : conversation._count.messages,
+            messages: isActiveConversation ? 0 : isIncoming ? conversation._count.messages + 1 : conversation._count.messages,
           },
         };
 
@@ -149,12 +152,57 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
       });
     };
 
+    const markConversationTyping = (conversationId: string) => {
+      setTypingConversationIds((prev) => (prev.includes(conversationId) ? prev : [...prev, conversationId]));
+
+      const existingTimeout = typingTimeoutsRef.current[conversationId];
+      if (existingTimeout) {
+        window.clearTimeout(existingTimeout);
+      }
+
+      typingTimeoutsRef.current[conversationId] = window.setTimeout(() => {
+        setTypingConversationIds((prev) => prev.filter((id) => id !== conversationId));
+        delete typingTimeoutsRef.current[conversationId];
+      }, 2500);
+    };
+
+    const clearConversationTyping = (conversationId: string) => {
+      const existingTimeout = typingTimeoutsRef.current[conversationId];
+      if (existingTimeout) {
+        window.clearTimeout(existingTimeout);
+        delete typingTimeoutsRef.current[conversationId];
+      }
+
+      setTypingConversationIds((prev) => prev.filter((id) => id !== conversationId));
+    };
+
+    const handleUserTyping = (data: { conversationId: string; userId: string }) => {
+      if (data.userId === user?.id) return;
+      markConversationTyping(data.conversationId);
+    };
+
+    const handleUserStopTyping = (data: { conversationId: string; userId: string }) => {
+      if (data.userId === user?.id) return;
+      clearConversationTyping(data.conversationId);
+    };
+
     socket.on("receive_message", handleReceiveMessage);
+    socket.on("user_typing", handleUserTyping);
+    socket.on("user_stop_typing", handleUserStopTyping);
 
     return () => {
       socket.off("receive_message", handleReceiveMessage);
+      socket.off("user_typing", handleUserTyping);
+      socket.off("user_stop_typing", handleUserStopTyping);
     };
-  }, [isConnected, socket, user]);
+  }, [isConnected, pathname, socket, user]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(typingTimeoutsRef.current).forEach((timeoutId) => window.clearTimeout(timeoutId));
+      typingTimeoutsRef.current = {};
+    };
+  }, []);
 
   useEffect(() => {
     if (!pathname?.startsWith("/messages/")) return;
@@ -354,6 +402,7 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
                 const lastMessage = conversation.messages[0];
                 const isActive = pathname === `/messages/${conversation.id}`;
                 const unreadCount = conversation._count.messages;
+                const isTyping = typingConversationIds.includes(conversation.id);
 
                 return (
                   <Link
@@ -383,7 +432,7 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
                             seller: conversation.seller,
                             post: conversation.post,
                           },
-                          messages: conversation.messages || [],
+                          messages: [],
                           nextCursor: null,
                         });
                       }
@@ -412,7 +461,9 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
                           </span>
                         </div>
 
-                        <p className="truncate text-[14px] text-slate-300">{formatConversationPreview(lastMessage)}</p>
+                        <p className={`truncate text-[14px] ${isTyping ? "font-medium text-blue-300" : "text-slate-300"}`}>
+                          {isTyping ? "Đang nhập..." : formatConversationPreview(lastMessage)}
+                        </p>
                         <p className="mt-1 truncate text-xs text-slate-500">{conversation.post.title}</p>
                       </div>
 

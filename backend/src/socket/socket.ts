@@ -158,12 +158,15 @@ export function initializeSocket(httpServer: HTTPServer) {
             return socket.emit("error", { message: "Unauthorized" });
           }
 
+          const messageId =
+            tempId ||
+            `msg_${Date.now()}_${Math.random()
+              .toString(36)
+              .substring(2, 9)}`;
+
           const tempMessage = {
-            id:
-              tempId ||
-              `msg_${Date.now()}_${Math.random()
-                .toString(36)
-                .substring(2, 9)}`,
+            id: messageId,
+            tempId: messageId,
             conversationId,
             senderId: user.id,
             content,
@@ -185,7 +188,7 @@ export function initializeSocket(httpServer: HTTPServer) {
           Promise.allSettled([
             prisma.message.create({
               data: {
-                id: tempId ? undefined : tempMessage.id,
+                id: tempMessage.id,
                 conversationId,
                 senderId: user.id,
                 content,
