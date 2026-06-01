@@ -1,6 +1,7 @@
 import express from "express";
 import { UserRole } from "@prisma/client";
 
+import { adminRoutes } from "./admin/admin.routes.js";
 import { authRouter } from "./auth/auth.routes.js";
 import { corsMiddleware } from "./config/cors.js";
 import { homeRoutes } from "./home/home.routes.js";
@@ -38,6 +39,7 @@ app.use("/api/comments", commentRoutes);
 app.use("/api/features", featureRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/admin", adminRoutes);
 app.use("/api/admin/logs", systemLogRoutes);
 
 app.get("/api/admin/test", authenticate, authorizeRoles(UserRole.ADMIN), (req, res) => {
