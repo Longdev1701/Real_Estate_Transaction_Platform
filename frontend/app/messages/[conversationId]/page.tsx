@@ -238,6 +238,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
   const [canScrollPreview, setCanScrollPreview] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isDetailsPanelOpen, setIsDetailsPanelOpen] = useState(false);
   const [firstItemIndex, setFirstItemIndex] = useState(INITIAL_FIRST_ITEM_INDEX);
@@ -304,6 +305,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
     setInputValue("");
     setEditingMessageId(null);
     setOpenMenuId(null);
+    setMenuPosition(null);
     setIsDetailsPanelOpen(false);
     setShowScrollButton(false);
   }, [conversationId]);
@@ -626,6 +628,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
     setEditingMessageId(message.id);
     setInputValue(message.content);
     setOpenMenuId(null);
+    setMenuPosition(null);
     textInputRef.current?.focus();
   };
 
@@ -636,6 +639,22 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
     }
 
     setOpenMenuId(null);
+    setMenuPosition(null);
+  };
+
+  const handleToggleMessageMenu = (messageId: string, trigger: HTMLButtonElement) => {
+    if (openMenuId === messageId) {
+      setOpenMenuId(null);
+      setMenuPosition(null);
+      return;
+    }
+
+    const rect = trigger.getBoundingClientRect();
+    setOpenMenuId(messageId);
+    setMenuPosition({
+      top: rect.top - 8,
+      right: window.innerWidth - rect.right,
+    });
   };
 
   const handleSendMessage = async (event: React.FormEvent) => {
@@ -1057,6 +1076,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                     showDateDivider={showDateDivider}
                     openMenuId={openMenuId}
                     setOpenMenuId={setOpenMenuId}
+                    handleToggleMessageMenu={handleToggleMessageMenu}
                     setLightboxImage={setLightboxImage}
                     handleEditMessage={handleEditMessage}
                     handleDeleteMessage={handleDeleteMessage}
@@ -1086,6 +1106,37 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
               </motion.button>
             )}
           </AnimatePresence>
+
+          {openMenuId && menuPosition && (
+            <div
+              className="fixed z-[90] w-40 -translate-y-full overflow-hidden rounded-2xl border border-white/10 bg-[#13213b] p-1 shadow-2xl"
+              style={{ top: menuPosition.top, right: menuPosition.right }}
+            >
+              {messages.find((message) => message.id === openMenuId)?.messageType === "TEXT" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const targetMessage = messages.find((message) => message.id === openMenuId);
+                    if (targetMessage) {
+                      handleEditMessage(targetMessage);
+                    }
+                  }}
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-slate-200 transition hover:bg-white/5"
+                >
+                  <Edit2 className="h-4 w-4" />
+                  Chinh sua
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => handleDeleteMessage(openMenuId)}
+                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-red-300 transition hover:bg-red-500/10"
+              >
+                <Trash2 className="h-4 w-4" />
+                Thu hoi
+              </button>
+            </div>
+          )}
 
           <div className="shrink-0 border-t border-white/10 bg-white/[0.03] px-4 py-4 lg:px-5">
             <AnimatePresence>
@@ -1400,6 +1451,7 @@ const MessageBubble = memo(({
   showDateDivider,
   openMenuId,
   setOpenMenuId,
+  handleToggleMessageMenu,
   setLightboxImage,
   handleEditMessage,
   handleDeleteMessage,
@@ -1420,10 +1472,10 @@ const MessageBubble = memo(({
       <motion.div
         initial={message.isHistory ? false : { opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`group/message flex w-full ${isMine ? "justify-end" : "justify-start"} ${isGroupedWithNext ? "mb-2" : "mb-5"
+        className={`group/message flex w-full overflow-visible ${isMine ? "justify-end" : "justify-start"} ${isGroupedWithNext ? "mb-2" : "mb-5"
           }`}
       >
-        <div className={`flex max-w-[95%] items-end ${isMine ? "flex-row-reverse gap-2" : "flex-row gap-0.5"} md:max-w-[88%] xl:max-w-[76%]`}>
+        <div className={`flex max-w-[95%] items-end overflow-visible ${isMine ? "flex-row-reverse gap-2" : "flex-row gap-0.5"} md:max-w-[88%] xl:max-w-[76%]`}>
           {isMine && <div className="h-10 w-8 shrink-0" aria-hidden="true" />}
 
           {!isMine && (
@@ -1443,6 +1495,12 @@ const MessageBubble = memo(({
           )}
 
           <div className={`flex flex-col ${isMine ? "items-end" : "items-start"}`}>
+            {message.isEdited && message.messageType === "TEXT" && (
+              <p className={`mb-1 px-1 text-[11px] ${isMine ? "text-blue-100/80" : "text-slate-400"}`}>
+                Đã chỉnh sửa
+              </p>
+            )}
+
             <div className={`flex items-center gap-2 ${isMine ? "flex-row-reverse" : "flex-row"}`}>
               <div
                 className={`relative overflow-hidden ${message.messageType === "IMAGE"
@@ -1509,11 +1567,6 @@ const MessageBubble = memo(({
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {message.isEdited && (
-                      <p className={`text-[11px] ${isMine ? "text-blue-100/80" : "text-slate-400"}`}>
-                        Da chinh sua
-                      </p>
-                    )}
                     <p className="whitespace-pre-wrap break-words text-[14px] leading-6">{message.content}</p>
                     {message.isOptimistic && (
                       <p className={`text-[11px] ${isMine ? "text-blue-100/80" : "text-slate-400"}`}>
@@ -1525,37 +1578,14 @@ const MessageBubble = memo(({
               </div>
 
               {isMine && !message.isOptimistic && (
-                <div className="relative opacity-0 transition group-hover/message:opacity-100">
+                <div className={`relative z-30 transition ${openMenuId === message.id ? "opacity-100" : "opacity-0 group-hover/message:opacity-100"}`}>
                   <button
                     type="button"
-                    onClick={() => setOpenMenuId(openMenuId === message.id ? null : message.id)}
+                    onClick={(event) => handleToggleMessageMenu(message.id, event.currentTarget)}
                     className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-slate-400 transition hover:text-white"
                   >
                     <MoreVertical className="h-4 w-4" />
                   </button>
-
-                  {openMenuId === message.id && (
-                    <div className="absolute bottom-10 right-0 z-20 w-40 overflow-hidden rounded-2xl border border-white/10 bg-[#13213b] p-1 shadow-2xl">
-                      {message.messageType === "TEXT" && (
-                        <button
-                          type="button"
-                          onClick={() => handleEditMessage(message)}
-                          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-slate-200 transition hover:bg-white/5"
-                        >
-                          <Edit2 className="h-4 w-4" />
-                          Chinh sua
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteMessage(message.id)}
-                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-red-300 transition hover:bg-red-500/10"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Thu hoi
-                      </button>
-                    </div>
-                  )}
                 </div>
               )}
             </div>
