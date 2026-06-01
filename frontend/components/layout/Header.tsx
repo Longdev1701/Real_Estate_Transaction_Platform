@@ -75,7 +75,7 @@ export function Header() {
     };
   }, [socket, user]);
 
-  if (pathname?.startsWith("/messages")) {
+  if (pathname?.startsWith("/messages") || pathname?.startsWith("/admin")) {
     return null;
   }
 
