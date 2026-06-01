@@ -2,7 +2,7 @@
 
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth.store";
-import { Bookmark, List, LogOut, User as UserIcon } from "lucide-react";
+import { Bookmark, LayoutDashboard, List, LogOut, User as UserIcon } from "lucide-react";
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 
@@ -87,6 +87,16 @@ export function UserMenu() {
             <Bookmark size={16} />
             <span>Saved Posts</span>
           </Link>
+          {user.role === "ADMIN" && (
+            <Link
+              href="/admin"
+              className="flex items-center gap-3 px-4 py-2 hover:bg-white/10 transition-colors text-blue-300"
+              onClick={() => setIsOpen(false)}
+            >
+              <LayoutDashboard size={16} />
+              <span>Admin</span>
+            </Link>
+          )}
           <div className="h-px bg-white/10 my-1"></div>
           <button
             onClick={handleLogout}

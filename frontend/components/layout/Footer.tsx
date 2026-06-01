@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 
 export function Footer() {
   const pathname = usePathname();
-  if (pathname?.startsWith("/messages") || pathname === "/posts/create") return null;
+  if (pathname?.startsWith("/messages") || pathname?.startsWith("/admin") || pathname === "/posts/create") return null;
 
   return (
     <footer className="glass-panel mt-auto shrink-0">
