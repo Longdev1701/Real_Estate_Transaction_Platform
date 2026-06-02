@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, Mail, Phone, ShieldCheck, User as UserIcon, Lock, Bell, CheckCircle2 } from "lucide-react";
+import { Camera, Mail, Phone, ShieldCheck, User as UserIcon, Lock, Bell, CheckCircle2, List } from "lucide-react";
+import Link from "next/link";
 
 import { useAuthStore } from "@/stores/auth.store";
 
@@ -43,6 +44,13 @@ export default function ProfileSettingsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-8 items-start">
         {/* Sidebar Settings Nav */}
         <aside className="space-y-1 lg:sticky lg:top-24">
+          <Link
+            href="/profile/posts"
+            className="mb-4 flex w-full items-center gap-3 rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm font-medium text-blue-300 transition-colors hover:bg-blue-500/20 hover:text-white"
+          >
+            <List className="w-5 h-5" />
+            Bài đăng của tôi
+          </Link>
           <button
             onClick={() => setActiveTab("personal")}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-sm ${

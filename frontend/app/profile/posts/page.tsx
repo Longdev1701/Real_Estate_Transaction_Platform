@@ -6,17 +6,20 @@ import { useSearchParams } from "next/navigation";
 import { AxiosError } from "axios";
 import { BadgeCheck, Edit, LoaderCircle } from "lucide-react";
 
+import { ProfilePostCard } from "@/components/post/ProfilePostCard";
+import { buildPostQuery, defaultPostFilter, type Post, type PostListData } from "@/lib/posts";
 import { api } from "@/lib/api";
 import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
-import { ProfilePostCard } from "@/components/post/ProfilePostCard";
 import { useAuthStore } from "@/stores/auth.store";
-import { buildPostQuery, defaultPostFilter, type Post, type PostListData } from "@/lib/posts";
+
+type PostViewTab = "ALL" | "SELL" | "RENT" | "SOLD" | "BANNED";
 
 export default function ProfilePostsPage() {
   const searchParams = useSearchParams();
   const authorId = searchParams.get("authorId");
-  const { user, hasHydrated, isLoadingUser } = useAuthStore();
+  const { user, accessToken, hasHydrated, isLoadingUser } = useAuthStore();
   const [posts, setPosts] = useState<Post[]>([]);
+  const [activeTab, setActiveTab] = useState<PostViewTab>("ALL");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,25 +41,37 @@ export default function ProfilePostsPage() {
           return;
         }
 
+        const isOwnerView = Boolean(user?.id) && targetAuthorId === user?.id;
         const query = buildPostQuery(
           {
             ...defaultPostFilter,
-            authorId: targetAuthorId,
+            ...(isOwnerView ? {} : { authorId: targetAuthorId }),
           },
           1,
           30,
         );
-        const cacheKey = `profile:posts:${targetAuthorId}`;
-        const cachedPayload = readSessionCache<PostListData>(cacheKey);
-        if (cachedPayload && isMounted) {
-          setPosts(cachedPayload.items);
-          setIsLoading(false);
+        const cacheKey = `profile:posts:${targetAuthorId}:${isOwnerView ? "owner" : "public"}`;
+        if (!isOwnerView) {
+          const cachedPayload = readSessionCache<PostListData>(cacheKey);
+          if (cachedPayload && isMounted) {
+            setPosts(cachedPayload.items);
+            setIsLoading(false);
+          }
         }
-        const response = await api.get<{ data: PostListData }>(`/posts?${query}`);
 
+        if (isOwnerView && !accessToken) {
+          setPosts([]);
+          setError("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để xem bài đăng của bạn.");
+          return;
+        }
+
+        const endpoint = isOwnerView ? `/posts/mine?${query}` : `/posts?${query}`;
+        const response = await api.get<{ data: PostListData }>(endpoint);
         if (isMounted) {
           setPosts(response.data.data.items);
-          writeSessionCache(cacheKey, response.data.data);
+          if (!isOwnerView) {
+            writeSessionCache(cacheKey, response.data.data);
+          }
         }
       } catch (err) {
         const axiosError = err as AxiosError<{ message?: string }>;
@@ -75,25 +90,64 @@ export default function ProfilePostsPage() {
     return () => {
       isMounted = false;
     };
-  }, [authorId, hasHydrated, user?.id]);
+  }, [accessToken, authorId, hasHydrated, user?.id]);
 
   const targetAuthorId = authorId ?? user?.id ?? "";
-  const myPosts = useMemo(
-    () => (targetAuthorId ? posts : []),
-    [posts, targetAuthorId],
-  );
-
+  const myPosts = useMemo(() => (targetAuthorId ? posts : []), [posts, targetAuthorId]);
   const targetAuthor = myPosts[0]?.author;
   const isOwnProfile = !!user && targetAuthorId === user.id;
 
   const saleCount = useMemo(
-    () => myPosts.filter((post) => post.postType === "SELL").length,
+    () => myPosts.filter((post) => post.postType === "SELL" && post.status !== "BANNED").length,
     [myPosts],
   );
   const rentCount = useMemo(
-    () => myPosts.filter((post) => post.postType === "RENT").length,
+    () => myPosts.filter((post) => post.postType === "RENT" && post.status !== "BANNED").length,
     [myPosts],
   );
+  const soldCount = useMemo(() => myPosts.filter((post) => post.status === "SOLD").length, [myPosts]);
+  const bannedCount = useMemo(
+    () => myPosts.filter((post) => post.status === "BANNED").length,
+    [myPosts],
+  );
+
+  const visiblePosts = useMemo(() => {
+    switch (activeTab) {
+      case "SELL":
+        return myPosts.filter((post) => post.postType === "SELL" && post.status !== "BANNED");
+      case "RENT":
+        return myPosts.filter((post) => post.postType === "RENT" && post.status !== "BANNED");
+      case "SOLD":
+        return myPosts.filter((post) => post.status === "SOLD");
+      case "BANNED":
+        return myPosts.filter((post) => post.status === "BANNED");
+      case "ALL":
+      default:
+        return myPosts;
+    }
+  }, [activeTab, myPosts]);
+
+  const emptyStateMessage = useMemo(() => {
+    switch (activeTab) {
+      case "SELL":
+        return "Chưa có bài đăng bán nào.";
+      case "RENT":
+        return "Chưa có bài đăng cho thuê nào.";
+      case "SOLD":
+        return "Chưa có bài đăng nào đã bán hoặc đã cho thuê.";
+      case "BANNED":
+        return "Bạn chưa có bài đăng nào bị khóa.";
+      case "ALL":
+      default:
+        return "Chưa có bài đăng nào trong hồ sơ này.";
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (!isOwnProfile && activeTab === "BANNED") {
+      setActiveTab("ALL");
+    }
+  }, [activeTab, isOwnProfile]);
 
   if (!hasHydrated || isLoadingUser) {
     return null;
@@ -117,6 +171,8 @@ export default function ProfilePostsPage() {
   const email = targetAuthor?.email ?? user?.email ?? "";
   const avatarUrl = targetAuthor?.avatarUrl ?? user?.avatarUrl ?? null;
   const username = email ? email.split("@")[0] : "user";
+
+  const listTitle = isOwnProfile ? "Bài đăng của tôi" : `Bài đăng của ${displayName}`;
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 lg:px-8">
@@ -152,7 +208,9 @@ export default function ProfilePostsPage() {
               </div>
               <p className="mt-1 text-gray-400">@{username}</p>
               <p className="mt-3 max-w-2xl text-sm text-gray-300">
-                Danh sách bài đăng bất động sản đang hiển thị của {displayName}.
+                {isOwnProfile
+                  ? `Danh sách bài đăng của ${displayName}, bao gồm cả các bài đang hiển thị, đã hoàn tất và bài bị khóa.`
+                  : `Danh sách bài đăng bất động sản công khai của ${displayName}.`}
               </p>
 
               <div className="mt-5 flex items-center gap-6 md:gap-10">
@@ -161,16 +219,16 @@ export default function ProfilePostsPage() {
                   <div className="mt-1 text-xs uppercase tracking-wider text-gray-400">Bài đăng</div>
                 </div>
                 <div>
-                  <div className="text-xl font-bold text-white">128</div>
-                  <div className="mt-1 text-xs uppercase tracking-wider text-gray-400">Đang theo dõi</div>
+                  <div className="text-xl font-bold text-white">{bannedCount}</div>
+                  <div className="mt-1 text-xs uppercase tracking-wider text-gray-400">Bị khóa</div>
                 </div>
                 <div>
-                  <div className="text-xl font-bold text-white">1.2K</div>
-                  <div className="mt-1 text-xs uppercase tracking-wider text-gray-400">Người theo dõi</div>
+                  <div className="text-xl font-bold text-white">{saleCount}</div>
+                  <div className="mt-1 text-xs uppercase tracking-wider text-gray-400">Đang bán</div>
                 </div>
                 <div>
-                  <div className="text-xl font-bold text-white">4.8</div>
-                  <div className="mt-1 text-xs uppercase tracking-wider text-gray-400">Đánh giá</div>
+                  <div className="text-xl font-bold text-white">{rentCount}</div>
+                  <div className="mt-1 text-xs uppercase tracking-wider text-gray-400">Cho thuê</div>
                 </div>
               </div>
             </div>
@@ -202,9 +260,7 @@ export default function ProfilePostsPage() {
 
       <div className="glass-card p-6 md:p-8">
         <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-          <h2 className="text-2xl font-bold text-white">
-            {isOwnProfile ? "Bài đăng của tôi" : `Bài đăng của ${displayName}`}
-          </h2>
+          <h2 className="text-2xl font-bold text-white">{listTitle}</h2>
           {isOwnProfile ? (
             <Link href="/posts/create" className="btn-primary inline-flex items-center justify-center gap-2">
               <span>+</span> Đăng bài mới
@@ -213,18 +269,28 @@ export default function ProfilePostsPage() {
         </div>
 
         <div className="mb-8 flex gap-3 overflow-x-auto pb-2 hide-scrollbar">
-          <button className="whitespace-nowrap rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-medium text-white transition-colors">
-            Tất cả ({myPosts.length})
-          </button>
-          <button className="whitespace-nowrap rounded-full border border-white/10 bg-transparent px-5 py-2 text-sm font-medium text-gray-400 transition-colors hover:bg-white/5 hover:text-white">
-            Đang bán ({saleCount})
-          </button>
-          <button className="whitespace-nowrap rounded-full border border-white/10 bg-transparent px-5 py-2 text-sm font-medium text-gray-400 transition-colors hover:bg-white/5 hover:text-white">
-            Đang cho thuê ({rentCount})
-          </button>
-          <button className="whitespace-nowrap rounded-full border border-white/10 bg-transparent px-5 py-2 text-sm font-medium text-gray-400 transition-colors hover:bg-white/5 hover:text-white">
-            Đã bán/cho thuê (0)
-          </button>
+          {[
+            { key: "ALL" as const, label: "Tất cả", count: myPosts.length },
+            { key: "SELL" as const, label: "Đang bán", count: saleCount },
+            { key: "RENT" as const, label: "Đang cho thuê", count: rentCount },
+            { key: "SOLD" as const, label: "Đã bán/cho thuê", count: soldCount },
+            ...(isOwnProfile ? [{ key: "BANNED" as const, label: "Bị khóa", count: bannedCount }] : []),
+          ].map((tab) => {
+            const isActive = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`whitespace-nowrap rounded-full border px-5 py-2 text-sm font-medium transition-colors ${
+                  isActive
+                    ? "border-white/20 bg-white/10 text-white"
+                    : "border-white/10 bg-transparent text-gray-400 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                {tab.label} ({tab.count})
+              </button>
+            );
+          })}
         </div>
 
         {error ? (
@@ -240,13 +306,13 @@ export default function ProfilePostsPage() {
               Đang tải bài đăng...
             </div>
           </div>
-        ) : myPosts.length === 0 ? (
+        ) : visiblePosts.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-white/10 p-12 text-center text-gray-400">
-            Chưa có bài đăng nào đang hiển thị.
+            {emptyStateMessage}
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
-            {myPosts.map((post) => (
+            {visiblePosts.map((post) => (
               <ProfilePostCard key={post.id} post={post} />
             ))}
           </div>
