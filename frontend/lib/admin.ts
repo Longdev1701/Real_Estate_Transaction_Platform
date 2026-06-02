@@ -41,6 +41,7 @@ export type AdminDashboardData = {
 export type AdminUserRole = "USER" | "ADMIN";
 export type AdminUserStatus = "ACTIVE" | "BANNED";
 export type AdminPostStatus = "ACTIVE" | "HIDDEN" | "BANNED";
+export type AdminReportStatus = "PENDING" | "RESOLVED" | "REJECTED";
 export type AdminSystemLogModule =
   | "AUTH"
   | "USER"
@@ -362,6 +363,45 @@ export const getAdminPosts = async (filter: AdminPostsFilter) => {
 
   const response = await api.get<{ data: AdminPostsData }>(`/admin/posts?${params.toString()}`);
   return response.data.data;
+};
+
+export const getAdminReports = async (filter: AdminReportsFilter) => {
+  const params = new URLSearchParams();
+  params.set("page", String(filter.page));
+  params.set("limit", String(filter.limit));
+
+  if (filter.status) {
+    params.set("status", filter.status);
+  }
+
+  const response = await api.get<{ data: AdminReportsData }>(`/reports?${params.toString()}`);
+  return response.data.data;
+};
+
+export const getAdminReportsStats = async (): Promise<AdminReportsStats> => {
+  const [totalResult, pendingResult, resolvedResult, rejectedResult] = await Promise.all([
+    getAdminReports({ page: 1, limit: 1, status: "" }),
+    getAdminReports({ page: 1, limit: 1, status: "PENDING" }),
+    getAdminReports({ page: 1, limit: 1, status: "RESOLVED" }),
+    getAdminReports({ page: 1, limit: 1, status: "REJECTED" }),
+  ]);
+
+  return {
+    total: totalResult.meta.total,
+    pending: pendingResult.meta.total,
+    resolved: resolvedResult.meta.total,
+    rejected: rejectedResult.meta.total,
+  };
+};
+
+export const resolveAdminReport = async (
+  reportId: string,
+  status: Extract<AdminReportStatus, "RESOLVED" | "REJECTED">,
+) => {
+  const response = await api.patch<{ data: { report: AdminReport } }>(`/reports/${reportId}`, {
+    status,
+  });
+  return response.data.data.report;
 };
 
 export const updateAdminPostStatus = async (postId: string, status: AdminPostStatus) => {
