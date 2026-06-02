@@ -93,7 +93,7 @@ const parseImages = (content: string): string[] => {
 };
 
 function formatPrice(value: number) {
-  if (value >= 1000) return `${(value / 1000).toFixed(1)} tỷ`;
+  if (value >= 1000) return `${(value / 1000).toFixed(1)} tỉ`;
   return `${value} triệu`;
 }
 
@@ -544,7 +544,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
       if (!error.tempId) return;
 
       setMessages((prev) => prev.filter((message) => message.id !== error.tempId));
-      window.alert(error.message || "KhĂ´ng thá»ƒ gá»­i tin nháº¯n. Vui lĂ²ng thá»­ láº¡i.");
+      window.alert(error.message || "Không thể gửi tin nhắn. Vui lòng thử lại.");
     };
 
     socket.emit("join_room", conversationId);
@@ -1528,7 +1528,7 @@ const MessageBubble = memo(({
                     {imageUrls.length === 1 ? (
                       <ChatImageTile
                         src={imageUrls[0]}
-                        alt="Anh da gui"
+                        alt="ảnh đã gửi"
                         onClick={() => setLightboxImage(imageUrls[0])}
                         wrapperClassName="relative block w-full overflow-hidden rounded-[24px] bg-slate-900"
                         className="h-full w-full object-cover transition hover:scale-[1.01]"
@@ -1545,7 +1545,7 @@ const MessageBubble = memo(({
                           >
                             <FallbackMedia
                               src={url}
-                              alt="Anh da gui"
+                              alt="Ảnh đã gửi"
                               className="h-full w-full object-cover transition hover:scale-[1.01]"
                               wrapperClassName="h-full w-full"
                             />
@@ -1570,7 +1570,7 @@ const MessageBubble = memo(({
                     <p className="whitespace-pre-wrap break-words text-[14px] leading-6">{message.content}</p>
                     {message.isOptimistic && (
                       <p className={`text-[11px] ${isMine ? "text-blue-100/80" : "text-slate-400"}`}>
-                        Dang gui...
+                        Đang gửi...
                       </p>
                     )}
                   </div>
