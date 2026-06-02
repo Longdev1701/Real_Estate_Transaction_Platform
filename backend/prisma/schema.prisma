@@ -353,3 +353,4 @@ model PropertyPostFeature {
   @@index([postId])
   @@index([featureId])
 }
+

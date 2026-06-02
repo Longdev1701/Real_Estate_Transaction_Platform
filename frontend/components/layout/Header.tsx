@@ -87,18 +87,18 @@ export function Header() {
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 shadow-lg shadow-blue-500/20">
               T
             </span>
-            Trust<span className="text-blue-400">Estate</span>
+            <span>TrustEstate</span>
           </Link>
 
           <nav className="hidden items-center gap-6 text-sm font-medium text-gray-300 md:flex">
             <Link href="/" className="transition-colors hover:text-blue-400">
-              {"Trang chủ"}
+              Trang chủ
             </Link>
             <Link href="/posts" className="transition-colors hover:text-blue-400">
-              {"Bài đăng"}
+              Bài đăng
             </Link>
             <Link href="/compare" className="transition-colors hover:text-blue-400">
-              {"So sánh"}
+              So sánh
             </Link>
           </nav>
         </div>
@@ -134,7 +134,7 @@ export function Header() {
           </Link>
 
           <Link href="/posts/create" className="btn-primary ml-2 hidden sm:block">
-            {"+ Đăng bài"}
+            + Đăng bài
           </Link>
 
           <div className="mx-2 h-8 w-px bg-white/10" />

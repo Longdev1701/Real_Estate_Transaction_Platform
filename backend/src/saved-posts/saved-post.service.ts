@@ -213,10 +213,10 @@ export const getSavedPosts = async (
     isSaved: true,
     post: {
       ...savedPost.post,
-      features: Array.isArray(savedPost.post.features)
-        ? savedPost.post.features.map((item: any) => item.feature)
-        : [],
-      isSaved: true,
+      features:
+        "features" in savedPost.post && Array.isArray(savedPost.post.features)
+          ? savedPost.post.features.map((item: any) => item.feature)
+          : undefined,
     },
   }));
 };

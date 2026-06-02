@@ -32,7 +32,6 @@ export const createReport = async (req: Request, res: Response, next: NextFuncti
       throw new AppError("Post not found or not active.", 404);
     }
 
-    // Check if user already reported this post
     const existingReport = await prisma.report.findFirst({
       where: {
         reporterId: userId,
@@ -103,7 +102,7 @@ export const getReports = async (req: Request, res: Response, next: NextFunction
     const skip = (page - 1) * limit;
     const status = req.query.status as string | undefined;
 
-    const where: any = {};
+    const where: Record<string, unknown> = {};
     if (status && Object.values(ReportStatus).includes(status as ReportStatus)) {
       where.status = status;
     }
@@ -116,7 +115,33 @@ export const getReports = async (req: Request, res: Response, next: NextFunction
             select: { id: true, fullName: true, email: true, avatarUrl: true },
           },
           post: {
-            select: { id: true, title: true, status: true },
+            select: {
+              id: true,
+              title: true,
+              status: true,
+              price: true,
+              address: true,
+              city: true,
+              district: true,
+              createdAt: true,
+              author: {
+                select: {
+                  id: true,
+                  fullName: true,
+                  email: true,
+                  avatarUrl: true,
+                },
+              },
+              images: {
+                select: {
+                  id: true,
+                  imageUrl: true,
+                  order: true,
+                },
+                orderBy: { order: "asc" },
+                take: 1,
+              },
+            },
           },
         },
         orderBy: { createdAt: "desc" },
@@ -126,16 +151,20 @@ export const getReports = async (req: Request, res: Response, next: NextFunction
       prisma.report.count({ where }),
     ]);
 
-    sendSuccess(res, {
-      items,
-      meta: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-        hasMore: page < Math.ceil(total / limit),
+    sendSuccess(
+      res,
+      {
+        items,
+        meta: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+          hasMore: page < Math.ceil(total / limit),
+        },
       },
-    }, "Reports fetched successfully");
+      "Reports fetched successfully",
+    );
   } catch (error) {
     next(error);
   }
@@ -170,12 +199,37 @@ export const resolveReport = async (req: Request, res: Response, next: NextFunct
           select: { id: true, fullName: true, email: true },
         },
         post: {
-          select: { id: true, title: true },
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            price: true,
+            address: true,
+            city: true,
+            district: true,
+            createdAt: true,
+            author: {
+              select: {
+                id: true,
+                fullName: true,
+                email: true,
+                avatarUrl: true,
+              },
+            },
+            images: {
+              select: {
+                id: true,
+                imageUrl: true,
+                order: true,
+              },
+              orderBy: { order: "asc" },
+              take: 1,
+            },
+          },
         },
       },
     });
 
-    // If resolved, optionally ban the post
     if (status === "RESOLVED") {
       await prisma.propertyPost.update({
         where: { id: report.postId },
@@ -208,7 +262,10 @@ export const resolveReport = async (req: Request, res: Response, next: NextFunct
       userId: report.reporterId,
       type: NotificationType.REPORT,
       relatedId: report.postId,
-      title: status === "RESOLVED" ? "Báo cáo của bạn đã được xử lý" : "Báo cáo của bạn đã bị từ chối",
+      title:
+        status === "RESOLVED"
+          ? "Báo cáo của bạn đã được xử lý"
+          : "Báo cáo của bạn đã bị từ chối",
       content:
         status === "RESOLVED"
           ? "Cảm ơn bạn đã báo cáo. Nội dung vi phạm đã được xử lý."

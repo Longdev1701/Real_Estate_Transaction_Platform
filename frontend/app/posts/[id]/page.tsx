@@ -347,11 +347,11 @@ export default function PostDetailPage() {
     <div className="container mx-auto space-y-6 px-4 pt-8 pb-28 lg:px-8 lg:py-10">
       <div className="flex flex-wrap items-center gap-2 text-sm text-gray-400">
         <Link href="/" className="transition hover:text-white">
-          Trang chu
+          Trang chủ
         </Link>
         <span>/</span>
         <Link href="/posts" className="transition hover:text-white">
-          Bai dang
+          Bài đăng
         </Link>
         <span>/</span>
         <span className="text-white">{post.title}</span>

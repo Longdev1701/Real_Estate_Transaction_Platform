@@ -1,4 +1,4 @@
-import type { Express } from "express";
+﻿import type { Express } from "express";
 import type { Prisma } from "@prisma/client";
 
 import { PostStatus, UserRole } from "@prisma/client";
@@ -319,6 +319,9 @@ export const createPost = async (
   const actor = ensureAuthenticated(user);
   const imageMetadata = parseImageMetadata(imageMetadataValue);
   validateImageMetadataCount(files, imageMetadata);
+  if (files.length > 10) {
+    throw new AppError("Mỗi bài đăng chỉ được tối đa 10 ảnh.", 400);
+  }
   const { imageMetadata: _imageMetadata, featureIds, ...postData } = input;
   const post = await prisma.propertyPost.create({
     data: {
@@ -643,7 +646,7 @@ export const addPostImages = async (
   });
 
   if (existingImageCount + files.length > 10) {
-    throw new AppError("A post can have at most 10 images.", 400);
+    throw new AppError("Mỗi bài đăng chỉ được tối đa 10 ảnh.", 400);
   }
 
   const imageMetadata = parseImageMetadata(imageMetadataValue);
@@ -729,3 +732,4 @@ export const deletePostImage = async (
 
   invalidateCaches();
 };
+

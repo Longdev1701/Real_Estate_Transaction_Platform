@@ -17,19 +17,6 @@ import {
 import { sendSuccess } from "../utils/response.js";
 import { createSystemLog } from "../utils/system-log.helper.js";
 
-export const getAdminDashboardController: RequestHandler = async (
-  _req,
-  res,
-  next,
-) => {
-  try {
-    const dashboard = await getAdminDashboard();
-    sendSuccess(res, dashboard);
-  } catch (error) {
-    next(error);
-  }
-};
-
 const toPositiveNumber = (
   value: unknown,
   fallback: number,
@@ -96,6 +83,19 @@ const parsePostType = (value: unknown) => {
 const parseOptionalNumber = (value: unknown) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+};
+
+export const getAdminDashboardController: RequestHandler = async (
+  _req,
+  res,
+  next,
+) => {
+  try {
+    const dashboard = await getAdminDashboard();
+    sendSuccess(res, dashboard);
+  } catch (error) {
+    next(error);
+  }
 };
 
 export const getAdminUsersController: RequestHandler = async (
