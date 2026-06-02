@@ -54,6 +54,23 @@ export const createReport = async (req: Request, res: Response, next: NextFuncti
       },
     });
 
+    await createSystemLog({
+      module: "REPORT",
+      actorId: userId,
+      action: "CREATE_REPORT",
+      targetType: "Report",
+      targetId: report.id,
+      description: `Người dùng ${userId} đã gửi báo cáo cho bài đăng #${postId}.`,
+      severity: "WARNING",
+      status: "SUCCESS",
+      request: req,
+      metadata: {
+        reportId: report.id,
+        postId,
+        reason,
+      },
+    });
+
     const admins = await prisma.user.findMany({
       where: { role: UserRole.ADMIN },
       select: { id: true },
@@ -167,11 +184,24 @@ export const resolveReport = async (req: Request, res: Response, next: NextFunct
     }
 
     await createSystemLog({
+      module: "REPORT",
       actorId: adminId,
       action: `REPORT_${status}`,
       targetType: "Report",
       targetId: id,
-      description: `Admin ${status.toLowerCase()} report #${id} for post #${report.postId}`,
+      description:
+        status === "RESOLVED"
+          ? `Quản trị viên đã xử lý báo cáo #${id} cho bài đăng #${report.postId}.`
+          : `Quản trị viên đã từ chối báo cáo #${id} cho bài đăng #${report.postId}.`,
+      severity: status === "RESOLVED" ? "WARNING" : "INFO",
+      status: "SUCCESS",
+      request: req,
+      metadata: {
+        reportId: id,
+        postId: report.postId,
+        reportStatus: status,
+        reporterId: report.reporterId,
+      },
     });
 
     void createNotification({

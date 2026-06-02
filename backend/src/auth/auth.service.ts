@@ -207,4 +207,8 @@ export const logout = async ({ refreshToken }: RefreshTokenInput) => {
       revokedAt: new Date(),
     },
   });
+
+  return {
+    userId: matchedToken.userId,
+  };
 };

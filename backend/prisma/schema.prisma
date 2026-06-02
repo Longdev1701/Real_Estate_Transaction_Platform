@@ -58,6 +58,29 @@ enum ReportStatus {
   REJECTED
 }
 
+enum SystemLogModule {
+  AUTH
+  USER
+  POST
+  REPORT
+  ADMIN
+  SYSTEM
+  STORAGE
+}
+
+enum SystemLogSeverity {
+  INFO
+  WARNING
+  SECURITY
+  ERROR
+}
+
+enum SystemLogStatus {
+  SUCCESS
+  FAILED
+  BLOCKED
+}
+
 model User {
   id           String     @id @default(cuid())
   email        String     @unique
@@ -233,14 +256,22 @@ model SystemLog {
   actorId String?
   actor   User?   @relation(fields: [actorId], references: [id], onDelete: SetNull)
 
+  module      SystemLogModule
   action      String
-  targetType  String
-  targetId    String
+  targetType  String?
+  targetId    String?
   description String?
+  severity    SystemLogSeverity @default(INFO)
+  status      SystemLogStatus   @default(SUCCESS)
+  ipAddress   String?
+  userAgent   String?
+  metadata    Json?
 
   createdAt DateTime @default(now())
 
   @@index([actorId])
+  @@index([targetType])
+  @@index([createdAt])
 }
 
 model SavedPost {
