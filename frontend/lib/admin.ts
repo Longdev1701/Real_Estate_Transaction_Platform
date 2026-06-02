@@ -204,6 +204,10 @@ export type AdminReport = {
   reason: string;
   description?: string | null;
   status: AdminReportStatus;
+  appealStatus: "NONE" | "PENDING" | "REVIEWED";
+  appealMessage?: string | null;
+  appealEvidence?: string | null;
+  appealedAt?: string | null;
   createdAt: string;
   resolvedAt?: string | null;
   reporter: {
@@ -258,6 +262,8 @@ export type AdminReportsStats = {
   resolved: number;
   rejected: number;
 };
+
+export type AdminAppealDecision = "APPROVE" | "REJECT";
 
 export const getAdminDashboard = async () => {
   const response = await api.get<{ data: AdminDashboardData }>("/admin/dashboard");
@@ -401,6 +407,19 @@ export const resolveAdminReport = async (
   const response = await api.patch<{ data: { report: AdminReport } }>(`/reports/${reportId}`, {
     status,
   });
+  return response.data.data.report;
+};
+
+export const reviewAdminReportAppeal = async (
+  reportId: string,
+  decision: AdminAppealDecision,
+) => {
+  const response = await api.patch<{ data: { report: AdminReport } }>(
+    `/reports/${reportId}/appeal`,
+    {
+      decision,
+    },
+  );
   return response.data.data.report;
 };
 
