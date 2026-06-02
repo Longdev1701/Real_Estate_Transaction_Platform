@@ -28,6 +28,17 @@ export type PostAuthor = {
   avatarUrl?: string | null;
 };
 
+export type PostBanContext = {
+  reportId: string;
+  reason: string;
+  description?: string | null;
+  resolvedAt?: string | null;
+  appealStatus: "NONE" | "PENDING" | "REVIEWED";
+  appealMessage?: string | null;
+  appealEvidence?: string | null;
+  appealedAt?: string | null;
+};
+
 export type Post = {
   id: string;
   authorId: string;
@@ -52,6 +63,7 @@ export type Post = {
   commentCount?: number;
   isSaved?: boolean;
   relatedPosts?: Post[];
+  banContext?: PostBanContext | null;
   features: {
     id: string;
     name: string;
@@ -157,6 +169,7 @@ export const propertyTypeLabels: Record<PropertyType, string> = {
 export const statusLabels: Record<string, string> = {
   ACTIVE: "Đang hiển thị",
   INACTIVE: "Đã ẩn",
+  BANNED: "Bị khóa",
   PENDING: "Chờ duyệt",
   SOLD: "Đã bán/cho thuê",
   DRAFT: "Bản nháp",
@@ -166,6 +179,7 @@ export const statusLabels: Record<string, string> = {
 export const statusColors: Record<string, string> = {
   ACTIVE: "text-emerald-400 bg-emerald-400/10 border-emerald-400/20",
   INACTIVE: "text-gray-400 bg-gray-400/10 border-gray-400/20",
+  BANNED: "text-red-300 bg-red-500/10 border-red-400/30",
   PENDING: "text-amber-400 bg-amber-400/10 border-amber-400/20",
   SOLD: "text-blue-400 bg-blue-400/10 border-blue-400/20",
   DRAFT: "text-slate-400 bg-slate-400/10 border-slate-400/20",
@@ -173,9 +187,7 @@ export const statusColors: Record<string, string> = {
 };
 
 export const formatPrice = (price: number) => {
-  const formattedNumber = price
-    .toString()
-    .replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  const formattedNumber = price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   return `${formattedNumber} ₫`;
 };
 

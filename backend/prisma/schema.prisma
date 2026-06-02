@@ -58,6 +58,12 @@ enum ReportStatus {
   REJECTED
 }
 
+enum AppealStatus {
+  NONE
+  PENDING
+  REVIEWED
+}
+
 enum SystemLogModule {
   AUTH
   USER
@@ -242,6 +248,11 @@ model Report {
   description String?
 
   status ReportStatus @default(PENDING)
+
+  appealStatus   AppealStatus @default(NONE)
+  appealMessage  String?
+  appealEvidence String?
+  appealedAt     DateTime?
 
   createdAt  DateTime  @default(now())
   resolvedAt DateTime?

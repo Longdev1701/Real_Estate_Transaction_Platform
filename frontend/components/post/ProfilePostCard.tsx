@@ -9,6 +9,8 @@ import {
   formatPrice,
   postTypeLabels,
   propertyTypeLabels,
+  statusColors,
+  statusLabels,
   type Post,
 } from "@/lib/posts";
 import { writeSessionCache } from "@/lib/client-cache";
@@ -31,8 +33,8 @@ export function ProfilePostCard({ post }: { post: Post }) {
 
   return (
     <article className="glass-card flex h-full flex-col overflow-hidden p-4 md:p-5">
-      <div className="mb-4 flex items-start gap-4">
-        <div className="flex items-center gap-3">
+        <div className="mb-4 flex items-start gap-4">
+          <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-blue-400/30 bg-blue-500/10 text-sm font-semibold text-blue-200">
             {post.author.avatarUrl ? (
               <img src={post.author.avatarUrl} alt={post.author.fullName} className="h-full w-full object-cover" />
@@ -48,6 +50,11 @@ export function ProfilePostCard({ post }: { post: Post }) {
               <span>{propertyTypeLabels[post.propertyType]}</span>
             </div>
           </div>
+          {post.status !== "ACTIVE" ? (
+            <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${statusColors[post.status] ?? "border-red-400/30 bg-red-500/10 text-red-300"}`}>
+              {statusLabels[post.status] ?? post.status}
+            </span>
+          ) : null}
         </div>
       </div>
 

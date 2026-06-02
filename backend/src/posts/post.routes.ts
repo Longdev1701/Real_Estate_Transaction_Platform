@@ -10,6 +10,7 @@ import {
   createPostController,
   deletePostController,
   deletePostImageController,
+  getMyPostsController,
   getPostByIdController,
   getPostsController,
   updatePostController,
@@ -46,6 +47,12 @@ postRoutes.get(
   optionalAuthenticate,
   validateRequest({ query: postFilterSchema }),
   getPostsController,
+);
+postRoutes.get(
+  "/mine",
+  authenticate,
+  validateRequest({ query: postFilterSchema }),
+  getMyPostsController,
 );
 postRoutes.get(
   "/:id",

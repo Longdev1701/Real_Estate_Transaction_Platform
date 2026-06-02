@@ -59,6 +59,22 @@ export const getPostsController: RequestHandler = async (req, res, next) => {
   }
 };
 
+export const getMyPostsController: RequestHandler = async (req, res, next) => {
+  try {
+    const result = await getPosts(
+      {
+        ...req.query,
+        authorId: req.user!.id,
+      },
+      req.user,
+    );
+
+    sendSuccess(res, result, "My posts fetched successfully.");
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getPostByIdController: RequestHandler = async (req, res, next) => {
   try {
     const result = await getPostById(getPostIdParam(req.params.id), req.user);
