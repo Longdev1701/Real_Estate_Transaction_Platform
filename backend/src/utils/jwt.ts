@@ -8,14 +8,20 @@ export type AuthTokenPayload = {
   role: string;
 };
 
-export const signAccessToken = (payload: AuthTokenPayload) =>
+export const signAccessToken = (
+  payload: AuthTokenPayload,
+  expiresIn: jwt.SignOptions["expiresIn"] = "15m",
+) =>
   jwt.sign(payload, JWT_ACCESS_SECRET, {
-    expiresIn: "15m",
+    expiresIn,
   });
 
-export const signRefreshToken = (payload: AuthTokenPayload) =>
+export const signRefreshToken = (
+  payload: AuthTokenPayload,
+  expiresIn: jwt.SignOptions["expiresIn"] = "7d",
+) =>
   jwt.sign(payload, JWT_REFRESH_SECRET, {
-    expiresIn: "7d",
+    expiresIn,
   });
 
 export const verifyAccessToken = (token: string) =>
