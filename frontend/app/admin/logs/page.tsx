@@ -426,7 +426,7 @@ export default function AdminLogsPage() {
 
             <input
               type="date"
-              className="h-10 rounded-xl border border-blue-300/20 bg-slate-950/55 px-3 text-sm text-white outline-none"
+              className="h-10 rounded-xl border border-blue-300/20 bg-slate-950/55 px-3 text-sm text-white outline-none [color-scheme:dark]"
               value={filter.dateFrom}
               onChange={(event) =>
                 setFilter((current) => ({
@@ -439,7 +439,7 @@ export default function AdminLogsPage() {
 
             <input
               type="date"
-              className="h-10 rounded-xl border border-blue-300/20 bg-slate-950/55 px-3 text-sm text-white outline-none"
+              className="h-10 rounded-xl border border-blue-300/20 bg-slate-950/55 px-3 text-sm text-white outline-none [color-scheme:dark]"
               value={filter.dateTo}
               onChange={(event) =>
                 setFilter((current) => ({

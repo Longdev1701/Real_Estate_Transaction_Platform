@@ -46,7 +46,7 @@ export function UserMenu() {
   };
 
   return (
-    <div className="relative" ref={menuRef}>
+    <div className="relative z-[130]" ref={menuRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 p-2 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/10"
@@ -62,7 +62,7 @@ export function UserMenu() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 glass-card py-2 z-50">
+        <div className="absolute right-0 top-full z-[140] mt-2 w-48 overflow-visible rounded-2xl border border-white/12 bg-slate-950/62 py-2 shadow-[0_20px_60px_rgba(2,6,23,0.42)] backdrop-blur-2xl">
           <Link
             href="/profile"
             className="flex items-center gap-3 px-4 py-2 hover:bg-white/10 transition-colors"

@@ -80,8 +80,8 @@ export function Header() {
   }
 
   return (
-    <header className="fixed top-0 z-40 w-full glass-panel">
-      <div className="container mx-auto flex h-20 items-center justify-between px-4 lg:px-8">
+    <header className="fixed top-0 z-[120] w-full overflow-visible glass-panel">
+      <div className="container mx-auto flex h-20 items-center justify-between overflow-visible px-4 lg:px-8">
         <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center gap-2 text-2xl font-bold tracking-wider text-white">
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 shadow-lg shadow-blue-500/20">

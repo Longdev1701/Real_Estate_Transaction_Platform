@@ -455,7 +455,7 @@ export default function SavedPostsPage() {
                       <Link
                         href={`/posts/${post.id}`}
                         onClick={() => writeSessionCache(`posts:detail:${post.id}`, post)}
-                        className="mt-2 block line-clamp-2 text-lg font-semibold text-white transition hover:text-blue-300"
+                        className="mt-2 block truncate text-lg font-semibold text-white transition hover:text-blue-300"
                       >
                         {post.title}
                       </Link>
@@ -511,7 +511,7 @@ export default function SavedPostsPage() {
                 disabled={isBulkRemoving}
                 className="rounded-full border border-blue-400/20 bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isBulkRemoving ? "Đang bỏ lưu..." : "Bỏ lưu đã chọn"}
+                {isBulkRemoving ? "Đang bỏ lưu..." : "Bỏ lưu tất cả"}
               </button>
             </div>
           </div>
