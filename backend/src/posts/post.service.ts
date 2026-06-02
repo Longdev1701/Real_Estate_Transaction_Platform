@@ -1,7 +1,7 @@
 ﻿import type { Express } from "express";
 import type { Prisma } from "@prisma/client";
 
-import { PostStatus, UserRole } from "@prisma/client";
+import { PostStatus, ReportStatus, UserRole } from "@prisma/client";
 
 import type { AuthenticatedUser } from "../types/auth.type.js";
 
@@ -110,6 +110,17 @@ type PostListItem = Prisma.PropertyPostGetPayload<{
 type PostDetailItem = Prisma.PropertyPostGetPayload<{
   include: typeof postInclude;
 }>;
+
+type PostBanContext = {
+  reportId: string;
+  reason: string;
+  description?: string | null;
+  resolvedAt?: Date | null;
+  appealStatus: "NONE" | "PENDING" | "REVIEWED";
+  appealMessage?: string | null;
+  appealEvidence?: string | null;
+  appealedAt?: Date | null;
+};
 
 const POSTS_CACHE_TTL_MS = 15_000;
 const postsCache = new Map<
@@ -371,7 +382,6 @@ export const getPosts = async (
   filter: PostFilterInput,
   user?: AuthenticatedUser,
 ) => {
-  const isCacheableQuery = !user || user.role !== UserRole.ADMIN;
   const page = toPaginationNumber(filter.page, 1, 1);
   const limit = toPaginationNumber(filter.limit, 10, 1, 100);
   const skip = (page - 1) * limit;
@@ -383,12 +393,21 @@ export const getPosts = async (
   const featureIds = toOptionalString(filter.featureIds);
   const authorId = toOptionalString(filter.authorId);
 
+  const canViewOwnNonActivePosts =
+    Boolean(user) &&
+    Boolean(authorId) &&
+    user?.id === authorId;
+  const isCacheableQuery =
+    (!user || user.role !== UserRole.ADMIN) && !canViewOwnNonActivePosts;
+
   const where: Prisma.PropertyPostWhereInput = {
     authorId,
     status:
       user?.role === UserRole.ADMIN && filter.status
         ? filter.status
-        : PostStatus.ACTIVE,
+        : canViewOwnNonActivePosts
+          ? filter.status
+          : PostStatus.ACTIVE,
     city: toOptionalString(filter.city)
       ? { contains: toOptionalString(filter.city), mode: "insensitive" }
       : undefined,
@@ -433,8 +452,16 @@ export const getPosts = async (
     }
   }
 
+  const visibilityScope =
+    user?.role === UserRole.ADMIN
+      ? "admin"
+      : canViewOwnNonActivePosts
+        ? `owner:${user?.id ?? ""}`
+        : "public";
+
   const cacheKey = isCacheableQuery
     ? JSON.stringify({
+        visibilityScope,
         page,
         limit,
         authorId: authorId ?? "",
@@ -447,6 +474,7 @@ export const getPosts = async (
         maxPrice: maxPrice ?? null,
         minArea: minArea ?? null,
         maxArea: maxArea ?? null,
+        status: filter.status ?? "",
       })
     : null;
 
@@ -520,7 +548,7 @@ export const getPostById = async (id: string, user?: AuthenticatedUser) => {
   }
 
   // Fetch saved status and related posts in parallel to minimize network latency overhead
-  const [isSavedResult, relatedPostsRaw] = await Promise.all([
+  const [isSavedResult, relatedPostsRaw, latestResolvedReport] = await Promise.all([
     user
       ? prisma.savedPost.findUnique({
           where: {
@@ -543,6 +571,27 @@ export const getPostById = async (id: string, user?: AuthenticatedUser) => {
       orderBy: { createdAt: "desc" },
       take: 3,
     }),
+    post.status === PostStatus.BANNED && user && canManagePost(user, post.authorId)
+      ? prisma.report.findFirst({
+          where: {
+            postId: id,
+            status: ReportStatus.RESOLVED,
+          },
+          orderBy: {
+            resolvedAt: "desc",
+          },
+          select: {
+            id: true,
+            reason: true,
+            description: true,
+            resolvedAt: true,
+            appealStatus: true,
+            appealMessage: true,
+            appealEvidence: true,
+            appealedAt: true,
+          },
+        })
+      : null,
   ]);
 
   const relatedPosts = relatedPostsRaw.map((item) => ({
@@ -558,6 +607,18 @@ export const getPostById = async (id: string, user?: AuthenticatedUser) => {
     features: features?.map((f: any) => f.feature) ?? [],
     isSaved: Boolean(isSavedResult),
     relatedPosts,
+    banContext: latestResolvedReport
+      ? ({
+          reportId: latestResolvedReport.id,
+          reason: latestResolvedReport.reason,
+          description: latestResolvedReport.description,
+          resolvedAt: latestResolvedReport.resolvedAt,
+          appealStatus: latestResolvedReport.appealStatus,
+          appealMessage: latestResolvedReport.appealMessage,
+          appealEvidence: latestResolvedReport.appealEvidence,
+          appealedAt: latestResolvedReport.appealedAt,
+        } satisfies PostBanContext)
+      : null,
   };
 };
 
