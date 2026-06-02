@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { AxiosError } from "axios";
 import {
+  AlertTriangle,
   ArrowLeft,
   BadgeCheck,
   Bookmark,
@@ -20,7 +21,9 @@ import {
   Phone,
   Save,
   Share2,
+  ShieldAlert,
   ShieldCheck,
+  TriangleAlert,
   Trash2,
   X,
   Wifi,
@@ -64,6 +67,8 @@ import {
 import { useAuthStore } from "@/stores/auth.store";
 import dynamic from "next/dynamic";
 import CommentSection from "@/components/comment/CommentSection";
+import { AppealBanDialog } from "@/components/post/AppealBanDialog";
+import { ReportPostDialog } from "@/components/post/ReportPostDialog";
 
 const PostDetailMap = dynamic(() => import("@/components/map/PostDetailMap"), {
   ssr: false,
@@ -124,6 +129,8 @@ export default function PostDetailPage() {
   const [isSaveSubmitting, setIsSaveSubmitting] = useState(false);
   const [isStartingConversation, setIsStartingConversation] = useState(false);
   const [conversationError, setConversationError] = useState<string | null>(null);
+  const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
+  const [isAppealDialogOpen, setIsAppealDialogOpen] = useState(false);
 
   // Copy state
   const [isCopied, setIsCopied] = useState(false);
@@ -199,6 +206,7 @@ export default function PostDetailPage() {
 
   const activeImage = images[selectedImage]?.imageUrl ?? imageFallback;
   const isOwnPost = !!user && !!post && user.id === post.author.id;
+  const isBannedOwnerView = Boolean(post && isOwnPost && post.status === "BANNED");
 
   const handleSaveToggle = async () => {
     const rawValue = window.localStorage.getItem(savedKey);
@@ -245,6 +253,34 @@ export default function PostDetailPage() {
     } finally {
       setIsSaveSubmitting(false);
     }
+  };
+
+  const handleOpenReportDialog = () => {
+    if (!user) {
+      router.push("/auth/login");
+      return;
+    }
+
+    setIsReportDialogOpen(true);
+  };
+
+  const handleAppealSubmitted = () => {
+    setPost((currentPost) => {
+      if (!currentPost?.banContext) {
+        return currentPost;
+      }
+
+      const nextPost = {
+        ...currentPost,
+        banContext: {
+          ...currentPost.banContext,
+          appealStatus: "PENDING" as const,
+          appealedAt: new Date().toISOString(),
+        },
+      };
+      writeSessionCache(getPostDetailCacheKey(nextPost.id), nextPost);
+      return nextPost;
+    });
   };
   const handleCopyId = () => {
     if (!post) return;
@@ -341,6 +377,95 @@ export default function PostDetailPage() {
 
   if (!post) {
     return null;
+  }
+
+  if (isBannedOwnerView) {
+    return (
+      <div className="container mx-auto space-y-6 px-4 pt-8 pb-20 lg:px-8 lg:py-10">
+        <div className="flex flex-wrap items-center gap-2 text-sm text-gray-400">
+          <Link href="/" className="transition hover:text-white">
+            Trang chủ
+          </Link>
+          <span>/</span>
+          <Link href="/posts" className="transition hover:text-white">
+            Bài đăng
+          </Link>
+          <span>/</span>
+          <span className="text-white">Bài đăng bị khóa</span>
+        </div>
+
+        <div className="mx-auto max-w-4xl rounded-[32px] border border-red-400/20 bg-[linear-gradient(180deg,rgba(127,29,29,0.32),rgba(8,18,36,0.96))] p-6 shadow-[0_24px_80px_rgba(127,29,29,0.25)] md:p-8">
+          <div className="rounded-3xl border border-red-400/20 bg-slate-950/50 p-6 md:p-8">
+            <div className="mx-auto max-w-2xl text-center">
+              <span className="inline-flex items-center gap-2 rounded-full border border-red-400/30 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-200">
+                <ShieldAlert className="h-4 w-4" />
+                Bài đăng đã bị khóa do vi phạm
+              </span>
+              <h1 className="mt-5 text-3xl font-bold text-white md:text-4xl">Thông tin bài đăng đang bị ẩn để chờ xử lý</h1>
+              <p className="mt-4 text-sm leading-7 text-gray-300 md:text-base">
+                Để bảo vệ trải nghiệm chung của người dùng, chúng tôi tạm thời ẩn toàn bộ nội dung
+                của bài đăng này khỏi nền tảng. Nếu bạn cho rằng việc xử lý là chưa chính xác,
+                bạn có thể gửi khiếu nại kèm bằng chứng để đội ngũ quản trị xem xét lại.
+              </p>
+            </div>
+
+            <div className="mt-8 grid gap-4 md:grid-cols-2">
+              <div className="rounded-2xl border border-red-400/20 bg-red-500/10 p-5">
+                <p className="text-sm font-semibold uppercase tracking-wide text-red-200">Lý do bị khóa</p>
+                <p className="mt-3 text-lg font-semibold text-white">{post.banContext?.reason || "Nội dung vi phạm chính sách hiển thị."}</p>
+                <p className="mt-3 text-sm leading-6 text-red-100/85">
+                  {post.banContext?.description || "Bài đăng bị đánh giá là có dấu hiệu vi phạm nội dung hoặc thông tin không phù hợp với chính sách của nền tảng."}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-blue-400/20 bg-blue-500/10 p-5">
+                <p className="text-sm font-semibold uppercase tracking-wide text-blue-200">Trạng thái khiếu nại</p>
+                <p className="mt-3 text-lg font-semibold text-white">
+                  {post.banContext?.appealStatus === "PENDING"
+                    ? "Đã gửi khiếu nại, chờ admin xem xét"
+                    : "Chưa gửi khiếu nại"}
+                </p>
+                <p className="mt-3 text-sm leading-6 text-blue-100/85">
+                  {post.banContext?.appealStatus === "PENDING"
+                    ? "Yêu cầu khiếu nại của bạn đã nằm trong hàng đợi báo cáo của admin."
+                    : "Hãy chuẩn bị mô tả rõ ràng và bằng chứng cụ thể để tăng khả năng được xem xét lại."}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+              <button
+                type="button"
+                onClick={() => setIsAppealDialogOpen(true)}
+                disabled={post.banContext?.appealStatus === "PENDING"}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <AlertTriangle className="h-4 w-4" />
+                {post.banContext?.appealStatus === "PENDING" ? "Đã gửi khiếu nại" : "Khiếu nại quyết định khóa bài"}
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push("/profile/posts")}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-medium text-gray-200 transition hover:bg-white/10"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Quay lại bài đăng của tôi
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {post.banContext ? (
+          <AppealBanDialog
+            open={isAppealDialogOpen}
+            postTitle={post.title}
+            banContext={post.banContext}
+            onClose={() => setIsAppealDialogOpen(false)}
+            onSubmitted={handleAppealSubmitted}
+          />
+        ) : null}
+      </div>
+    );
   }
 
   return (
@@ -501,6 +626,16 @@ export default function PostDetailPage() {
                   <Share2 className="h-4 w-4 text-blue-300" />
                   Chia sẻ
                 </button>
+                {!isOwnPost ? (
+                  <button
+                    type="button"
+                    onClick={handleOpenReportDialog}
+                    className="inline-flex items-center gap-2 rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-amber-100 transition hover:bg-amber-500/15"
+                  >
+                    <TriangleAlert className="h-4 w-4 text-amber-300" />
+                    Báo cáo
+                  </button>
+                ) : null}
                 {conversationError ? (
                   <p className="rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-200">
                     {conversationError}
@@ -742,7 +877,7 @@ export default function PostDetailPage() {
               className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-gray-200 transition hover:bg-white/10"
             >
               <ArrowLeft className="h-4 w-4" />
-              Quay lai danh sach
+              Quay lại danh sách
             </button>
           </div>
         </aside>
@@ -787,6 +922,15 @@ export default function PostDetailPage() {
         </div>
       )}
 
+      {post ? (
+        <ReportPostDialog
+          open={isReportDialogOpen}
+          postId={post.id}
+          postTitle={post.title}
+          onClose={() => setIsReportDialogOpen(false)}
+        />
+      ) : null}
+
       {/* Mobile Bottom Action Bar */}
       {!isOwnPost && (
         <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center gap-3 border-t border-white/10 bg-slate-950/90 p-4 pb-6 backdrop-blur-xl lg:hidden shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
@@ -797,6 +941,13 @@ export default function PostDetailPage() {
             className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-gray-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Bookmark className={`h-5 w-5 ${post.isSaved ? "fill-blue-400 text-blue-400" : "text-blue-300"}`} />
+          </button>
+          <button
+            type="button"
+            onClick={handleOpenReportDialog}
+            className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-amber-400/20 bg-amber-500/10 text-amber-100 transition hover:bg-amber-500/15"
+          >
+            <TriangleAlert className="h-5 w-5 text-amber-300" />
           </button>
           <a
             href={`mailto:${post.author.email}`}

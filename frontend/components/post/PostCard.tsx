@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Expand,
+  TriangleAlert,
   Heart,
   MapPin,
   MessageCircle,
@@ -30,6 +31,7 @@ import { api } from "@/lib/api";
 import { writeSessionCache } from "@/lib/client-cache";
 import { useAuthStore } from "@/stores/auth.store";
 import CommentSection from "@/components/comment/CommentSection";
+import { ReportPostDialog } from "@/components/post/ReportPostDialog";
 
 const imageFallback =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 760'><rect width='1200' height='760' fill='%230b1120'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-family='Arial' font-size='48'>TrustEstate</text></svg>";
@@ -99,6 +101,7 @@ export function PostCard({ post }: { post: Post }) {
   const [isSaved, setIsSaved] = useState(Boolean(post.isSaved));
   const [isSaveSubmitting, setIsSaveSubmitting] = useState(false);
   const [saveEffect, setSaveEffect] = useState<{ key: number; type: "save" | "unsave" } | null>(null);
+  const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
 
   const images = useMemo(
     () => (post.images.length > 0 ? post.images : [{ id: "fallback", imageUrl: imageFallback, order: 0 }]),
@@ -109,6 +112,7 @@ export function PostCard({ post }: { post: Post }) {
   const visibleImages = images.slice(0, Math.min(images.length, 3));
   const activeImage = images[activeImageIndex]?.imageUrl ?? imageFallback;
   const location = formatLocation(post) || post.address || post.city;
+  const canReportPost = !user || user.id !== post.author.id;
   const engagementSeed = post.id.split("").reduce((total, char) => total + char.charCodeAt(0), 0);
   const likeCount = 48 + (engagementSeed % 96);
   const commentCount = post.commentCount ?? 0;
@@ -183,11 +187,21 @@ export function PostCard({ post }: { post: Post }) {
     }
   };
 
+  const handleReportClick = () => {
+    if (!user) {
+      router.push("/auth/login");
+      return;
+    }
+
+    setIsReportDialogOpen(true);
+  };
+
   return (
     <>
       <article className="overflow-hidden rounded-2xl border border-blue-400/15 bg-slate-950/55 shadow-[0_20px_70px_rgba(0,0,0,0.32)] backdrop-blur-xl">
         <div className="flex items-start justify-between gap-4 px-4 pb-3 pt-4 md:px-5">
           <div className="flex min-w-0 items-center gap-3">
+
             <Link
               href={`/profile/posts?authorId=${post.author.id}`}
               className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-blue-300/30 bg-blue-500/10 text-sm font-semibold text-blue-100 transition hover:border-blue-300 hover:ring-2 hover:ring-blue-500/30"
@@ -217,61 +231,75 @@ export function PostCard({ post }: { post: Post }) {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleSaveClick}
-            disabled={isSaveSubmitting}
-            className={`group/save relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition disabled:cursor-not-allowed disabled:opacity-70 ${
-              isSaved
-                ? "border-blue-400/40 bg-blue-500/15 text-blue-200 hover:bg-blue-500/25 hover:text-white"
-                : "border-white/15 bg-white/5 text-gray-300 hover:border-blue-400/30 hover:bg-blue-500/10 hover:text-blue-100"
-            }`}
-            aria-label="Lưu bài đăng"
-          >
-            {saveEffect && (
-              <span key={saveEffect.key} className="pointer-events-none absolute inset-0 z-20">
-                {saveEffect.type === "save" ? (
-                  <>
-                    <span className="absolute -inset-2 rounded-full bg-blue-400/0" style={{ animation: "savePulse 720ms ease-out forwards" }} />
-                    <span className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-blue-200/0" style={{ animation: "saveRing 760ms ease-out forwards" }} />
-                    {[0, 1, 2, 3, 4, 5].map((item) => (
-                      <span
-                        key={item}
-                        className="absolute left-1/2 top-1/2 h-1.5 w-1.5 rounded-full bg-blue-300 opacity-0 shadow-[0_0_10px_rgba(96,165,250,0.95)]"
-                        style={{
-                          animation: "saveSpark 680ms cubic-bezier(0.16,1,0.3,1) forwards",
-                          animationDelay: `${item * 45}ms`,
-                          ["--x" as string]: `${Math.cos((item * Math.PI) / 3) * 25}px`,
-                          ["--y" as string]: `${Math.sin((item * Math.PI) / 3) * 25}px`,
-                        }}
-                      />
-                    ))}
-                  </>
-                ) : (
-                  <>
-                    <span className="absolute -inset-3 rounded-full bg-red-500/0" style={{ animation: "killImpactFlash 620ms ease-out forwards" }} />
-                    <span className="absolute left-1/2 top-1/2 h-1.5 w-16 origin-center -translate-x-1/2 -translate-y-1/2 -rotate-45 rounded-full bg-gradient-to-r from-transparent via-red-500 to-yellow-100 opacity-0 shadow-[0_0_18px_rgba(248,113,113,0.95)]" style={{ animation: "killSlash 680ms cubic-bezier(0.16,1,0.3,1) forwards" }} />
-                    <span className="absolute left-1/2 top-1/2 h-1 w-12 origin-center -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-full bg-gradient-to-r from-transparent via-red-400 to-white opacity-0 shadow-[0_0_14px_rgba(239,68,68,0.9)]" style={{ animation: "killSlashSecondary 680ms cubic-bezier(0.16,1,0.3,1) 90ms forwards" }} />
-                    {[0, 1, 2, 3, 4, 5].map((item) => (
-                      <span
-                        key={item}
-                        className="absolute left-1/2 top-1/2 h-1.5 w-1.5 rounded-full bg-red-400 opacity-0 shadow-[0_0_8px_rgba(248,113,113,0.9)]"
-                        style={{
-                          animation: "killShard 620ms cubic-bezier(0.16,1,0.3,1) forwards",
-                          animationDelay: `${item * 35}ms`,
-                          ["--x" as string]: `${Math.cos((item * Math.PI) / 3) * 27}px`,
-                          ["--y" as string]: `${Math.sin((item * Math.PI) / 3) * 22}px`,
-                        }}
-                      />
-                    ))}
-                  </>
-                )}
-              </span>
-            )}
-            <span className={`pointer-events-none absolute inset-1 rounded-full opacity-0 blur-lg transition duration-300 group-hover/save:opacity-100 ${isSaved ? "group-hover/save:bg-blue-400/30" : "group-hover/save:bg-red-400/20"}`} />
-            <Bookmark className={`relative h-5 w-5 transition duration-300 group-hover/save:scale-110 ${saveEffect ? (saveEffect.type === "save" ? "animate-[saveIconPop_560ms_ease-out]" : "animate-[killIconShake_520ms_ease-out]") : ""} ${isSaved ? "fill-blue-400 text-blue-400" : ""}`} />
-          </button>
-        </div>
+          <div className="flex shrink-0 items-center gap-2">
+            {canReportPost ? (
+              <button
+                type="button"
+                onClick={handleReportClick}
+                className="group/report relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/5 text-amber-200 transition hover:border-amber-400/35 hover:bg-amber-500/10 hover:text-amber-100"
+                aria-label="Báo cáo bài đăng"
+                title="Báo cáo bài đăng"
+              >
+                <span className="pointer-events-none absolute inset-1 rounded-full opacity-0 blur-lg transition duration-300 group-hover/report:bg-amber-400/20 group-hover/report:opacity-100" />
+                <TriangleAlert className="relative h-5 w-5 transition duration-300 group-hover/report:-translate-y-0.5 group-hover/report:scale-110 group-hover/report:drop-shadow-[0_0_10px_rgba(251,191,36,0.75)]" />
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={handleSaveClick}
+              disabled={isSaveSubmitting}
+              className={`group/save relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition disabled:cursor-not-allowed disabled:opacity-70 ${
+                isSaved
+                  ? "border-blue-400/40 bg-blue-500/15 text-blue-200 hover:bg-blue-500/25 hover:text-white"
+                  : "border-white/15 bg-white/5 text-gray-300 hover:border-blue-400/30 hover:bg-blue-500/10 hover:text-blue-100"
+              }`}
+              aria-label="Lưu bài đăng"
+              title="Lưu bài đăng"
+            >
+              {saveEffect && (
+                <span key={saveEffect.key} className="pointer-events-none absolute inset-0 z-20">
+                  {saveEffect.type === "save" ? (
+                    <>
+                      <span className="absolute -inset-2 rounded-full bg-blue-400/0" style={{ animation: "savePulse 720ms ease-out forwards" }} />
+                      <span className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-blue-200/0" style={{ animation: "saveRing 760ms ease-out forwards" }} />
+                      {[0, 1, 2, 3, 4, 5].map((item) => (
+                        <span
+                          key={item}
+                          className="absolute left-1/2 top-1/2 h-1.5 w-1.5 rounded-full bg-blue-300 opacity-0 shadow-[0_0_10px_rgba(96,165,250,0.95)]"
+                          style={{
+                            animation: "saveSpark 680ms cubic-bezier(0.16,1,0.3,1) forwards",
+                            animationDelay: `${item * 45}ms`,
+                            ["--x" as string]: `${Math.cos((item * Math.PI) / 3) * 25}px`,
+                            ["--y" as string]: `${Math.sin((item * Math.PI) / 3) * 25}px`,
+                          }}
+                        />
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      <span className="absolute -inset-3 rounded-full bg-red-500/0" style={{ animation: "killImpactFlash 620ms ease-out forwards" }} />
+                      <span className="absolute left-1/2 top-1/2 h-1.5 w-16 origin-center -translate-x-1/2 -translate-y-1/2 -rotate-45 rounded-full bg-gradient-to-r from-transparent via-red-500 to-yellow-100 opacity-0 shadow-[0_0_18px_rgba(248,113,113,0.95)]" style={{ animation: "killSlash 680ms cubic-bezier(0.16,1,0.3,1) forwards" }} />
+                      <span className="absolute left-1/2 top-1/2 h-1 w-12 origin-center -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-full bg-gradient-to-r from-transparent via-red-400 to-white opacity-0 shadow-[0_0_14px_rgba(239,68,68,0.9)]" style={{ animation: "killSlashSecondary 680ms cubic-bezier(0.16,1,0.3,1) 90ms forwards" }} />
+                      {[0, 1, 2, 3, 4, 5].map((item) => (
+                        <span
+                          key={item}
+                          className="absolute left-1/2 top-1/2 h-1.5 w-1.5 rounded-full bg-red-400 opacity-0 shadow-[0_0_8px_rgba(248,113,113,0.9)]"
+                          style={{
+                            animation: "killShard 620ms cubic-bezier(0.16,1,0.3,1) forwards",
+                            animationDelay: `${item * 35}ms`,
+                            ["--x" as string]: `${Math.cos((item * Math.PI) / 3) * 27}px`,
+                            ["--y" as string]: `${Math.sin((item * Math.PI) / 3) * 22}px`,
+                          }}
+                        />
+                      ))}
+                    </>
+                  )}
+                </span>
+              )}
+              <span className={`pointer-events-none absolute inset-1 rounded-full opacity-0 blur-lg transition duration-300 group-hover/save:opacity-100 ${isSaved ? "group-hover/save:bg-blue-400/30" : "group-hover/save:bg-red-400/20"}`} />
+              <Bookmark className={`relative h-5 w-5 transition duration-300 group-hover/save:scale-110 ${saveEffect ? (saveEffect.type === "save" ? "animate-[saveIconPop_560ms_ease-out]" : "animate-[killIconShake_520ms_ease-out]") : ""} ${isSaved ? "fill-blue-400 text-blue-400" : ""}`} />
+            </button>
+          </div>        </div>
 
         <div className="px-4 md:px-5">
           <Link href={`/posts/${post.id}`} onClick={cachePostDetailPreview} className="mb-1 block">
@@ -390,8 +418,7 @@ export function PostCard({ post }: { post: Post }) {
               <span className="hidden sm:inline">Bình luận</span>
               <span className="relative text-xs text-gray-500">{commentCount}</span>
             </button>
-            <Link
-              href={`/posts/${post.id}`}
+            <Link              href={`/posts/${post.id}`}
               onClick={() => {
                 cachePostDetailPreview();
                 playDetail();
@@ -595,6 +622,13 @@ export function PostCard({ post }: { post: Post }) {
           </div>
         </div>
       )}
+
+      <ReportPostDialog
+        open={isReportDialogOpen}
+        postId={post.id}
+        postTitle={post.title}
+        onClose={() => setIsReportDialogOpen(false)}
+      />
 
       <style jsx global>{`
         @keyframes heartBurst {
