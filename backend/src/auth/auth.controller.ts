@@ -77,25 +77,8 @@ export const refreshTokenController: RequestHandler = async (req, res, next) => 
   try {
     const result = await refreshAuthToken(req.body);
 
-    await createSystemLog({
-      module: "AUTH",
-      action: "REFRESH_TOKEN",
-      description: "Làm mới phiên đăng nhập thành công.",
-      severity: "INFO",
-      status: "SUCCESS",
-      request: req,
-    });
-
     sendSuccess(res, result, "Token refreshed successfully.");
   } catch (error) {
-    await createSystemLog({
-      module: "AUTH",
-      action: "REFRESH_TOKEN_FAILED",
-      description: "Làm mới phiên đăng nhập thất bại.",
-      severity: "SECURITY",
-      status: "FAILED",
-      request: req,
-    });
     next(error);
   }
 };
