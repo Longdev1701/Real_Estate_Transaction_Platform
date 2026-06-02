@@ -339,26 +339,6 @@ export const getAdminUsers = async ({
         status: true,
         createdAt: true,
         updatedAt: true,
-        posts: {
-          orderBy: {
-            createdAt: "desc",
-          },
-          take: 3,
-          select: {
-            id: true,
-            title: true,
-            status: true,
-            createdAt: true,
-          },
-        },
-        _count: {
-          select: {
-            posts: true,
-            reports: true,
-            comments: true,
-            savedPosts: true,
-          },
-        },
       },
     }),
     prisma.user.count({ where }),
@@ -456,6 +436,41 @@ export const getAdminUsers = async ({
   };
 };
 
+export const getAdminUserDetail = async (id: string) => {
+  return prisma.user.findUniqueOrThrow({
+    where: { id },
+    select: {
+      id: true,
+      email: true,
+      fullName: true,
+      phone: true,
+      avatarUrl: true,
+      role: true,
+      status: true,
+      createdAt: true,
+      updatedAt: true,
+      posts: {
+        orderBy: { createdAt: "desc" },
+        take: 3,
+        select: {
+          id: true,
+          title: true,
+          status: true,
+          createdAt: true,
+        },
+      },
+      _count: {
+        select: {
+          posts: true,
+          reports: true,
+          comments: true,
+          savedPosts: true,
+        },
+      },
+    },
+  });
+};
+
 export const updateAdminUser = async (
   id: string,
   input: {
@@ -541,6 +556,7 @@ export const getAdminPosts = async ({
 
   if (keyword) {
     where.OR = [
+      { id: { contains: keyword, mode: "insensitive" } },
       { title: { contains: keyword, mode: "insensitive" } },
       { description: { contains: keyword, mode: "insensitive" } },
       { address: { contains: keyword, mode: "insensitive" } },
