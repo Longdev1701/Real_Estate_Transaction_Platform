@@ -41,6 +41,7 @@ export type AdminDashboardData = {
 export type AdminUserRole = "USER" | "ADMIN";
 export type AdminUserStatus = "ACTIVE" | "BANNED";
 export type AdminPostStatus = "ACTIVE" | "HIDDEN" | "BANNED";
+export type AdminReportStatus = "PENDING" | "RESOLVED" | "REJECTED";
 
 export type AdminUser = {
   id: string;
@@ -185,6 +186,66 @@ export type AdminPostsData = {
   };
 };
 
+export type AdminReport = {
+  id: string;
+  reason: string;
+  description?: string | null;
+  status: AdminReportStatus;
+  createdAt: string;
+  resolvedAt?: string | null;
+  reporter: {
+    id: string;
+    fullName: string;
+    email: string;
+    avatarUrl?: string | null;
+  };
+  post: {
+    id: string;
+    title: string;
+    status: AdminPostStatus;
+    price: number;
+    address: string;
+    city: string;
+    district: string;
+    createdAt: string;
+    author: {
+      id: string;
+      fullName: string;
+      email: string;
+      avatarUrl?: string | null;
+    };
+    images: {
+      id: string;
+      imageUrl: string;
+      order: number;
+    }[];
+  };
+};
+
+export type AdminReportsFilter = {
+  page: number;
+  limit: number;
+  status: "" | AdminReportStatus;
+};
+
+export type AdminReportsData = {
+  items: AdminReport[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasMore: boolean;
+  };
+};
+
+export type AdminReportsStats = {
+  total: number;
+  pending: number;
+  resolved: number;
+  rejected: number;
+};
+
 export const getAdminDashboard = async () => {
   const response = await api.get<{ data: AdminDashboardData }>("/admin/dashboard");
   return response.data.data;
@@ -207,9 +268,7 @@ export const getAdminUsers = async (filter: AdminUsersFilter) => {
     params.set("status", filter.status);
   }
 
-  const response = await api.get<{ data: AdminUsersData }>(
-    `/admin/users?${params.toString()}`,
-  );
+  const response = await api.get<{ data: AdminUsersData }>(`/admin/users?${params.toString()}`);
   return response.data.data;
 };
 
@@ -220,10 +279,7 @@ export const updateAdminUser = async (
     status?: AdminUserStatus;
   },
 ) => {
-  const response = await api.patch<{ data: AdminUser }>(
-    `/admin/users/${userId}`,
-    input,
-  );
+  const response = await api.patch<{ data: AdminUser }>(`/admin/users/${userId}`, input);
   return response.data.data;
 };
 
@@ -243,16 +299,50 @@ export const getAdminPosts = async (filter: AdminPostsFilter) => {
     }
   });
 
-  const response = await api.get<{ data: AdminPostsData }>(
-    `/admin/posts?${params.toString()}`,
-  );
+  const response = await api.get<{ data: AdminPostsData }>(`/admin/posts?${params.toString()}`);
   return response.data.data;
 };
 
-export const updateAdminPostStatus = async (
-  postId: string,
-  status: AdminPostStatus,
-) => {
+export const updateAdminPostStatus = async (postId: string, status: AdminPostStatus) => {
   const response = await api.patch(`/posts/${postId}`, { status });
   return response.data.data;
+};
+
+export const getAdminReports = async (filter: AdminReportsFilter) => {
+  const params = new URLSearchParams();
+  params.set("page", String(filter.page));
+  params.set("limit", String(filter.limit));
+
+  if (filter.status) {
+    params.set("status", filter.status);
+  }
+
+  const response = await api.get<{ data: AdminReportsData }>(`/reports?${params.toString()}`);
+  return response.data.data;
+};
+
+export const getAdminReportsStats = async (): Promise<AdminReportsStats> => {
+  const [all, pending, resolved, rejected] = await Promise.all([
+    getAdminReports({ page: 1, limit: 1, status: "" }),
+    getAdminReports({ page: 1, limit: 1, status: "PENDING" }),
+    getAdminReports({ page: 1, limit: 1, status: "RESOLVED" }),
+    getAdminReports({ page: 1, limit: 1, status: "REJECTED" }),
+  ]);
+
+  return {
+    total: all.meta.total,
+    pending: pending.meta.total,
+    resolved: resolved.meta.total,
+    rejected: rejected.meta.total,
+  };
+};
+
+export const resolveAdminReport = async (
+  reportId: string,
+  status: Extract<AdminReportStatus, "RESOLVED" | "REJECTED">,
+) => {
+  const response = await api.patch<{ data: { report: AdminReport } }>(`/reports/${reportId}`, {
+    status,
+  });
+  return response.data.data.report;
 };

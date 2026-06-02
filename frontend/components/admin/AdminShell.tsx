@@ -2,24 +2,19 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
-  Activity,
+  ArrowLeft,
   BarChart3,
-  Bell,
-  ChevronDown,
   ClipboardList,
   Home,
   Menu,
   Plus,
-  Settings,
   ShieldCheck,
   Users,
 } from "lucide-react";
 
 import { useAuthStore } from "@/stores/auth.store";
-
-const SIDEBAR_WIDTH = 224;
 
 const navItems = [
   { href: "/admin", label: "Tổng quan", icon: Home },
@@ -28,6 +23,9 @@ const navItems = [
   { href: "/admin/reports", label: "Báo cáo", icon: BarChart3 },
   { href: "/admin/logs", label: "Nhật ký hệ thống", icon: ShieldCheck },
 ];
+
+const isActivePath = (pathname: string, href: string) =>
+  href === "/admin" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 
 export function AdminShell({
   title,
@@ -43,6 +41,7 @@ export function AdminShell({
   const pathname = usePathname();
   const router = useRouter();
   const { user, hasHydrated } = useAuthStore();
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (!hasHydrated) return;
@@ -55,6 +54,10 @@ export function AdminShell({
     }
   }, [hasHydrated, router, user]);
 
+  useEffect(() => {
+    setMobileSidebarOpen(false);
+  }, [pathname]);
+
   if (!hasHydrated || !user || user.role !== "ADMIN") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#020817] text-blue-100">
@@ -66,13 +69,24 @@ export function AdminShell({
   return (
     <div className="min-h-screen bg-[#020817] text-white">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_12%_8%,rgba(37,99,235,0.25),transparent_28%),radial-gradient(circle_at_86%_10%,rgba(14,165,233,0.18),transparent_26%),linear-gradient(180deg,#020817,#071426_54%,#020817)]" />
+
+      {mobileSidebarOpen ? (
+        <button
+          type="button"
+          aria-label="Đóng điều hướng"
+          className="fixed inset-0 z-30 bg-slate-950/70 lg:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      ) : null}
+
       <div className="relative min-h-screen">
         <aside
-          className="fixed inset-y-0 left-0 z-30 hidden overflow-hidden border-r border-blue-400/20 bg-slate-950/68 shadow-[0_0_48px_rgba(37,99,235,0.18)] backdrop-blur-xl lg:flex lg:flex-col"
-          style={{ width: SIDEBAR_WIDTH }}
+          className={`fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-blue-400/20 bg-slate-950/85 backdrop-blur-xl transition-transform lg:w-56 ${
+            mobileSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+          }`}
         >
           <div className="flex h-20 items-center gap-3 px-5">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-blue-400/50 bg-blue-500/10 text-blue-300 shadow-[0_0_24px_rgba(59,130,246,0.6)]">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-blue-400/50 bg-blue-500/10 text-blue-200 shadow-[0_0_24px_rgba(59,130,246,0.6)]">
               <BuildingGlyph />
             </div>
             <div className="min-w-0">
@@ -83,8 +97,9 @@ export function AdminShell({
 
           <nav className="space-y-2 px-3 py-4">
             {navItems.map((item) => {
-              const active = pathname === item.href;
+              const active = isActivePath(pathname, item.href);
               const Icon = item.icon;
+
               return (
                 <Link
                   key={item.href}
@@ -100,64 +115,58 @@ export function AdminShell({
                 </Link>
               );
             })}
+
+            <Link
+              href="/"
+              className="mt-4 flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-medium text-gray-300 transition hover:border-blue-400/25 hover:bg-blue-500/10 hover:text-white"
+            >
+              <ArrowLeft className="h-5 w-5 shrink-0 text-blue-200" />
+              <span className="truncate">Về trang khách</span>
+            </Link>
           </nav>
 
-          <div className="mx-3 mt-auto rounded-2xl border border-blue-400/20 bg-blue-950/25 p-4 shadow-[0_0_30px_rgba(37,99,235,0.16)]">
-            <div className="mb-3 flex items-center gap-2">
-              <Activity className="h-4 w-4 text-cyan-300" />
-              <p className="text-sm font-semibold">Hoạt động hôm nay</p>
+          <div className="mx-3 mb-3 mt-auto rounded-2xl border border-blue-400/20 bg-blue-950/25 p-4 shadow-[0_0_48px_rgba(37,99,235,0.18)]">
+            <div className="flex items-center gap-2">
+              <AdminAvatar name={user.name} className="border-blue-300/30 bg-blue-500/15 text-blue-100" />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-white">{getPrimaryName(user.name)}</p>
+                <p className="text-xs text-gray-400">Quản trị viên</p>
+              </div>
             </div>
-            <div className="space-y-2 text-xs">
-              <StatusMetric label="Bài đăng mới" value="Live" tone="blue" />
-              <StatusMetric label="User mới" value="Sync" tone="green" />
-              <StatusMetric label="Report mới" value="Watch" tone="amber" />
-            </div>
-          </div>
-
-          <div className="m-3 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">
-            <AdminAvatar name={user.name} />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold">{user.name}</p>
-              <p className="text-xs text-gray-400">Quản trị viên</p>
-            </div>
-            <ChevronDown className="h-4 w-4 text-gray-400" />
           </div>
         </aside>
 
         <section className="min-w-0 lg:pl-56">
           <header className="sticky top-0 z-20 flex min-h-20 items-center justify-between gap-5 border-b border-blue-400/20 bg-slate-950/70 px-4 py-4 backdrop-blur-xl md:px-6">
             <div className="flex min-w-0 items-center gap-4">
-              <button className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 lg:hidden">
+              <button
+                type="button"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 lg:hidden"
+                onClick={() => setMobileSidebarOpen(true)}
+              >
                 <Menu className="h-5 w-5" />
               </button>
               <div className="min-w-0">
                 <h1 className="text-2xl font-bold md:text-3xl">{title}</h1>
-                {subtitle && (
+                {subtitle ? (
                   <p className="mt-1.5 hidden max-w-3xl text-sm leading-6 text-gray-300 md:block">
                     {subtitle}
                   </p>
-                )}
+                ) : null}
               </div>
             </div>
 
             <div className="ml-auto flex shrink-0 items-center gap-3">
               {action}
-              <button className="relative inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 transition hover:bg-blue-500/10">
-                <Bell className="h-5 w-5" />
-                <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-red-500 px-1 text-[10px] font-bold">
-                  5
-                </span>
-              </button>
-              <button className="hidden h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 transition hover:bg-blue-500/10 md:inline-flex">
-                <Settings className="h-5 w-5" />
-              </button>
               <div className="hidden items-center gap-3 border-l border-white/10 pl-4 md:flex">
-                <AdminAvatar name={user.name} />
+                <AdminAvatar
+                  name={user.name}
+                  className="border-blue-300/30 bg-blue-500/15 text-blue-100"
+                />
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold">Admin</p>
+                  <p className="text-sm font-semibold">{getPrimaryName(user.name)}</p>
                   <p className="text-xs text-gray-400">Quản trị viên</p>
                 </div>
-                <ChevronDown className="h-4 w-4 text-gray-400" />
               </div>
             </div>
           </header>
@@ -224,7 +233,11 @@ export function StatCard({
           <p className={`${compact ? "mt-1 text-2xl" : "mt-2 text-3xl"} font-bold tracking-tight`}>
             {value}
           </p>
-          <p className={`${compact ? "mt-1.5 text-xs" : "mt-3 text-sm"} ${tone === "red" ? "text-red-300" : "text-emerald-300"}`}>
+          <p
+            className={`${compact ? "mt-1.5 text-xs" : "mt-3 text-sm"} ${
+              tone === "red" ? "text-red-300" : "text-emerald-300"
+            }`}
+          >
             {delta} <span className="text-gray-400">so với tháng trước</span>
           </p>
         </div>
@@ -271,45 +284,39 @@ function Sparkline({
   );
 }
 
-function StatusMetric({
-  label,
-  value,
-  tone,
+function AdminAvatar({
+  name,
+  className = "",
 }: {
-  label: string;
-  value: string;
-  tone: "blue" | "green" | "amber";
+  name?: string;
+  className?: string;
 }) {
-  const colors = {
-    blue: "bg-blue-400",
-    green: "bg-emerald-400",
-    amber: "bg-amber-400",
-  };
-
   return (
-    <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
-      <span className="text-gray-300">{label}</span>
-      <span className="inline-flex items-center gap-1.5 font-semibold text-white">
-        <span className={`h-1.5 w-1.5 rounded-full ${colors[tone]}`} />
-        {value}
-      </span>
+    <div
+      className={`grid h-10 w-10 shrink-0 place-items-center rounded-full border text-sm font-bold ${className}`}
+    >
+      {(name || "A").charAt(0).toUpperCase()}
     </div>
   );
 }
 
-function AdminAvatar({ name }: { name?: string }) {
-  return (
-    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-blue-300/30 bg-blue-500/15 text-sm font-bold text-blue-100">
-      {(name || "A").charAt(0).toUpperCase()}
-    </div>
-  );
+function getPrimaryName(name?: string) {
+  const trimmed = name?.trim();
+  if (!trimmed) return "Admin";
+
+  const parts = trimmed.split(/\s+/);
+  return parts.length > 1 ? parts.slice(-2).join(" ") : parts[0];
 }
 
 function BuildingGlyph() {
   return (
     <svg viewBox="0 0 32 32" className="h-8 w-8" fill="none">
       <path d="M6 27V11l8-5v21M14 27V3l12 7v17" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M9 14h2M9 19h2M18 10h2M18 15h2M18 20h2M23 13h2M23 18h2" stroke="currentColor" strokeWidth="1.4" />
+      <path
+        d="M9 14h2M9 19h2M18 10h2M18 15h2M18 20h2M23 13h2M23 18h2"
+        stroke="currentColor"
+        strokeWidth="1.4"
+      />
     </svg>
   );
 }
