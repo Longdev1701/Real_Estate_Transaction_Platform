@@ -93,14 +93,14 @@ const parseImages = (content: string): string[] => {
 };
 
 function formatPrice(value: number) {
-  if (value >= 1000) return `${(value / 1000).toFixed(1)} t?`;
-  return `${value} tri?u`;
+  if (value >= 1000) return `${(value / 1000).toFixed(1)} tỉ`;
+  return `${value} triệu`;
 }
 
 function formatMessageDayLabel(value: string) {
   const date = new Date(value);
-  if (isToday(date)) return `H?m nay, ${format(date, "dd/MM", { locale: vi })}`;
-  if (isYesterday(date)) return `H?m qua, ${format(date, "dd/MM", { locale: vi })}`;
+  if (isToday(date)) return `Hôm nay, ${format(date, "dd/MM", { locale: vi })}`;
+  if (isYesterday(date)) return `Hôm qua, ${format(date, "dd/MM", { locale: vi })}`;
   return format(date, "dd/MM/yyyy", { locale: vi });
 }
 
@@ -109,7 +109,7 @@ function formatMessageTime(value: string) {
 }
 
 function getFileLabel(index: number) {
-  return `H?nh ?nh ${String(index + 1).padStart(2, "0")}`;
+  return `Hình ảnh ${String(index + 1).padStart(2, "0")}`;
 }
 
 function getMessagesCacheKey(conversationId: string) {
@@ -1528,7 +1528,7 @@ const MessageBubble = memo(({
                     {imageUrls.length === 1 ? (
                       <ChatImageTile
                         src={imageUrls[0]}
-                        alt="?nh ?? g?i"
+                        alt="ảnh đã gửi"
                         onClick={() => setLightboxImage(imageUrls[0])}
                         wrapperClassName="relative block w-full overflow-hidden rounded-[24px] bg-slate-900"
                         className="h-full w-full object-cover transition hover:scale-[1.01]"
@@ -1545,7 +1545,7 @@ const MessageBubble = memo(({
                           >
                             <FallbackMedia
                               src={url}
-                              alt="Anh da gui"
+                              alt="Ảnh đã gửi"
                               className="h-full w-full object-cover transition hover:scale-[1.01]"
                               wrapperClassName="h-full w-full"
                             />
@@ -1570,7 +1570,7 @@ const MessageBubble = memo(({
                     <p className="whitespace-pre-wrap break-words text-[14px] leading-6">{message.content}</p>
                     {message.isOptimistic && (
                       <p className={`text-[11px] ${isMine ? "text-blue-100/80" : "text-slate-400"}`}>
-                        ?ang g?i...
+                        Đang gửi...
                       </p>
                     )}
                   </div>
