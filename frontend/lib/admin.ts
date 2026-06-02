@@ -41,8 +41,18 @@ export type AdminDashboardData = {
 export type AdminUserRole = "USER" | "ADMIN";
 export type AdminUserStatus = "ACTIVE" | "BANNED";
 export type AdminPostStatus = "ACTIVE" | "HIDDEN" | "BANNED";
+export type AdminSystemLogModule =
+  | "AUTH"
+  | "USER"
+  | "POST"
+  | "REPORT"
+  | "ADMIN"
+  | "SYSTEM"
+  | "STORAGE";
+export type AdminLogSeverity = "INFO" | "WARNING" | "SECURITY" | "ERROR";
+export type AdminLogStatus = "SUCCESS" | "FAILED" | "BLOCKED";
 
-export type AdminUser = {
+export type AdminUserListItem = {
   id: string;
   email: string;
   fullName: string;
@@ -52,6 +62,9 @@ export type AdminUser = {
   status: AdminUserStatus;
   createdAt: string;
   updatedAt: string;
+};
+
+export type AdminUser = AdminUserListItem & {
   posts: {
     id: string;
     title: string;
@@ -75,7 +88,7 @@ export type AdminUsersFilter = {
 };
 
 export type AdminUsersData = {
-  items: AdminUser[];
+  items: AdminUserListItem[];
   stats: {
     totalUsers: {
       total: number;
@@ -213,6 +226,55 @@ export const getAdminUsers = async (filter: AdminUsersFilter) => {
   return response.data.data;
 };
 
+export type AdminSystemLog = {
+  id: string;
+  actorId?: string | null;
+  module: AdminSystemLogModule;
+  action: string;
+  targetType: string;
+  targetId: string;
+  description?: string | null;
+  severity: AdminLogSeverity;
+  status: AdminLogStatus;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  metadata?: Record<string, string | number | boolean | null> | null;
+  createdAt: string;
+  actor?: {
+    id: string;
+    fullName: string;
+    email: string;
+    role: AdminUserRole;
+    avatarUrl?: string | null;
+  } | null;
+};
+
+export type AdminSystemLogsFilter = {
+  page: number;
+  limit: number;
+  keyword: string;
+  module: string;
+  severity: string;
+  dateFrom: string;
+  dateTo: string;
+};
+
+export type AdminSystemLogsData = {
+  items: AdminSystemLog[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasMore: boolean;
+  };
+};
+
+export const getAdminUserDetail = async (userId: string) => {
+  const response = await api.get<{ data: AdminUser }>(`/admin/users/${userId}`);
+  return response.data.data;
+};
+
 export const updateAdminUser = async (
   userId: string,
   input: {
@@ -254,5 +316,36 @@ export const updateAdminPostStatus = async (
   status: AdminPostStatus,
 ) => {
   const response = await api.patch(`/posts/${postId}`, { status });
+  return response.data.data;
+};
+
+export const getAdminSystemLogs = async (filter: AdminSystemLogsFilter) => {
+  const params = new URLSearchParams();
+  params.set("page", String(filter.page));
+  params.set("limit", String(filter.limit));
+
+  if (filter.keyword.trim()) {
+    params.set("keyword", filter.keyword.trim());
+  }
+
+  if (filter.module.trim()) {
+    params.set("module", filter.module.trim());
+  }
+
+  if (filter.severity.trim()) {
+    params.set("severity", filter.severity.trim());
+  }
+
+  if (filter.dateFrom) {
+    params.set("dateFrom", filter.dateFrom);
+  }
+
+  if (filter.dateTo) {
+    params.set("dateTo", filter.dateTo);
+  }
+
+  const response = await api.get<{ data: AdminSystemLogsData }>(
+    `/admin/logs?${params.toString()}`,
+  );
   return response.data.data;
 };

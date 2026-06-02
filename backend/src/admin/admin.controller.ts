@@ -10,10 +10,12 @@ import {
 import {
   getAdminDashboard,
   getAdminPosts,
+  getAdminUserDetail,
   getAdminUsers,
   updateAdminUser,
 } from "./admin.service.js";
 import { sendSuccess } from "../utils/response.js";
+import { createSystemLog } from "../utils/system-log.helper.js";
 
 export const getAdminDashboardController: RequestHandler = async (
   _req,
@@ -121,20 +123,71 @@ export const getAdminUsersController: RequestHandler = async (
   }
 };
 
+export const getAdminUserDetailController: RequestHandler = async (
+  req,
+  res,
+  next,
+) => {
+  try {
+    const result = await getAdminUserDetail(String(req.params.id));
+    sendSuccess(res, result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const updateAdminUserController: RequestHandler = async (
   req,
   res,
   next,
 ) => {
   try {
+    const nextRole = parseUserRole(req.body.role);
+    const nextStatus = parseUserStatus(req.body.status);
     const result = await updateAdminUser(
       String(req.params.id),
       {
-        role: parseUserRole(req.body.role),
-        status: parseUserStatus(req.body.status),
+        role: nextRole,
+        status: nextStatus,
       },
       req.user!.id,
     );
+
+    if (nextRole) {
+      await createSystemLog({
+        module: "USER",
+        actorId: req.user!.id,
+        action: "UPDATE_USER_ROLE",
+        targetType: "User",
+        targetId: String(req.params.id),
+        description: `Quản trị viên đã cập nhật vai trò của người dùng #${req.params.id} thành ${nextRole}.`,
+        severity: "SECURITY",
+        status: "SUCCESS",
+        request: req,
+        metadata: {
+          targetUserId: String(req.params.id),
+          role: nextRole,
+        },
+      });
+    }
+
+    if (nextStatus) {
+      await createSystemLog({
+        module: "USER",
+        actorId: req.user!.id,
+        action: nextStatus === UserStatus.BANNED ? "BAN_USER" : "ACTIVATE_USER",
+        targetType: "User",
+        targetId: String(req.params.id),
+        description: `Quản trị viên đã cập nhật trạng thái của người dùng #${req.params.id} thành ${nextStatus}.`,
+        severity: nextStatus === UserStatus.BANNED ? "WARNING" : "INFO",
+        status: "SUCCESS",
+        request: req,
+        metadata: {
+          targetUserId: String(req.params.id),
+          status: nextStatus,
+        },
+      });
+    }
 
     sendSuccess(res, result, "User updated successfully.");
   } catch (error) {
