@@ -87,7 +87,7 @@ export function Header() {
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 shadow-lg shadow-blue-500/20">
               T
             </span>
-            <span>TrustEstate</span>
+            Trust<span className="text-blue-400">Estate</span>
           </Link>
 
           <nav className="hidden items-center gap-6 text-sm font-medium text-gray-300 md:flex">
@@ -106,9 +106,8 @@ export function Header() {
         <div className="flex items-center gap-4">
           <Link
             href={user ? "/notifications" : "/auth/login"}
-            className={`relative p-2 transition-colors ${
-              pathname === "/notifications" ? "text-blue-300" : "text-gray-400 hover:text-white"
-            }`}
+            className={`relative p-2 transition-colors ${pathname === "/notifications" ? "text-blue-300" : "text-gray-400 hover:text-white"
+              }`}
             aria-label="Thông báo"
           >
             <Bell size={20} />

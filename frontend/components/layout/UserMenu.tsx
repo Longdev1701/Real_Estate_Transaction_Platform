@@ -69,7 +69,7 @@ export function UserMenu() {
             onClick={() => setIsOpen(false)}
           >
             <UserIcon size={16} />
-            <span>Profile</span>
+            <span>Hồ sơ</span>
           </Link>
           <Link
             href="/profile/posts"
@@ -77,7 +77,7 @@ export function UserMenu() {
             onClick={() => setIsOpen(false)}
           >
             <List size={16} />
-            <span>My Posts</span>
+            <span>Bài đăng của tôi</span>
           </Link>
           <Link
             href="/profile/saved"
@@ -85,7 +85,7 @@ export function UserMenu() {
             onClick={() => setIsOpen(false)}
           >
             <Bookmark size={16} />
-            <span>Saved Posts</span>
+            <span>Bài đăng đã lưu</span>
           </Link>
           {user.role === "ADMIN" && (
             <Link
@@ -94,7 +94,7 @@ export function UserMenu() {
               onClick={() => setIsOpen(false)}
             >
               <LayoutDashboard size={16} />
-              <span>Admin</span>
+              <span>Quản trị</span>
             </Link>
           )}
           <div className="h-px bg-white/10 my-1"></div>
@@ -104,7 +104,7 @@ export function UserMenu() {
             className="w-full text-left flex items-center gap-3 px-4 py-2 hover:bg-white/10 transition-colors text-red-400 hover:text-red-300"
           >
             <LogOut size={16} />
-            <span>{isLoggingOut ? "Logging out..." : "Logout"}</span>
+            <span>{isLoggingOut ? "Đang đăng xuất..." : "Đăng xuất"}</span>
           </button>
         </div>
       )}
