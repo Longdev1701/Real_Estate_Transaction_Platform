@@ -1,19 +1,21 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   Ban,
+  CalendarDays,
   CheckCircle2,
   ClipboardList,
   Eye,
   EyeOff,
   Flag,
-  Pencil,
+  Mail,
+  MapPin,
+  Phone,
   RefreshCw,
   Search,
   ShieldAlert,
-  ShieldCheck,
+  X,
 } from "lucide-react";
 
 import { AdminShell, NeonCard, StatCard } from "@/components/admin/AdminShell";
@@ -39,15 +41,17 @@ const imageFallback =
 const numberFormatter = new Intl.NumberFormat("vi-VN");
 
 const statusLabels: Record<AdminPostStatus, string> = {
-  ACTIVE: "Đang hiển thị",
+  ACTIVE: "Đang hiện thị",
   HIDDEN: "Đã ẩn",
   BANNED: "Vi phạm",
 };
 
 const statusStyles: Record<AdminPostStatus, string> = {
-  ACTIVE: "border-emerald-400/30 bg-emerald-500/12 text-emerald-300 shadow-[0_0_18px_rgba(16,185,129,0.12)]",
+  ACTIVE:
+    "border-emerald-400/30 bg-emerald-500/12 text-emerald-300 shadow-[0_0_18px_rgba(16,185,129,0.12)]",
   HIDDEN: "border-slate-500/35 bg-slate-500/12 text-slate-300",
-  BANNED: "border-red-400/35 bg-red-500/12 text-red-300 shadow-[0_0_18px_rgba(239,68,68,0.12)]",
+  BANNED:
+    "border-red-400/35 bg-red-500/12 text-red-300 shadow-[0_0_18px_rgba(239,68,68,0.12)]",
 };
 
 const formatNumber = (value: number) => numberFormatter.format(value);
@@ -69,8 +73,32 @@ const formatDate = (value: string) => {
   });
 };
 
+const formatDateTime = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "--";
+  return date.toLocaleString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 const getLocation = (post: AdminPost) =>
   [post.district, post.city].filter(Boolean).join(", ") || post.address;
+
+const getFullAddress = (post: AdminPost) =>
+  [post.address, post.ward, post.district, post.city].filter(Boolean).join(", ");
+
+const buildPostPatch = (
+  post: AdminPost,
+  input: Partial<Pick<AdminPost, "status">>,
+): AdminPost => ({
+  ...post,
+  ...input,
+  updatedAt: new Date().toISOString(),
+});
 
 type StatusTab = "ALL" | "ACTIVE" | "BANNED" | "HIDDEN";
 
@@ -92,6 +120,7 @@ export default function AdminPostsPage() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [selectedPost, setSelectedPost] = useState<AdminPost | null>(null);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -118,7 +147,7 @@ export default function AdminPostsPage() {
         }
       } catch {
         if (!ignore) {
-          setError("Không thể tải danh sách bài đăng.");
+          setError("Khong the tai danh sach bai dang.");
         }
       } finally {
         if (!ignore) {
@@ -137,7 +166,11 @@ export default function AdminPostsPage() {
   const tabs = useMemo(
     () => [
       { key: "ALL" as const, label: "Tất cả", count: data?.stats.totalPosts.total ?? 0 },
-      { key: "ACTIVE" as const, label: "Đang hiển thị", count: data?.stats.activePosts.total ?? 0 },
+      {
+        key: "ACTIVE" as const,
+        label: "Đang hiện thị",
+        count: data?.stats.activePosts.total ?? 0,
+      },
       { key: "BANNED" as const, label: "Vi phạm", count: data?.stats.bannedPosts.total ?? 0 },
       { key: "HIDDEN" as const, label: "Đã ẩn", count: data?.stats.hiddenPosts.total ?? 0 },
     ],
@@ -169,18 +202,43 @@ export default function AdminPostsPage() {
     }));
   };
 
+  const syncPost = (patchedPost: AdminPost) => {
+    setData((current) =>
+      current
+        ? {
+            ...current,
+            items: current.items.map((item) =>
+              item.id === patchedPost.id ? patchedPost : item,
+            ),
+          }
+        : current,
+    );
+    setSelectedPost((current) =>
+      current?.id === patchedPost.id ? patchedPost : current,
+    );
+  };
+
   const updateStatus = async (post: AdminPost, status: AdminPostStatus) => {
     if (isUpdating || post.status === status) return;
 
     try {
       setIsUpdating(true);
       await updateAdminPostStatus(post.id, status);
+      syncPost(buildPostPatch(post, { status }));
       setRefreshKey((current) => current + 1);
     } catch {
-      setError("Không thể cập nhật trạng thái bài đăng.");
+      setError("Khong the cap nhat trang thai bai dang.");
     } finally {
       setIsUpdating(false);
     }
+  };
+
+  const openDetail = (post: AdminPost) => {
+    setSelectedPost(post);
+  };
+
+  const closeDrawer = () => {
+    setSelectedPost(null);
   };
 
   return (
@@ -207,7 +265,7 @@ export default function AdminPostsPage() {
           <StatCard
             compact
             icon={Flag}
-            title="Report chờ xử lý"
+            title="Report cho xử lý"
             value={isLoading ? "..." : formatNumber(data?.stats.pendingReports.total ?? 0)}
             delta={isLoading ? "..." : formatDelta(data?.stats.pendingReports.deltaPercent ?? 0)}
             tone="orange"
@@ -215,7 +273,7 @@ export default function AdminPostsPage() {
           <StatCard
             compact
             icon={CheckCircle2}
-            title="Đang hiển thị"
+            title="Đang hiện thị"
             value={isLoading ? "..." : formatNumber(data?.stats.activePosts.total ?? 0)}
             delta={isLoading ? "..." : formatDelta(data?.stats.activePosts.deltaPercent ?? 0)}
             tone="green"
@@ -227,7 +285,10 @@ export default function AdminPostsPage() {
             value={
               isLoading
                 ? "..."
-                : formatNumber((data?.stats.hiddenPosts.total ?? 0) + (data?.stats.bannedPosts.total ?? 0))
+                : formatNumber(
+                    (data?.stats.hiddenPosts.total ?? 0) +
+                      (data?.stats.bannedPosts.total ?? 0),
+                  )
             }
             delta={isLoading ? "..." : formatDelta(data?.stats.bannedPosts.deltaPercent ?? 0)}
             tone="red"
@@ -258,7 +319,7 @@ export default function AdminPostsPage() {
               }}
               options={[
                 { value: "", label: "Trạng thái" },
-                { value: "ACTIVE", label: "Đang hiển thị" },
+                { value: "ACTIVE", label: "Đang hiện thị" },
                 { value: "HIDDEN", label: "Đã ẩn" },
                 { value: "BANNED", label: "Vi phạm" },
               ]}
@@ -274,7 +335,7 @@ export default function AdminPostsPage() {
                 }))
               }
               options={[
-                { value: "", label: "Loại BĐS" },
+                { value: "", label: "Loại BDS" },
                 ...PROPERTY_TYPES.map((type) => ({
                   value: type,
                   label: propertyTypeLabels[type],
@@ -366,7 +427,7 @@ export default function AdminPostsPage() {
           <div className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,0.85fr)_minmax(0,0.6fr)_minmax(0,0.7fr)_minmax(0,0.9fr)_110px_125px_136px] border-b border-white/10 px-3 py-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
             <div>Bài đăng</div>
             <div>Người đăng</div>
-            <div>Loại BĐS</div>
+            <div>Loại BDS</div>
             <div>Giá</div>
             <div>Vị trí</div>
             <div>Ngày đăng</div>
@@ -376,7 +437,9 @@ export default function AdminPostsPage() {
 
           <div className="divide-y divide-white/5">
             {isLoading && (
-              <div className="px-5 py-10 text-center text-sm text-gray-400">Đang tải bài đăng...</div>
+              <div className="px-5 py-10 text-center text-sm text-gray-400">
+                Đang tải bài đăng...
+              </div>
             )}
 
             {!isLoading && !data?.items.length && (
@@ -391,6 +454,7 @@ export default function AdminPostsPage() {
                   key={post.id}
                   post={post}
                   isUpdating={isUpdating}
+                  onOpenDetail={openDetail}
                   onUpdateStatus={updateStatus}
                 />
               ))}
@@ -419,6 +483,15 @@ export default function AdminPostsPage() {
           </div>
         </NeonCard>
       </div>
+
+      {selectedPost && (
+        <PostDetailDrawer
+          post={selectedPost}
+          isUpdating={isUpdating}
+          onClose={closeDrawer}
+          onUpdateStatus={updateStatus}
+        />
+      )}
     </AdminShell>
   );
 }
@@ -426,14 +499,14 @@ export default function AdminPostsPage() {
 function PostRow({
   post,
   isUpdating,
+  onOpenDetail,
   onUpdateStatus,
 }: {
   post: AdminPost;
   isUpdating: boolean;
+  onOpenDetail: (post: AdminPost) => void;
   onUpdateStatus: (post: AdminPost, status: AdminPostStatus) => void;
 }) {
-  const postedDate = formatDate(post.createdAt);
-
   return (
     <div className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,0.85fr)_minmax(0,0.6fr)_minmax(0,0.7fr)_minmax(0,0.9fr)_110px_125px_136px] items-center gap-0 px-3 py-3 text-sm text-gray-200 transition hover:bg-blue-500/[0.04]">
       <div className="flex min-w-0 items-center gap-3 pr-3">
@@ -454,19 +527,24 @@ function PostRow({
         <p className="mt-1 truncate text-xs text-gray-500">{post.author.email}</p>
       </div>
 
-      <div className="line-clamp-2 pr-3 text-gray-300">{propertyTypeLabels[post.propertyType]}</div>
-      <div className="break-words pr-3 font-semibold leading-5 text-blue-100">{formatPrice(post.price)}</div>
+      <div className="line-clamp-2 pr-3 text-gray-300">
+        {propertyTypeLabels[post.propertyType]}
+      </div>
+      <div className="break-words pr-3 font-semibold leading-5 text-blue-100">
+        {formatPrice(post.price)}
+      </div>
       <div className="line-clamp-2 pr-3 text-gray-300">{getLocation(post)}</div>
-      <div className="pr-3 text-gray-300">{postedDate}</div>
+      <div className="pr-3 text-gray-300">{formatDate(post.createdAt)}</div>
       <StatusBadge status={post.status} />
 
       <div className="flex justify-end gap-1">
-        <ActionLink href={`/posts/${post.id}`} title="Xem">
+        <ActionButton
+          title="Xem chi tiet"
+          className="border-white/10 bg-white/5 text-gray-200 hover:border-blue-300/30 hover:bg-blue-500/15 hover:text-blue-100"
+          onClick={() => onOpenDetail(post)}
+        >
           <Eye className="h-3.5 w-3.5" />
-        </ActionLink>
-        <ActionLink href={`/posts/${post.id}/edit`} title="Chỉnh sửa">
-          <Pencil className="h-3.5 w-3.5" />
-        </ActionLink>
+        </ActionButton>
         <ActionButton
           title="Đánh dấu vi phạm"
           disabled={isUpdating}
@@ -488,6 +566,192 @@ function PostRow({
   );
 }
 
+function PostDetailDrawer({
+  post,
+  isUpdating,
+  onClose,
+  onUpdateStatus,
+}: {
+  post: AdminPost;
+  isUpdating: boolean;
+  onClose: () => void;
+  onUpdateStatus: (post: AdminPost, status: AdminPostStatus) => void;
+}) {
+  const canActivate = post.status !== "ACTIVE";
+  const canHide = post.status !== "HIDDEN";
+  const canBan = post.status !== "BANNED";
+
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/55 backdrop-blur-sm">
+      <aside className="h-full w-full max-w-[520px] overflow-y-auto border-l border-blue-300/20 bg-[#061225]/95 p-5 shadow-[0_0_60px_rgba(37,99,235,0.22)]">
+        <div className="mb-5 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold">Chi tiết bài đăng</h2>
+            <p className="text-sm text-gray-400">Mã bài đăng #{post.id.slice(-6).toUpperCase()}</p>
+          </div>
+          <button
+            className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 bg-white/5 text-gray-300 hover:bg-white/10"
+            onClick={onClose}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <NeonCard className="overflow-hidden p-0">
+          <img
+            src={post.images[0]?.imageUrl ?? imageFallback}
+            alt={post.title}
+            className="h-56 w-full object-cover"
+          />
+          <div className="p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="text-xl font-bold text-white">{post.title}</h3>
+                <p className="mt-1 text-sm text-blue-200">{postTypeLabels[post.postType]}</p>
+              </div>
+              <StatusBadge status={post.status} />
+            </div>
+
+            <p className="mt-4 text-2xl font-bold text-white">{formatPrice(post.price)}</p>
+            <p className="mt-1 text-sm text-gray-400">{post.area} m²</p>
+
+            <div className="mt-5 grid gap-3 text-sm">
+              <InfoRow icon={MapPin} label="Địa chỉ" value={getFullAddress(post)} />
+              <InfoRow
+                icon={ClipboardList}
+                label="Loại bất động sản"
+                value={propertyTypeLabels[post.propertyType]}
+              />
+              <InfoRow
+                icon={CalendarDays}
+                label="Ngày đăng"
+                value={formatDateTime(post.createdAt)}
+              />
+              <InfoRow
+                icon={CalendarDays}
+                label="Cập nhật cuối"
+                value={formatDateTime(post.updatedAt)}
+              />
+            </div>
+          </div>
+        </NeonCard>
+
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          <DrawerMetric label="Reports" value={post._count.reports} />
+          <DrawerMetric label="Comments" value={post._count.comments} />
+          <DrawerMetric label="Saved" value={post._count.savedBy} />
+        </div>
+
+        <NeonCard className="mt-4 p-4">
+          <h3 className="mb-3 font-semibold">Người đăng</h3>
+          <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
+            <p className="text-base font-semibold text-white">{post.author.fullName}</p>
+            <div className="mt-3 grid gap-3 text-sm">
+              <InfoRow icon={Mail} label="Email" value={post.author.email} />
+              <InfoRow
+                icon={Phone}
+                label="Số điện thoại"
+                value={post.author.phone || "Chưa cập nhật"}
+              />
+            </div>
+          </div>
+        </NeonCard>
+
+        <NeonCard className="mt-4 p-4">
+          <h3 className="mb-3 font-semibold">Mô tả bài đăng</h3>
+          <p className="whitespace-pre-wrap text-sm leading-6 text-gray-300">
+            {post.description || "Bài đăng chưa có mô tả."}
+          </p>
+        </NeonCard>
+
+        {post.images.length > 1 && (
+          <NeonCard className="mt-4 p-4">
+            <h3 className="mb-3 font-semibold">Hình ảnh khác</h3>
+            <div className="grid grid-cols-3 gap-2">
+              {post.images.slice(1).map((image) => (
+                <img
+                  key={image.id}
+                  src={image.imageUrl}
+                  alt={post.title}
+                  className="h-20 w-full rounded-xl border border-white/10 object-cover"
+                />
+              ))}
+            </div>
+          </NeonCard>
+        )}
+        <div className="mt-4 grid gap-2">
+          {canActivate && (
+            <button
+              disabled={isUpdating}
+              onClick={() => onUpdateStatus(post, "ACTIVE")}
+              className="h-11 rounded-xl border border-emerald-400/25 bg-emerald-500/10 font-semibold text-emerald-200 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Hiển thị lại bài đăng
+            </button>
+          )}
+
+          {canHide && (
+            <button
+              disabled={isUpdating}
+              onClick={() => onUpdateStatus(post, "HIDDEN")}
+              className="h-11 rounded-xl border border-amber-400/25 bg-amber-500/10 font-semibold text-amber-200 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Ẩn bài đăng
+            </button>
+          )}
+
+          {canBan && (
+            <button
+              disabled={isUpdating}
+              onClick={() => onUpdateStatus(post, "BANNED")}
+              className="h-11 rounded-xl border border-red-400/25 bg-red-500/10 font-semibold text-red-200 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Đánh dấu vi phạm
+            </button>
+          )}
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+function InfoRow({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof MapPin;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3">
+      <div className="mt-0.5 rounded-lg border border-blue-300/20 bg-blue-500/10 p-2 text-blue-200">
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
+        <p className="mt-1 text-sm text-gray-200">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function DrawerMetric({
+  label,
+  value,
+}: {
+  label: string;
+  value: number;
+}) {
+  return (
+    <NeonCard className="p-3 text-center">
+      <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
+      <p className="mt-2 text-lg font-bold text-white">{formatNumber(value)}</p>
+    </NeonCard>
+  );
+}
+
 function SelectBox({
   value,
   options,
@@ -499,7 +763,7 @@ function SelectBox({
 }) {
   return (
     <select
-      className="h-10 min-w-0 rounded-xl border border-blue-300/20 bg-slate-950/55 px-3 text-sm text-white outline-none"
+      className="h-11 min-w-0 rounded-xl border border-blue-300/20 bg-slate-950/55 px-3 text-sm text-white outline-none"
       value={value}
       onChange={(event) => onChange(event.target.value)}
     >
@@ -525,26 +789,6 @@ function StatusBadge({ status }: { status: AdminPostStatus }) {
   );
 }
 
-function ActionLink({
-  href,
-  title,
-  children,
-}: {
-  href: string;
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link
-      href={href}
-      title={title}
-      className="grid h-7 w-7 place-items-center rounded-lg border border-white/10 bg-white/5 text-gray-200 transition hover:border-blue-300/30 hover:bg-blue-500/15 hover:text-blue-100"
-    >
-      {children}
-    </Link>
-  );
-}
-
 function ActionButton({
   title,
   children,
@@ -553,7 +797,7 @@ function ActionButton({
   onClick,
 }: {
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
   className: string;
   disabled?: boolean;
   onClick?: () => void;
