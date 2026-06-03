@@ -30,6 +30,8 @@ import {
   type PropertyType,
 } from "@/lib/posts";
 
+import { CompareButton } from "@/components/post/CompareButton";
+
 const heroImage =
   "https://images.pexels.com/photos/313782/pexels-photo-313782.jpeg?auto=compress&cs=tinysrgb&w=2400";
 
@@ -101,6 +103,9 @@ function PropertyCard({ post, index }: { post: Post; index: number }) {
             {tag}
           </span>
         )}
+        <div className="absolute right-3 top-3 z-10">
+          <CompareButton post={post} />
+        </div>
       </div>
       <div className="p-4">
         <h3 className="line-clamp-2 min-h-12 font-semibold text-white">{post.title}</h3>
