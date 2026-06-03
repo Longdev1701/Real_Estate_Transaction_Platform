@@ -191,6 +191,7 @@ export function PostList() {
           setDraftFilter(state.draftFilter || defaultPostFilter);
           setActiveFilter(state.activeFilter || defaultPostFilter);
           setIsRestored(true);
+          setIsLoading(false);
 
           // Restore scroll position
           setTimeout(() => {
