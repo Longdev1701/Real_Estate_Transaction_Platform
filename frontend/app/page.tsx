@@ -32,6 +32,7 @@ import {
 
 import { CompareButton } from "@/components/post/CompareButton";
 import { HeroSlideshow } from "@/components/home/HeroSlideshow";
+import { CitySelect } from "@/components/home/CitySelect";
 
 const heroImage =
   "https://images.pexels.com/photos/313782/pexels-photo-313782.jpeg?auto=compress&cs=tinysrgb&w=2400";
@@ -195,7 +196,7 @@ export default async function HomePage() {
                 <MapPin className="h-5 w-5 shrink-0 text-gray-300" />
                 <span className="min-w-0 flex-1">
                   <span className="block text-xs text-gray-400">{"V\u1ecb tr\u00ed"}</span>
-                  <input name="city" className="mt-1 w-full bg-transparent text-sm font-medium text-white outline-none placeholder:text-gray-300" placeholder={"Nh\u1eadp t\u1ec9nh / th\u00e0nh ph\u1ed1"} />
+                  <CitySelect />
                 </span>
               </label>
 
