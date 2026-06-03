@@ -442,10 +442,16 @@ export function PostCard({ post }: { post: Post }) {
       </article>
 
       {isImageViewerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-3 backdrop-blur-sm md:p-6">
+        <div
+          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/95 p-4 backdrop-blur-md"
+          onClick={() => setIsImageViewerOpen(false)}
+        >
           <button
             type="button"
-            onClick={() => setIsImageViewerOpen(false)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsImageViewerOpen(false);
+            }}
             className="absolute right-4 top-4 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white transition hover:bg-white/20"
             aria-label="Đóng ảnh"
           >
@@ -456,7 +462,10 @@ export function PostCard({ post }: { post: Post }) {
             <>
               <button
                 type="button"
-                onClick={goToPreviousImage}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToPreviousImage();
+                }}
                 className="absolute left-4 top-1/2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white transition hover:bg-white/20"
                 aria-label="Ảnh trước"
               >
@@ -464,7 +473,10 @@ export function PostCard({ post }: { post: Post }) {
               </button>
               <button
                 type="button"
-                onClick={goToNextImage}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  goToNextImage();
+                }}
                 className="absolute right-4 top-1/2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white transition hover:bg-white/20"
                 aria-label="Ảnh tiếp theo"
               >
@@ -473,24 +485,32 @@ export function PostCard({ post }: { post: Post }) {
             </>
           )}
 
-          <div className="flex max-h-[92vh] w-full max-w-6xl flex-col items-center gap-4">
-            <img
-              src={activeImage}
-              alt={`${post.title} ${activeImageIndex + 1}`}
-              className="max-h-[78vh] max-w-full rounded-xl object-contain"
-            />
-            <div className="rounded-full bg-black/55 px-4 py-2 text-sm font-medium text-white">
+          <div
+            className="flex max-h-[90vh] w-full max-w-5xl flex-col items-center gap-4 px-12"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="relative flex flex-1 items-center justify-center overflow-hidden">
+              <img
+                src={activeImage}
+                alt={`${post.title} ${activeImageIndex + 1}`}
+                className="max-h-[60vh] md:max-h-[70vh] max-w-full rounded-xl object-contain shadow-2xl"
+              />
+            </div>
+            <div className="rounded-full bg-black/55 px-4 py-1.5 text-sm font-medium text-white ring-1 ring-white/10">
               {activeImageIndex + 1} / {images.length}
             </div>
             {images.length > 1 && (
-              <div className="scrollbar-hidden flex max-w-full gap-2 overflow-x-auto px-2">
+              <div className="scrollbar-hidden flex max-w-full gap-2 overflow-x-auto py-1">
                 {images.map((image, index) => (
                   <button
                     key={image.id}
                     type="button"
-                    onClick={() => setActiveImageIndex(index)}
-                    className={`h-14 w-24 shrink-0 overflow-hidden rounded-lg border transition ${
-                      activeImageIndex === index ? "border-blue-400 opacity-100" : "border-white/15 opacity-65 hover:opacity-100"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveImageIndex(index);
+                    }}
+                    className={`h-12 w-20 shrink-0 overflow-hidden rounded-lg border transition ${
+                      activeImageIndex === index ? "border-blue-400 scale-105 opacity-100" : "border-white/15 opacity-60 hover:opacity-100"
                     }`}
                   >
                     <img src={image.imageUrl} alt={`${post.title} ${index + 1}`} className="h-full w-full object-cover" />
@@ -503,8 +523,14 @@ export function PostCard({ post }: { post: Post }) {
       )}
 
       {isCommentOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-3 backdrop-blur-md md:p-6">
-          <div className="relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-blue-400/30 bg-[#061225] shadow-[0_30px_120px_rgba(0,0,0,0.65)]">
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/75 p-3 backdrop-blur-md md:p-6"
+          onClick={() => setIsCommentOpen(false)}
+        >
+          <div
+            className="relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-blue-400/30 bg-[#061225] shadow-[0_30px_120px_rgba(0,0,0,0.65)]"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-start justify-between gap-4 border-b border-white/10 px-4 py-4 md:px-5">
               <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-blue-300/30 bg-blue-500/10 text-sm font-semibold text-blue-100">
