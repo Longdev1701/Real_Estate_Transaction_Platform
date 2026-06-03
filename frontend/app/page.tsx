@@ -164,7 +164,18 @@ export default async function HomePage() {
   return (
     <div className="pb-14">
       <section className="relative min-h-[560px] overflow-hidden border-b border-blue-500/20">
-        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${heroImage})` }} />
+        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${heroImage})`, animation: "kenburns 40s ease-in-out infinite" }} />
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 h-full w-full object-cover"
+          style={{ animation: "kenburns 40s ease-in-out infinite" }}
+          poster={heroImage}
+        >
+          <source src="https://player.vimeo.com/external/434045526.sd.mp4?s=c27d2ab2d0d3d0f04e1302d96c77a3d3c8c6913e&profile_id=165&oauth2_token_id=57447761" type="video/mp4" />
+        </video>
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(2,6,23,0.96)_0%,rgba(2,6,23,0.82)_42%,rgba(2,6,23,0.48)_78%,rgba(2,6,23,0.72)_100%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(37,99,235,0.34),transparent_36%),radial-gradient(circle_at_76%_18%,rgba(14,165,233,0.18),transparent_32%)]" />
 
@@ -323,6 +334,18 @@ export default async function HomePage() {
             .hero-select option:checked {
               background-color: #1d4ed8;
               color: #ffffff;
+            }
+
+            @keyframes kenburns {
+              0% {
+                transform: scale(1.05) translate(0, 0);
+              }
+              50% {
+                transform: scale(1.15) translate(-1%, -0.5%);
+              }
+              100% {
+                transform: scale(1.05) translate(0, 0);
+              }
             }
           `,
         }}
