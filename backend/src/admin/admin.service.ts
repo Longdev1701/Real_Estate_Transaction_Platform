@@ -12,6 +12,8 @@ import { prisma } from "../prisma/prisma.service.js";
 
 
 
+const ADMIN_STATS_CACHE_TTL_MS = 60_000;
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 const startOfDay = (date: Date) =>
@@ -50,209 +52,312 @@ const makeDateKey = (date: Date) => date.toISOString().slice(0, 10);
 const makeViShortLabel = (date: Date) =>
   `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}`;
 
-const countByDay = async (
-  model: "user" | "propertyPost",
-  dates: Date[],
-  options?: {
-    where?: Record<string, unknown>;
-  },
-) => {
-  const result = await Promise.all(
-    dates.map(async (date) => {
-      const nextDate = addDays(date, 1);
-      const where = {
-        ...options?.where,
-        createdAt: {
-          gte: date,
-          lt: nextDate,
-        },
-      };
-
-      const count =
-        model === "user"
-          ? await prisma.user.count({ where })
-          : await prisma.propertyPost.count({ where });
-
-      return {
-        date: makeDateKey(date),
-        label: makeViShortLabel(date),
-        count,
-      };
-    }),
-  );
-
-  return result;
+type CachedValue<T> = {
+  expiresAt: number;
+  value: T;
 };
 
-export const getAdminDashboard = async () => {
-  const today = startOfDay(new Date());
-  const dates = Array.from({ length: 7 }, (_, index) =>
-    addDays(today, index - 6),
+type DailyCountRow = {
+  date: Date;
+  total: number;
+};
+
+type UserSummaryRow = {
+  total: number;
+  banned: number;
+  active: number;
+  admins: number;
+  currentMonth: number;
+  previousMonth: number;
+  activeCurrentMonth: number;
+  activePreviousMonth: number;
+  bannedCurrentMonth: number;
+  bannedPreviousMonth: number;
+  adminsCurrentMonth: number;
+  adminsPreviousMonth: number;
+  beforeRange: number;
+};
+
+type PostSummaryRow = {
+  total: number;
+  active: number;
+  hidden: number;
+  banned: number;
+  currentMonth: number;
+  previousMonth: number;
+  activeCurrentMonth: number;
+  activePreviousMonth: number;
+  hiddenCurrentMonth: number;
+  hiddenPreviousMonth: number;
+  bannedCurrentMonth: number;
+  bannedPreviousMonth: number;
+  activeBeforeRange: number;
+};
+
+type PendingReportSummaryRow = {
+  pending: number;
+  currentMonth: number;
+  previousMonth: number;
+};
+
+let dashboardCache: CachedValue<Awaited<ReturnType<typeof buildAdminDashboard>>> | null =
+  null;
+let adminUserStatsCache: CachedValue<
+  Awaited<ReturnType<typeof buildAdminUserStats>>
+> | null = null;
+let adminPostStatsCache: CachedValue<
+  Awaited<ReturnType<typeof buildAdminPostStats>>
+> | null = null;
+
+const getCachedValue = async <T>(
+  cache: CachedValue<T> | null,
+  builder: () => Promise<T>,
+  assign: (value: CachedValue<T>) => void,
+) => {
+  if (cache && cache.expiresAt > Date.now()) {
+    return cache.value;
+  }
+
+  const value = await builder();
+  assign({
+    value,
+    expiresAt: Date.now() + ADMIN_STATS_CACHE_TTL_MS,
+  });
+
+  return value;
+};
+
+const getDailyUserCounts = (rangeStart: Date, rangeEndExclusive: Date) =>
+  prisma.$queryRaw<DailyCountRow[]>`
+    SELECT
+      DATE("createdAt") AS "date",
+      COUNT(*)::int AS "total"
+    FROM "User"
+    WHERE "createdAt" >= ${rangeStart}
+      AND "createdAt" < ${rangeEndExclusive}
+    GROUP BY DATE("createdAt")
+    ORDER BY DATE("createdAt") ASC
+  `;
+
+const getDailyActivePostCounts = (rangeStart: Date, rangeEndExclusive: Date) =>
+  prisma.$queryRaw<DailyCountRow[]>`
+    SELECT
+      DATE("createdAt") AS "date",
+      COUNT(*)::int AS "total"
+    FROM "PropertyPost"
+    WHERE "status" = ${PostStatus.ACTIVE}::"PostStatus"
+      AND "createdAt" >= ${rangeStart}
+      AND "createdAt" < ${rangeEndExclusive}
+    GROUP BY DATE("createdAt")
+    ORDER BY DATE("createdAt") ASC
+  `;
+
+const getUserSummary = (
+  previousMonthStart: Date,
+  currentMonthStart: Date,
+  rangeStart: Date,
+) =>
+  prisma.$queryRaw<UserSummaryRow[]>`
+    SELECT
+      COUNT(*)::int AS "total",
+      COUNT(*) FILTER (WHERE "status" = ${UserStatus.BANNED}::"UserStatus")::int AS "banned",
+      COUNT(*) FILTER (WHERE "status" = ${UserStatus.ACTIVE}::"UserStatus")::int AS "active",
+      COUNT(*) FILTER (WHERE "role" = ${UserRole.ADMIN}::"UserRole")::int AS "admins",
+      COUNT(*) FILTER (WHERE "createdAt" >= ${currentMonthStart})::int AS "currentMonth",
+      COUNT(*) FILTER (
+        WHERE "createdAt" >= ${previousMonthStart}
+          AND "createdAt" < ${currentMonthStart}
+      )::int AS "previousMonth",
+      COUNT(*) FILTER (
+        WHERE "status" = ${UserStatus.ACTIVE}::"UserStatus"
+          AND "createdAt" >= ${currentMonthStart}
+      )::int AS "activeCurrentMonth",
+      COUNT(*) FILTER (
+        WHERE "status" = ${UserStatus.ACTIVE}::"UserStatus"
+          AND "createdAt" >= ${previousMonthStart}
+          AND "createdAt" < ${currentMonthStart}
+      )::int AS "activePreviousMonth",
+      COUNT(*) FILTER (
+        WHERE "status" = ${UserStatus.BANNED}::"UserStatus"
+          AND "createdAt" >= ${currentMonthStart}
+      )::int AS "bannedCurrentMonth",
+      COUNT(*) FILTER (
+        WHERE "status" = ${UserStatus.BANNED}::"UserStatus"
+          AND "createdAt" >= ${previousMonthStart}
+          AND "createdAt" < ${currentMonthStart}
+      )::int AS "bannedPreviousMonth",
+      COUNT(*) FILTER (
+        WHERE "role" = ${UserRole.ADMIN}::"UserRole"
+          AND "createdAt" >= ${currentMonthStart}
+      )::int AS "adminsCurrentMonth",
+      COUNT(*) FILTER (
+        WHERE "role" = ${UserRole.ADMIN}::"UserRole"
+          AND "createdAt" >= ${previousMonthStart}
+          AND "createdAt" < ${currentMonthStart}
+      )::int AS "adminsPreviousMonth",
+      COUNT(*) FILTER (WHERE "createdAt" < ${rangeStart})::int AS "beforeRange"
+    FROM "User"
+  `;
+
+const getPostSummary = (
+  previousMonthStart: Date,
+  currentMonthStart: Date,
+  rangeStart: Date,
+) =>
+  prisma.$queryRaw<PostSummaryRow[]>`
+    SELECT
+      COUNT(*)::int AS "total",
+      COUNT(*) FILTER (WHERE "status" = ${PostStatus.ACTIVE}::"PostStatus")::int AS "active",
+      COUNT(*) FILTER (WHERE "status" = ${PostStatus.HIDDEN}::"PostStatus")::int AS "hidden",
+      COUNT(*) FILTER (WHERE "status" = ${PostStatus.BANNED}::"PostStatus")::int AS "banned",
+      COUNT(*) FILTER (WHERE "createdAt" >= ${currentMonthStart})::int AS "currentMonth",
+      COUNT(*) FILTER (
+        WHERE "createdAt" >= ${previousMonthStart}
+          AND "createdAt" < ${currentMonthStart}
+      )::int AS "previousMonth",
+      COUNT(*) FILTER (
+        WHERE "status" = ${PostStatus.ACTIVE}::"PostStatus"
+          AND "createdAt" >= ${currentMonthStart}
+      )::int AS "activeCurrentMonth",
+      COUNT(*) FILTER (
+        WHERE "status" = ${PostStatus.ACTIVE}::"PostStatus"
+          AND "createdAt" >= ${previousMonthStart}
+          AND "createdAt" < ${currentMonthStart}
+      )::int AS "activePreviousMonth",
+      COUNT(*) FILTER (
+        WHERE "status" = ${PostStatus.HIDDEN}::"PostStatus"
+          AND "createdAt" >= ${currentMonthStart}
+      )::int AS "hiddenCurrentMonth",
+      COUNT(*) FILTER (
+        WHERE "status" = ${PostStatus.HIDDEN}::"PostStatus"
+          AND "createdAt" >= ${previousMonthStart}
+          AND "createdAt" < ${currentMonthStart}
+      )::int AS "hiddenPreviousMonth",
+      COUNT(*) FILTER (
+        WHERE "status" = ${PostStatus.BANNED}::"PostStatus"
+          AND "createdAt" >= ${currentMonthStart}
+      )::int AS "bannedCurrentMonth",
+      COUNT(*) FILTER (
+        WHERE "status" = ${PostStatus.BANNED}::"PostStatus"
+          AND "createdAt" >= ${previousMonthStart}
+          AND "createdAt" < ${currentMonthStart}
+      )::int AS "bannedPreviousMonth",
+      COUNT(*) FILTER (
+        WHERE "status" = ${PostStatus.ACTIVE}::"PostStatus"
+          AND "createdAt" < ${rangeStart}
+      )::int AS "activeBeforeRange"
+    FROM "PropertyPost"
+  `;
+
+const getPendingReportSummary = (
+  previousMonthStart: Date,
+  currentMonthStart: Date,
+) =>
+  prisma.$queryRaw<PendingReportSummaryRow[]>`
+    SELECT
+      COUNT(*) FILTER (WHERE "status" = ${ReportStatus.PENDING}::"ReportStatus")::int AS "pending",
+      COUNT(*) FILTER (
+        WHERE "status" = ${ReportStatus.PENDING}::"ReportStatus"
+          AND "createdAt" >= ${currentMonthStart}
+      )::int AS "currentMonth",
+      COUNT(*) FILTER (
+        WHERE "status" = ${ReportStatus.PENDING}::"ReportStatus"
+          AND "createdAt" >= ${previousMonthStart}
+          AND "createdAt" < ${currentMonthStart}
+      )::int AS "previousMonth"
+    FROM "Report"
+  `;
+
+const mergeDailySeries = (
+  dates: Date[],
+  createdRows: DailyCountRow[],
+  baseTotal: number,
+) => {
+  const createdMap = new Map(
+    createdRows.map((row) => [makeDateKey(new Date(row.date)), row.total]),
   );
+  let runningTotal = baseTotal;
+
+  return dates.map((date) => {
+    const dateKey = makeDateKey(date);
+    const created = createdMap.get(dateKey) ?? 0;
+    runningTotal += created;
+
+    return {
+      date: dateKey,
+      label: makeViShortLabel(date),
+      total: runningTotal,
+      created,
+    };
+  });
+};
+
+const buildAdminDashboard = async () => {
+  const today = startOfDay(new Date());
+  const dates = Array.from({ length: 7 }, (_, index) => addDays(today, index - 6));
+  const rangeStart = dates[0];
+  const rangeEndExclusive = addDays(today, 1);
   const { previousMonthStart, currentMonthStart } = previousMonthRange(today);
 
-  const [
-    totalUsers,
-    bannedUsers,
-    totalPosts,
-    activePosts,
-    hiddenPosts,
-    pendingReports,
-    usersThisMonth,
-    usersPreviousMonth,
-    postsThisMonth,
-    postsPreviousMonth,
-    activePostsThisMonth,
-    activePostsPreviousMonth,
-    hiddenPostsThisMonth,
-    hiddenPostsPreviousMonth,
-    reportsThisMonth,
-    reportsPreviousMonth,
-    newUsersByDay,
-    newPostsByDay,
-  ] = await Promise.all([
-    prisma.user.count(),
-    prisma.user.count({ where: { status: UserStatus.BANNED } }),
-    prisma.propertyPost.count(),
-    prisma.propertyPost.count({ where: { status: PostStatus.ACTIVE } }),
-    prisma.propertyPost.count({
-      where: { status: { in: [PostStatus.HIDDEN, PostStatus.BANNED] } },
-    }),
-    prisma.report.count({ where: { status: ReportStatus.PENDING } }),
-    prisma.user.count({ where: { createdAt: { gte: currentMonthStart } } }),
-    prisma.user.count({
-      where: {
-        createdAt: {
-          gte: previousMonthStart,
-          lt: currentMonthStart,
-        },
-      },
-    }),
-    prisma.propertyPost.count({
-      where: { createdAt: { gte: currentMonthStart } },
-    }),
-    prisma.propertyPost.count({
-      where: {
-        createdAt: {
-          gte: previousMonthStart,
-          lt: currentMonthStart,
-        },
-      },
-    }),
-    prisma.propertyPost.count({
-      where: {
-        status: PostStatus.ACTIVE,
-        createdAt: { gte: currentMonthStart },
-      },
-    }),
-    prisma.propertyPost.count({
-      where: {
-        status: PostStatus.ACTIVE,
-        createdAt: {
-          gte: previousMonthStart,
-          lt: currentMonthStart,
-        },
-      },
-    }),
-    prisma.propertyPost.count({
-      where: {
-        status: { in: [PostStatus.HIDDEN, PostStatus.BANNED] },
-        createdAt: { gte: currentMonthStart },
-      },
-    }),
-    prisma.propertyPost.count({
-      where: {
-        status: { in: [PostStatus.HIDDEN, PostStatus.BANNED] },
-        createdAt: {
-          gte: previousMonthStart,
-          lt: currentMonthStart,
-        },
-      },
-    }),
-    prisma.report.count({
-      where: {
-        status: ReportStatus.PENDING,
-        createdAt: { gte: currentMonthStart },
-      },
-    }),
-    prisma.report.count({
-      where: {
-        status: ReportStatus.PENDING,
-        createdAt: {
-          gte: previousMonthStart,
-          lt: currentMonthStart,
-        },
-      },
-    }),
-    countByDay("user", dates),
-    countByDay("propertyPost", dates),
-  ]);
-
-  const cumulativeUserSeries = await Promise.all(
-    dates.map(async (date) => ({
-      date: makeDateKey(date),
-      label: makeViShortLabel(date),
-      total: await prisma.user.count({
-        where: {
-          createdAt: {
-            lt: addDays(date, 1),
-          },
-        },
-      }),
-    })),
-  );
-
-  const activePostSeries = await Promise.all(
-    dates.map(async (date) => ({
-      date: makeDateKey(date),
-      label: makeViShortLabel(date),
-      total: await prisma.propertyPost.count({
-        where: {
-          status: PostStatus.ACTIVE,
-          createdAt: {
-            lt: addDays(date, 1),
-          },
-        },
-      }),
-    })),
-  );
+  const [[userSummary], [postSummary], [reportSummary], userCreatedRows, postCreatedRows] =
+    await Promise.all([
+      getUserSummary(previousMonthStart, currentMonthStart, rangeStart),
+      getPostSummary(previousMonthStart, currentMonthStart, rangeStart),
+      getPendingReportSummary(previousMonthStart, currentMonthStart),
+      getDailyUserCounts(rangeStart, rangeEndExclusive),
+      getDailyActivePostCounts(rangeStart, rangeEndExclusive),
+    ]);
 
   return {
     stats: {
       users: {
-        total: totalUsers,
-        banned: bannedUsers,
-        deltaPercent: calculatePercentChange(usersThisMonth, usersPreviousMonth),
+        total: userSummary.total,
+        banned: userSummary.banned,
+        deltaPercent: calculatePercentChange(
+          userSummary.currentMonth,
+          userSummary.previousMonth,
+        ),
       },
       posts: {
-        total: totalPosts,
-        deltaPercent: calculatePercentChange(postsThisMonth, postsPreviousMonth),
+        total: postSummary.total,
+        deltaPercent: calculatePercentChange(
+          postSummary.currentMonth,
+          postSummary.previousMonth,
+        ),
       },
       activePosts: {
-        total: activePosts,
-        deltaPercent: calculatePercentChange(activePostsThisMonth, activePostsPreviousMonth),
+        total: postSummary.active,
+        deltaPercent: calculatePercentChange(
+          postSummary.activeCurrentMonth,
+          postSummary.activePreviousMonth,
+        ),
       },
       hiddenPosts: {
-        total: hiddenPosts,
-        deltaPercent: calculatePercentChange(hiddenPostsThisMonth, hiddenPostsPreviousMonth),
+        total: postSummary.hidden + postSummary.banned,
+        deltaPercent: calculatePercentChange(
+          postSummary.hiddenCurrentMonth + postSummary.bannedCurrentMonth,
+          postSummary.hiddenPreviousMonth + postSummary.bannedPreviousMonth,
+        ),
       },
       pendingReports: {
-        total: pendingReports,
-        deltaPercent: calculatePercentChange(reportsThisMonth, reportsPreviousMonth),
+        total: reportSummary.pending,
+        deltaPercent: calculatePercentChange(
+          reportSummary.currentMonth,
+          reportSummary.previousMonth,
+        ),
       },
     },
     charts: {
-      users: cumulativeUserSeries.map((item, index) => ({
-        ...item,
-        created: newUsersByDay[index]?.count ?? 0,
-      })),
-      posts: activePostSeries.map((item, index) => ({
-        ...item,
-        created: newPostsByDay[index]?.count ?? 0,
-      })),
+      users: mergeDailySeries(dates, userCreatedRows, userSummary.beforeRange),
+      posts: mergeDailySeries(dates, postCreatedRows, postSummary.activeBeforeRange),
     },
   };
 };
+
+export const getAdminDashboard = async () =>
+  getCachedValue(dashboardCache, buildAdminDashboard, (value) => {
+    dashboardCache = value;
+  });
 
 export type AdminUserListFilter = {
   page: number;
@@ -260,6 +365,54 @@ export type AdminUserListFilter = {
   keyword?: string;
   role?: UserRole;
   status?: UserStatus;
+};
+
+const buildAdminUserStats = async () => {
+  const today = startOfDay(new Date());
+  const { previousMonthStart, currentMonthStart } = previousMonthRange(today);
+  const [userSummary] = await getUserSummary(
+    previousMonthStart,
+    currentMonthStart,
+    today,
+  );
+
+  return {
+    totalUsers: {
+      total: userSummary.total,
+      deltaPercent: calculatePercentChange(
+        userSummary.currentMonth,
+        userSummary.previousMonth,
+      ),
+    },
+    newUsersThisMonth: {
+      total: userSummary.currentMonth,
+      deltaPercent: calculatePercentChange(
+        userSummary.currentMonth,
+        userSummary.previousMonth,
+      ),
+    },
+    activeUsers: {
+      total: userSummary.active,
+      deltaPercent: calculatePercentChange(
+        userSummary.activeCurrentMonth,
+        userSummary.activePreviousMonth,
+      ),
+    },
+    bannedUsers: {
+      total: userSummary.banned,
+      deltaPercent: calculatePercentChange(
+        userSummary.bannedCurrentMonth,
+        userSummary.bannedPreviousMonth,
+      ),
+    },
+    admins: {
+      total: userSummary.admins,
+      deltaPercent: calculatePercentChange(
+        userSummary.adminsCurrentMonth,
+        userSummary.adminsPreviousMonth,
+      ),
+    },
+  };
 };
 
 export const getAdminUsers = async ({
@@ -302,26 +455,9 @@ export const getAdminUsers = async ({
     where.status = status;
   }
 
-  const today = startOfDay(new Date());
-  const { previousMonthStart, currentMonthStart } = previousMonthRange(today);
   const skip = (page - 1) * limit;
 
-  const [
-    items,
-    total,
-    totalUsers,
-    usersThisMonth,
-    usersPreviousMonth,
-    activeUsers,
-    activeUsersThisMonth,
-    activeUsersPreviousMonth,
-    bannedUsers,
-    bannedUsersThisMonth,
-    bannedUsersPreviousMonth,
-    admins,
-    adminsThisMonth,
-    adminsPreviousMonth,
-  ] = await Promise.all([
+  const [items, total] = await Promise.all([
     prisma.user.findMany({
       where,
       orderBy: {
@@ -342,90 +478,10 @@ export const getAdminUsers = async ({
       },
     }),
     prisma.user.count({ where }),
-    prisma.user.count(),
-    prisma.user.count({ where: { createdAt: { gte: currentMonthStart } } }),
-    prisma.user.count({
-      where: {
-        createdAt: {
-          gte: previousMonthStart,
-          lt: currentMonthStart,
-        },
-      },
-    }),
-    prisma.user.count({ where: { status: UserStatus.ACTIVE } }),
-    prisma.user.count({
-      where: {
-        status: UserStatus.ACTIVE,
-        createdAt: { gte: currentMonthStart },
-      },
-    }),
-    prisma.user.count({
-      where: {
-        status: UserStatus.ACTIVE,
-        createdAt: {
-          gte: previousMonthStart,
-          lt: currentMonthStart,
-        },
-      },
-    }),
-    prisma.user.count({ where: { status: UserStatus.BANNED } }),
-    prisma.user.count({
-      where: {
-        status: UserStatus.BANNED,
-        createdAt: { gte: currentMonthStart },
-      },
-    }),
-    prisma.user.count({
-      where: {
-        status: UserStatus.BANNED,
-        createdAt: {
-          gte: previousMonthStart,
-          lt: currentMonthStart,
-        },
-      },
-    }),
-    prisma.user.count({ where: { role: UserRole.ADMIN } }),
-    prisma.user.count({
-      where: {
-        role: UserRole.ADMIN,
-        createdAt: { gte: currentMonthStart },
-      },
-    }),
-    prisma.user.count({
-      where: {
-        role: UserRole.ADMIN,
-        createdAt: {
-          gte: previousMonthStart,
-          lt: currentMonthStart,
-        },
-      },
-    }),
   ]);
 
   return {
     items,
-    stats: {
-      totalUsers: {
-        total: totalUsers,
-        deltaPercent: calculatePercentChange(usersThisMonth, usersPreviousMonth),
-      },
-      newUsersThisMonth: {
-        total: usersThisMonth,
-        deltaPercent: calculatePercentChange(usersThisMonth, usersPreviousMonth),
-      },
-      activeUsers: {
-        total: activeUsers,
-        deltaPercent: calculatePercentChange(activeUsersThisMonth, activeUsersPreviousMonth),
-      },
-      bannedUsers: {
-        total: bannedUsers,
-        deltaPercent: calculatePercentChange(bannedUsersThisMonth, bannedUsersPreviousMonth),
-      },
-      admins: {
-        total: admins,
-        deltaPercent: calculatePercentChange(adminsThisMonth, adminsPreviousMonth),
-      },
-    },
     meta: {
       page,
       limit,
@@ -435,6 +491,11 @@ export const getAdminUsers = async ({
     },
   };
 };
+
+export const getAdminUsersStats = async () =>
+  getCachedValue(adminUserStatsCache, buildAdminUserStats, (value) => {
+    adminUserStatsCache = value;
+  });
 
 export const getAdminUserDetail = async (id: string) => {
   return prisma.user.findUniqueOrThrow({
@@ -542,6 +603,53 @@ export type AdminPostListFilter = {
   maxPrice?: number;
 };
 
+const buildAdminPostStats = async () => {
+  const today = startOfDay(new Date());
+  const { previousMonthStart, currentMonthStart } = previousMonthRange(today);
+  const [[postSummary], [reportSummary]] = await Promise.all([
+    getPostSummary(previousMonthStart, currentMonthStart, today),
+    getPendingReportSummary(previousMonthStart, currentMonthStart),
+  ]);
+
+  return {
+    totalPosts: {
+      total: postSummary.total,
+      deltaPercent: calculatePercentChange(
+        postSummary.currentMonth,
+        postSummary.previousMonth,
+      ),
+    },
+    activePosts: {
+      total: postSummary.active,
+      deltaPercent: calculatePercentChange(
+        postSummary.activeCurrentMonth,
+        postSummary.activePreviousMonth,
+      ),
+    },
+    hiddenPosts: {
+      total: postSummary.hidden,
+      deltaPercent: calculatePercentChange(
+        postSummary.hiddenCurrentMonth,
+        postSummary.hiddenPreviousMonth,
+      ),
+    },
+    bannedPosts: {
+      total: postSummary.banned,
+      deltaPercent: calculatePercentChange(
+        postSummary.bannedCurrentMonth,
+        postSummary.bannedPreviousMonth,
+      ),
+    },
+    pendingReports: {
+      total: reportSummary.pending,
+      deltaPercent: calculatePercentChange(
+        reportSummary.currentMonth,
+        reportSummary.previousMonth,
+      ),
+    },
+  };
+};
+
 export const getAdminPosts = async ({
   page,
   limit,
@@ -592,29 +700,9 @@ export const getAdminPosts = async ({
     };
   }
 
-  const today = startOfDay(new Date());
-  const { previousMonthStart, currentMonthStart } = previousMonthRange(today);
   const skip = (page - 1) * limit;
 
-  const [
-    items,
-    total,
-    totalPosts,
-    postsThisMonth,
-    postsPreviousMonth,
-    activePosts,
-    activePostsThisMonth,
-    activePostsPreviousMonth,
-    hiddenPosts,
-    hiddenPostsThisMonth,
-    hiddenPostsPreviousMonth,
-    bannedPosts,
-    bannedPostsThisMonth,
-    bannedPostsPreviousMonth,
-    pendingReports,
-    pendingReportsThisMonth,
-    pendingReportsPreviousMonth,
-  ] = await Promise.all([
+  const [items, total] = await Promise.all([
     prisma.propertyPost.findMany({
       where,
       orderBy: {
@@ -667,110 +755,10 @@ export const getAdminPosts = async ({
       },
     }),
     prisma.propertyPost.count({ where }),
-    prisma.propertyPost.count(),
-    prisma.propertyPost.count({
-      where: {
-        createdAt: { gte: currentMonthStart },
-      },
-    }),
-    prisma.propertyPost.count({
-      where: {
-        createdAt: {
-          gte: previousMonthStart,
-          lt: currentMonthStart,
-        },
-      },
-    }),
-    prisma.propertyPost.count({ where: { status: PostStatus.ACTIVE } }),
-    prisma.propertyPost.count({
-      where: {
-        status: PostStatus.ACTIVE,
-        createdAt: { gte: currentMonthStart },
-      },
-    }),
-    prisma.propertyPost.count({
-      where: {
-        status: PostStatus.ACTIVE,
-        createdAt: {
-          gte: previousMonthStart,
-          lt: currentMonthStart,
-        },
-      },
-    }),
-    prisma.propertyPost.count({ where: { status: PostStatus.HIDDEN } }),
-    prisma.propertyPost.count({
-      where: {
-        status: PostStatus.HIDDEN,
-        createdAt: { gte: currentMonthStart },
-      },
-    }),
-    prisma.propertyPost.count({
-      where: {
-        status: PostStatus.HIDDEN,
-        createdAt: {
-          gte: previousMonthStart,
-          lt: currentMonthStart,
-        },
-      },
-    }),
-    prisma.propertyPost.count({ where: { status: PostStatus.BANNED } }),
-    prisma.propertyPost.count({
-      where: {
-        status: PostStatus.BANNED,
-        createdAt: { gte: currentMonthStart },
-      },
-    }),
-    prisma.propertyPost.count({
-      where: {
-        status: PostStatus.BANNED,
-        createdAt: {
-          gte: previousMonthStart,
-          lt: currentMonthStart,
-        },
-      },
-    }),
-    prisma.report.count({ where: { status: ReportStatus.PENDING } }),
-    prisma.report.count({
-      where: {
-        status: ReportStatus.PENDING,
-        createdAt: { gte: currentMonthStart },
-      },
-    }),
-    prisma.report.count({
-      where: {
-        status: ReportStatus.PENDING,
-        createdAt: {
-          gte: previousMonthStart,
-          lt: currentMonthStart,
-        },
-      },
-    }),
   ]);
 
   return {
     items,
-    stats: {
-      totalPosts: {
-        total: totalPosts,
-        deltaPercent: calculatePercentChange(postsThisMonth, postsPreviousMonth),
-      },
-      activePosts: {
-        total: activePosts,
-        deltaPercent: calculatePercentChange(activePostsThisMonth, activePostsPreviousMonth),
-      },
-      hiddenPosts: {
-        total: hiddenPosts,
-        deltaPercent: calculatePercentChange(hiddenPostsThisMonth, hiddenPostsPreviousMonth),
-      },
-      bannedPosts: {
-        total: bannedPosts,
-        deltaPercent: calculatePercentChange(bannedPostsThisMonth, bannedPostsPreviousMonth),
-      },
-      pendingReports: {
-        total: pendingReports,
-        deltaPercent: calculatePercentChange(pendingReportsThisMonth, pendingReportsPreviousMonth),
-      },
-    },
     meta: {
       page,
       limit,
@@ -780,4 +768,9 @@ export const getAdminPosts = async ({
     },
   };
 };
+
+export const getAdminPostsStats = async () =>
+  getCachedValue(adminPostStatsCache, buildAdminPostStats, (value) => {
+    adminPostStatsCache = value;
+  });
 

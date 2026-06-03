@@ -90,34 +90,35 @@ export type AdminUsersFilter = {
 
 export type AdminUsersData = {
   items: AdminUserListItem[];
-  stats: {
-    totalUsers: {
-      total: number;
-      deltaPercent: number;
-    };
-    newUsersThisMonth: {
-      total: number;
-      deltaPercent: number;
-    };
-    activeUsers: {
-      total: number;
-      deltaPercent: number;
-    };
-    bannedUsers: {
-      total: number;
-      deltaPercent: number;
-    };
-    admins: {
-      total: number;
-      deltaPercent: number;
-    };
-  };
   meta: {
     page: number;
     limit: number;
     total: number;
     totalPages: number;
     hasMore: boolean;
+  };
+};
+
+export type AdminUsersStats = {
+  totalUsers: {
+    total: number;
+    deltaPercent: number;
+  };
+  newUsersThisMonth: {
+    total: number;
+    deltaPercent: number;
+  };
+  activeUsers: {
+    total: number;
+    deltaPercent: number;
+  };
+  bannedUsers: {
+    total: number;
+    deltaPercent: number;
+  };
+  admins: {
+    total: number;
+    deltaPercent: number;
   };
 };
 
@@ -168,34 +169,35 @@ export type AdminPostsFilter = {
 
 export type AdminPostsData = {
   items: AdminPost[];
-  stats: {
-    totalPosts: {
-      total: number;
-      deltaPercent: number;
-    };
-    activePosts: {
-      total: number;
-      deltaPercent: number;
-    };
-    hiddenPosts: {
-      total: number;
-      deltaPercent: number;
-    };
-    bannedPosts: {
-      total: number;
-      deltaPercent: number;
-    };
-    pendingReports: {
-      total: number;
-      deltaPercent: number;
-    };
-  };
   meta: {
     page: number;
     limit: number;
     total: number;
     totalPages: number;
     hasMore: boolean;
+  };
+};
+
+export type AdminPostsStats = {
+  totalPosts: {
+    total: number;
+    deltaPercent: number;
+  };
+  activePosts: {
+    total: number;
+    deltaPercent: number;
+  };
+  hiddenPosts: {
+    total: number;
+    deltaPercent: number;
+  };
+  bannedPosts: {
+    total: number;
+    deltaPercent: number;
+  };
+  pendingReports: {
+    total: number;
+    deltaPercent: number;
   };
 };
 
@@ -291,6 +293,11 @@ export const getAdminUsers = async (filter: AdminUsersFilter) => {
   return response.data.data;
 };
 
+export const getAdminUsersStats = async () => {
+  const response = await api.get<{ data: AdminUsersStats }>("/admin/users/stats");
+  return response.data.data;
+};
+
 export type AdminSystemLog = {
   id: string;
   actorId?: string | null;
@@ -368,6 +375,11 @@ export const getAdminPosts = async (filter: AdminPostsFilter) => {
   });
 
   const response = await api.get<{ data: AdminPostsData }>(`/admin/posts?${params.toString()}`);
+  return response.data.data;
+};
+
+export const getAdminPostsStats = async () => {
+  const response = await api.get<{ data: AdminPostsStats }>("/admin/posts/stats");
   return response.data.data;
 };
 

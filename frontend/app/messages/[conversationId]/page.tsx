@@ -79,9 +79,12 @@ type CachedConversationPayload = {
 };
 
 const MESSAGES_CACHE_PREFIX = "messages_";
+const MESSAGES_CACHE_TTL_MS = 5 * 60 * 1000;
 const MARK_READ_DEBOUNCE_MS = 350;
 const INITIAL_FIRST_ITEM_INDEX = 100000;
 const DEFAULT_MESSAGE_ITEM_HEIGHT = 92;
+const CACHE_WRITE_DEBOUNCE_MS = 150;
+const MAX_CACHED_MESSAGES = 120;
 
 const parseImages = (content: string): string[] => {
   try {
@@ -122,6 +125,17 @@ function readCachedConversation(conversationId: string) {
 
 function createClientMessageId() {
   return `msg_client_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function getLatestUnreadIncomingMessageId(messages: Message[], currentUserId: string) {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message.senderId !== currentUserId && !message.isRead) {
+      return message.id;
+    }
+  }
+
+  return null;
 }
 
 function FallbackMedia({
@@ -250,7 +264,10 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
   const previewScrollRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const markReadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const cacheWriteTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const unreadPendingReadRef = useRef(false);
+  const pendingReadMessageIdRef = useRef<string | null>(null);
+  const lastMarkedMessageIdRef = useRef<string | null>(null);
   const shouldStickToBottomRef = useRef(true);
   const isAtBottomRef = useRef(true);
   const initialPositionSettledRef = useRef(false);
@@ -299,6 +316,8 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
     initialPositionSettledRef.current = false;
     bottomSnapInProgressRef.current = false;
     unreadPendingReadRef.current = false;
+    pendingReadMessageIdRef.current = null;
+    lastMarkedMessageIdRef.current = null;
 
     setSelectedImages([]);
     setImagePreviewUrls([]);
@@ -319,15 +338,28 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
   useEffect(() => {
     if (!conversation) return;
 
-    writeSessionCache(getMessagesCacheKey(conversationId), {
-      messages,
-      conversation,
-      nextCursor,
-    });
+    if (cacheWriteTimeoutRef.current) {
+      clearTimeout(cacheWriteTimeoutRef.current);
+    }
+
+    cacheWriteTimeoutRef.current = setTimeout(() => {
+      writeSessionCache(
+        getMessagesCacheKey(conversationId),
+        {
+          messages: messages.slice(-MAX_CACHED_MESSAGES),
+          conversation,
+          nextCursor,
+        },
+        { ttlMs: MESSAGES_CACHE_TTL_MS },
+      );
+    }, CACHE_WRITE_DEBOUNCE_MS);
   }, [conversation, conversationId, messages, nextCursor]);
 
   useEffect(() => {
     return () => {
+      if (cacheWriteTimeoutRef.current) {
+        clearTimeout(cacheWriteTimeoutRef.current);
+      }
       if (markReadTimeoutRef.current) {
         clearTimeout(markReadTimeoutRef.current);
       }
@@ -338,8 +370,10 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
 
   const scheduleMarkAsRead = () => {
     if (!conversationId) return;
-
-    unreadPendingReadRef.current = false;
+    const targetMessageId = pendingReadMessageIdRef.current;
+    if (!targetMessageId || targetMessageId === lastMarkedMessageIdRef.current) {
+      return;
+    }
 
     if (markReadTimeoutRef.current) {
       clearTimeout(markReadTimeoutRef.current);
@@ -350,6 +384,9 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
       if (socket && isConnected) {
         socket.emit("mark_read", { conversationId });
       }
+      lastMarkedMessageIdRef.current = targetMessageId;
+      pendingReadMessageIdRef.current = null;
+      unreadPendingReadRef.current = false;
     }, MARK_READ_DEBOUNCE_MS);
   };
 
@@ -396,6 +433,11 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
     const fetchMessages = async () => {
       try {
         setLoadError(null);
+        const currentUserId = user?.id;
+
+        if (!currentUserId) {
+          return;
+        }
 
         const cachedData = readCachedConversation(conversationId);
 
@@ -412,7 +454,11 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
         setConversation(data.data.conversation);
         setNextCursor(data.data.nextCursor);
         setHasMoreMessages(!!data.data.nextCursor);
-        unreadPendingReadRef.current = true;
+        pendingReadMessageIdRef.current = getLatestUnreadIncomingMessageId(
+          data.data.messages,
+          currentUserId,
+        );
+        unreadPendingReadRef.current = Boolean(pendingReadMessageIdRef.current);
         requestAnimationFrame(() => snapToBottom("auto"));
         scheduleMarkAsRead();
       } catch (error) {
@@ -514,15 +560,19 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
 
       const isAtBottom = isAtBottomRef.current;
 
-      if (message.senderId !== user.id && !isAtBottom) {
-        unreadPendingReadRef.current = true;
-        setUnreadCount((prev) => prev + 1);
-      } else {
-        shouldStickToBottomRef.current = true;
-        unreadPendingReadRef.current = true;
-        scheduleMarkAsRead();
-      }
-    };
+        if (message.senderId !== user.id && !isAtBottom) {
+          pendingReadMessageIdRef.current = message.id;
+          unreadPendingReadRef.current = true;
+          setUnreadCount((prev) => prev + 1);
+        } else {
+          shouldStickToBottomRef.current = true;
+          if (message.senderId !== user.id) {
+            pendingReadMessageIdRef.current = message.id;
+            unreadPendingReadRef.current = true;
+          }
+          scheduleMarkAsRead();
+        }
+      };
 
     const handleMessageEdited = (updatedMessage: Message) => {
       setMessages((prev) => prev.map((message) => (message.id === updatedMessage.id ? updatedMessage : message)));

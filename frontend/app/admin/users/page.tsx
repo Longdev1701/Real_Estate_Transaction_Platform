@@ -25,11 +25,13 @@ import { AdminShell, NeonCard, StatCard } from "@/components/admin/AdminShell";
 import {
   getAdminUserDetail,
   getAdminUsers,
+  getAdminUsersStats,
   updateAdminUser,
   type AdminUser,
   type AdminUserListItem,
   type AdminUsersData,
   type AdminUsersFilter,
+  type AdminUsersStats,
 } from "@/lib/admin";
 
 type UserQuickTab = "ALL" | "USER" | "ADMIN" | "AGENT" | "ACTIVE" | "BANNED";
@@ -102,7 +104,9 @@ export default function AdminUsersPage() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [data, setData] = useState<AdminUsersData | null>(null);
+  const [stats, setStats] = useState<AdminUsersStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
   const [isLoadingSelectedUser, setIsLoadingSelectedUser] = useState(false);
   const [isUpdatingUser, setIsUpdatingUser] = useState(false);
   const [error, setError] = useState("");
@@ -143,6 +147,34 @@ export default function AdminUsersPage() {
   }, [filter, refreshKey]);
 
   useEffect(() => {
+    let ignore = false;
+
+    const loadStats = async () => {
+      try {
+        setIsLoadingStats(true);
+        const result = await getAdminUsersStats();
+        if (!ignore) {
+          setStats(result);
+        }
+      } catch {
+        if (!ignore) {
+          setError("Không thể tải thống kê người dùng.");
+        }
+      } finally {
+        if (!ignore) {
+          setIsLoadingStats(false);
+        }
+      }
+    };
+
+    loadStats();
+
+    return () => {
+      ignore = true;
+    };
+  }, [refreshKey]);
+
+  useEffect(() => {
     if (!selectedUserId) {
       setSelectedUser(null);
       return;
@@ -176,14 +208,14 @@ export default function AdminUsersPage() {
   }, [selectedUserId]);
 
   const counts = useMemo(() => {
-    const total = data?.stats.totalUsers.total ?? 0;
-    const admins = data?.stats.admins.total ?? 0;
-    const banned = data?.stats.bannedUsers.total ?? 0;
-    const active = data?.stats.activeUsers.total ?? 0;
+    const total = stats?.totalUsers.total ?? 0;
+    const admins = stats?.admins.total ?? 0;
+    const banned = stats?.bannedUsers.total ?? 0;
+    const active = stats?.activeUsers.total ?? 0;
     const users = Math.max(0, total - admins);
 
     return { total, admins, users, active, banned, agents: 0 };
-  }, [data]);
+  }, [stats]);
 
   const pageButtons = useMemo(() => {
     const totalPages = data?.meta.totalPages ?? 1;
@@ -273,38 +305,38 @@ export default function AdminUsersPage() {
         )}
 
         <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <StatCard
+              compact
+              icon={Users}
+              title="Tổng người dùng"
+              value={isLoadingStats ? "..." : formatNumber(counts.total)}
+              delta={`${formatNumber(counts.total)} tài khoản`}
+              tone="blue"
+            />
           <StatCard
             compact
-            icon={Users}
-            title="Tổng người dùng"
-            value={formatNumber(counts.total)}
-            delta={`${formatNumber(counts.total)} tài khoản`}
-            tone="blue"
-          />
+              icon={ShieldCheck}
+              title="Đang hoạt động"
+              value={isLoadingStats ? "..." : formatNumber(counts.active)}
+              delta={`${formatNumber(counts.active)} tài khoản`}
+              tone="green"
+            />
           <StatCard
             compact
-            icon={ShieldCheck}
-            title="Đang hoạt động"
-            value={formatNumber(counts.active)}
-            delta={`${formatNumber(counts.active)} tài khoản`}
-            tone="green"
-          />
+              icon={Shield}
+              title="Admin"
+              value={isLoadingStats ? "..." : formatNumber(counts.admins)}
+              delta={`${formatNumber(counts.admins)} tài khoản`}
+              tone="violet"
+            />
           <StatCard
             compact
-            icon={Shield}
-            title="Admin"
-            value={formatNumber(counts.admins)}
-            delta={`${formatNumber(counts.admins)} tài khoản`}
-            tone="violet"
-          />
-          <StatCard
-            compact
-            icon={Ban}
-            title="Đã khóa"
-            value={formatNumber(counts.banned)}
-            delta={`${formatNumber(counts.banned)} tài khoản`}
-            tone="red"
-          />
+              icon={Ban}
+              title="Đã khóa"
+              value={isLoadingStats ? "..." : formatNumber(counts.banned)}
+              delta={`${formatNumber(counts.banned)} tài khoản`}
+              tone="red"
+            />
         </section>
 
         <NeonCard className="p-3">

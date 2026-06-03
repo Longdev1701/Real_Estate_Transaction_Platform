@@ -108,6 +108,7 @@ const imageFallback =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 800'><rect width='1200' height='800' fill='%230b1120'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-family='Arial' font-size='52'>TrustEstate</text></svg>";
 
 const savedKey = "trustestate-saved-posts";
+const POST_DETAIL_CACHE_TTL_MS = 2 * 60 * 1000;
 
 const getPostDetailCacheKey = (postId: string) => `posts:detail:${postId}`;
 
@@ -153,6 +154,7 @@ export default function PostDetailPage() {
           setSelectedImage(0);
           setRelatedPosts(cachedPost.relatedPosts ?? []);
           setIsLoading(false);
+          return;
         }
 
         const response = await api.get<{ data: Post }>(`/posts/${params.id}`);
@@ -164,7 +166,7 @@ export default function PostDetailPage() {
         const currentPost = response.data.data;
         setPost(currentPost);
         setSelectedImage(0);
-        writeSessionCache(cacheKey, currentPost);
+        writeSessionCache(cacheKey, currentPost, { ttlMs: POST_DETAIL_CACHE_TTL_MS });
 
         if (currentPost.relatedPosts) {
           setRelatedPosts(currentPost.relatedPosts);
@@ -229,7 +231,9 @@ export default function PostDetailPage() {
           ...currentPost,
           isSaved: nextSaved,
         };
-        writeSessionCache(getPostDetailCacheKey(nextPost.id), nextPost);
+        writeSessionCache(getPostDetailCacheKey(nextPost.id), nextPost, {
+          ttlMs: POST_DETAIL_CACHE_TTL_MS,
+        });
         return nextPost;
       });
 
@@ -245,7 +249,9 @@ export default function PostDetailPage() {
           ...currentPost,
           isSaved: post.isSaved,
         };
-        writeSessionCache(getPostDetailCacheKey(nextPost.id), nextPost);
+        writeSessionCache(getPostDetailCacheKey(nextPost.id), nextPost, {
+          ttlMs: POST_DETAIL_CACHE_TTL_MS,
+        });
         return nextPost;
       });
       const axiosError = err as AxiosError<{ message?: string }>;
@@ -278,7 +284,9 @@ export default function PostDetailPage() {
           appealedAt: new Date().toISOString(),
         },
       };
-      writeSessionCache(getPostDetailCacheKey(nextPost.id), nextPost);
+      writeSessionCache(getPostDetailCacheKey(nextPost.id), nextPost, {
+        ttlMs: POST_DETAIL_CACHE_TTL_MS,
+      });
       return nextPost;
     });
   };

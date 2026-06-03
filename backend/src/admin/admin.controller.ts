@@ -10,8 +10,10 @@ import {
 import {
   getAdminDashboard,
   getAdminPosts,
+  getAdminPostsStats,
   getAdminUserDetail,
   getAdminUsers,
+  getAdminUsersStats,
   updateAdminUser,
 } from "./admin.service.js";
 import { sendSuccess } from "../utils/response.js";
@@ -123,6 +125,19 @@ export const getAdminUsersController: RequestHandler = async (
   }
 };
 
+export const getAdminUsersStatsController: RequestHandler = async (
+  _req,
+  res,
+  next,
+) => {
+  try {
+    const result = await getAdminUsersStats();
+    sendSuccess(res, result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getAdminUserDetailController: RequestHandler = async (
   req,
   res,
@@ -217,6 +232,19 @@ export const getAdminPostsController: RequestHandler = async (
       maxPrice: parseOptionalNumber(req.query.maxPrice),
     });
 
+    sendSuccess(res, result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getAdminPostsStatsController: RequestHandler = async (
+  _req,
+  res,
+  next,
+) => {
+  try {
+    const result = await getAdminPostsStats();
     sendSuccess(res, result);
   } catch (error) {
     next(error);

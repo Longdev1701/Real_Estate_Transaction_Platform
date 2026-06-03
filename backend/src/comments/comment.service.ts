@@ -144,6 +144,7 @@ export const getComments = async (postId: string, page: number = 1, limit: numbe
     prisma.comment.count({
       where: {
         postId,
+        parentId: null,
       },
     }),
   ]);
