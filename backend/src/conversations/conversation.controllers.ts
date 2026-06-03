@@ -25,6 +25,11 @@ export const createOrGetConversation = async (req: Request, res: Response, next:
         postId,
         buyerId,
         sellerId
+      },
+      include: {
+        buyer: { select: { id: true, fullName: true, avatarUrl: true } },
+        seller: { select: { id: true, fullName: true, avatarUrl: true } },
+        post: { select: { id: true, title: true, price: true, area: true, propertyType: true, city: true, images: { take: 1, select: { imageUrl: true } } } }
       }
     });
 
@@ -43,13 +48,23 @@ export const createOrGetConversation = async (req: Request, res: Response, next:
             postId,
             buyerId,
             sellerId
+          },
+          include: {
+            buyer: { select: { id: true, fullName: true, avatarUrl: true } },
+            seller: { select: { id: true, fullName: true, avatarUrl: true } },
+            post: { select: { id: true, title: true, price: true, area: true, propertyType: true, city: true, images: { take: 1, select: { imageUrl: true } } } }
           }
         });
       } catch (error: any) {
         // Handle race condition: if another request created the same conversation
         if (error?.code === "P2002") {
           conversation = await prisma.conversation.findFirst({
-            where: { postId, buyerId, sellerId }
+            where: { postId, buyerId, sellerId },
+            include: {
+              buyer: { select: { id: true, fullName: true, avatarUrl: true } },
+              seller: { select: { id: true, fullName: true, avatarUrl: true } },
+              post: { select: { id: true, title: true, price: true, area: true, propertyType: true, city: true, images: { take: 1, select: { imageUrl: true } } } }
+            }
           });
 
           if (!conversation) {
