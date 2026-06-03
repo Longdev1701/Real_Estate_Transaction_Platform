@@ -209,7 +209,7 @@ export function PostCard({ post }: { post: Post }) {
           <div className="flex min-w-0 items-center gap-3">
 
             <Link
-              href={`/profile/posts?authorId=${post.author.id}`}
+              href={`/profile/posts?authorId=${post.author.id}&name=${encodeURIComponent(post.author.fullName)}&avatar=${encodeURIComponent(post.author.avatarUrl || "")}`}
               className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-blue-300/30 bg-blue-500/10 text-sm font-semibold text-blue-100 transition hover:border-blue-300 hover:ring-2 hover:ring-blue-500/30"
               aria-label={`Xem bài đăng của ${post.author.fullName}`}
             >
@@ -221,7 +221,12 @@ export function PostCard({ post }: { post: Post }) {
             </Link>
             <div className="min-w-0">
               <div className="flex min-w-0 items-center gap-2">
-                <p className="truncate font-semibold text-white">{post.author.fullName}</p>
+                <Link
+                  href={`/profile/posts?authorId=${post.author.id}&name=${encodeURIComponent(post.author.fullName)}&avatar=${encodeURIComponent(post.author.avatarUrl || "")}`}
+                  className="truncate font-semibold text-white hover:text-blue-300 transition-colors"
+                >
+                  {post.author.fullName}
+                </Link>
                 <BadgeCheck className="h-4 w-4 shrink-0 fill-blue-500 text-slate-950" />
               </div>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-400">
