@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -48,7 +48,7 @@ const maxCompareItems = 3;
 
 const formatDate = (rawDate: string) => {
   const date = new Date(rawDate);
-  if (Number.isNaN(date.getTime())) return "KhÃ´ng rÃµ";
+  if (Number.isNaN(date.getTime())) return "Không rõ";
 
   return new Intl.DateTimeFormat("vi-VN", {
     day: "2-digit",
@@ -59,11 +59,11 @@ const formatDate = (rawDate: string) => {
 
 const compactPrice = (price: number) => {
   if (price >= 1_000_000_000) {
-    return `${new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2 }).format(price / 1_000_000_000)} tá»·`;
+    return `${new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2 }).format(price / 1_000_000_000)} tỷ`;
   }
 
   if (price >= 1_000_000) {
-    return `${new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 1 }).format(price / 1_000_000)} triá»‡u`;
+    return `${new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 1 }).format(price / 1_000_000)} triệu`;
   }
 
   return formatPrice(price);
@@ -71,7 +71,7 @@ const compactPrice = (price: number) => {
 
 const getFeatureSummary = (post: Post) => {
   if (!post.features || post.features.length === 0) {
-    return "ChÆ°a cáº­p nháº­t";
+    return "Chưa cập nhật";
   }
 
   return post.features.map((feature) => feature.name).slice(0, 5).join(", ");
@@ -80,21 +80,21 @@ const getFeatureSummary = (post: Post) => {
 const bedroomBathroomExcludedTypes = new Set<PropertyType>(["LAND", "OFFICE", "SHOPHOUSE", "WAREHOUSE"]);
 
 const getEstimatedBedrooms = (post: Post) => {
-  if (bedroomBathroomExcludedTypes.has(post.propertyType)) return "KhÃ´ng Ã¡p dá»¥ng";
+  if (bedroomBathroomExcludedTypes.has(post.propertyType)) return "Không áp dụng";
   return Math.max(1, Math.min(5, Math.round(post.area / 35))).toString();
 };
 
 const getEstimatedBathrooms = (post: Post) => {
-  if (bedroomBathroomExcludedTypes.has(post.propertyType)) return "KhÃ´ng Ã¡p dá»¥ng";
+  if (bedroomBathroomExcludedTypes.has(post.propertyType)) return "Không áp dụng";
   return Math.max(1, Math.min(4, Math.round(post.area / 50))).toString();
 };
 
 const getLegalStatus = (post: Post) => {
-  if (post.features?.some((feature) => feature.name.toLowerCase().includes("sá»•"))) {
-    return "ÄÃ£ cÃ³ sá»•";
+  if (post.features?.some((feature) => feature.name.toLowerCase().includes("sổ"))) {
+    return "Đã có sổ";
   }
 
-  return post.status === "ACTIVE" ? "Äang hiá»ƒn thá»‹" : post.status;
+  return post.status === "ACTIVE" ? "Đang hiển thị" : post.status;
 };
 
 type CompareRow = {
@@ -107,66 +107,66 @@ type CompareRow = {
 
 const compareRows: CompareRow[] = [
   {
-    label: "GiÃ¡ bÃ¡n",
+    label: "Giá bán",
     icon: Scale,
     getValue: (post) => compactPrice(post.price),
     getRankValue: (post) => post.price,
     best: "min",
   },
   {
-    label: "Diá»‡n tÃ­ch",
+    label: "Diện tích",
     icon: Ruler,
     getValue: (post) => formatArea(post.area),
     getRankValue: (post) => post.area,
     best: "max",
   },
   {
-    label: "Vá»‹ trÃ­",
+    label: "Vị trí",
     icon: MapPin,
     getValue: (post) => [post.district, post.city].filter(Boolean).join(", "),
     getRankValue: (post) => post.city,
     best: "same",
   },
   {
-    label: "Loáº¡i báº¥t Ä‘á»™ng sáº£n",
+    label: "Loại bất động sản",
     icon: Building2,
     getValue: (post) => propertyTypeLabels[post.propertyType],
   },
   {
-    label: "PhÃ²ng ngá»§",
+    label: "Phòng ngủ",
     icon: BedDouble,
     getValue: getEstimatedBedrooms,
     getRankValue: (post) => (bedroomBathroomExcludedTypes.has(post.propertyType) ? 0 : Number(getEstimatedBedrooms(post))),
     best: "max",
   },
   {
-    label: "PhÃ²ng táº¯m",
+    label: "Phòng tắm",
     icon: Bath,
     getValue: getEstimatedBathrooms,
     getRankValue: (post) => (bedroomBathroomExcludedTypes.has(post.propertyType) ? 0 : Number(getEstimatedBathrooms(post))),
     best: "max",
   },
   {
-    label: "PhÃ¡p lÃ½",
+    label: "Pháp lý",
     icon: FileBadge,
     getValue: getLegalStatus,
     getRankValue: getLegalStatus,
     best: "same",
   },
   {
-    label: "Tiá»‡n Ã­ch",
+    label: "Tiện ích",
     icon: Lightbulb,
     getValue: getFeatureSummary,
     getRankValue: (post) => post.features?.length ?? 0,
     best: "max",
   },
   {
-    label: "NgÆ°á»i Ä‘Äƒng",
+    label: "Người đăng",
     icon: UserRound,
     getValue: (post) => post.author.fullName,
   },
   {
-    label: "NgÃ y Ä‘Äƒng",
+    label: "Ngày đăng",
     icon: CalendarDays,
     getValue: (post) => formatDate(post.createdAt),
   },
@@ -200,17 +200,32 @@ export default function ComparePage() {
   const router = useRouter();
   const { user, accessToken, hasHydrated, isLoadingUser } = useAuthStore();
   const [savedPosts, setSavedPosts] = useState<SavedPost[]>([]);
-  const [selectedPostIds, setSelectedPostIds] = useState<string[]>([]);
+  const [comparedPosts, setComparedPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isStartingConversation, setIsStartingConversation] = useState(false);
   const [actionPicker, setActionPicker] = useState<"detail" | "message" | null>(null);
+
   useEffect(() => {
     if (hasHydrated && !accessToken && !user) {
       router.push("/auth/login");
     }
   }, [accessToken, hasHydrated, router, user]);
+
+  useEffect(() => {
+    const handleCompareUpdate = () => {
+      try {
+        const stored = localStorage.getItem("compared_posts");
+        setComparedPosts(stored ? JSON.parse(stored) : []);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    handleCompareUpdate();
+    window.addEventListener("compare_list_updated", handleCompareUpdate);
+    return () => window.removeEventListener("compare_list_updated", handleCompareUpdate);
+  }, []);
 
   useEffect(() => {
     if (!hasHydrated || !user) {
@@ -228,7 +243,6 @@ export default function ComparePage() {
         const cachedSavedPosts = readSessionCache<SavedPost[]>(cacheKey);
         if (cachedSavedPosts && isMounted) {
           setSavedPosts(cachedSavedPosts);
-          setSelectedPostIds(cachedSavedPosts.slice(0, maxCompareItems).map((item) => item.postId));
           setIsLoading(false);
         }
         const response = await api.get<{ data: SavedPost[] }>("/saved-posts?includeFeatures=true&imageLimit=1");
@@ -236,13 +250,22 @@ export default function ComparePage() {
 
         if (isMounted) {
           setSavedPosts(items);
-          setSelectedPostIds(items.slice(0, maxCompareItems).map((item) => item.postId));
           writeSessionCache(cacheKey, items);
+
+          // If comparedPosts is empty, initialize it with first 3 saved posts
+          const stored = localStorage.getItem("compared_posts");
+          const parsed = stored ? JSON.parse(stored) : [];
+          if (parsed.length === 0 && items.length > 0) {
+            const initialCompared = items.slice(0, maxCompareItems).map((item) => item.post);
+            setComparedPosts(initialCompared);
+            localStorage.setItem("compared_posts", JSON.stringify(initialCompared));
+            window.dispatchEvent(new Event("compare_list_updated"));
+          }
         }
       } catch (err) {
         const axiosError = err as AxiosError<{ message?: string }>;
         if (isMounted) {
-          setError(axiosError.response?.data?.message ?? "KhÃ´ng thá»ƒ táº£i danh sÃ¡ch báº¥t Ä‘á»™ng sáº£n Ä‘Ã£ lÆ°u.");
+          setError(axiosError.response?.data?.message ?? "Không thể tải danh sách bất động sản đã lưu.");
         }
       } finally {
         if (isMounted) {
@@ -263,42 +286,54 @@ export default function ComparePage() {
     [savedPosts],
   );
 
-  const selectedPosts = useMemo(
-    () =>
-      selectedPostIds
-        .map((postId) => savedPostMap.get(postId)?.post)
-        .filter((post): post is Post => Boolean(post)),
-    [savedPostMap, selectedPostIds],
+  const selectedPosts = comparedPosts;
+
+  const selectedPostIds = useMemo(
+    () => comparedPosts.map((p) => p.id),
+    [comparedPosts]
   );
 
   const toggleSelectedPost = (postId: string) => {
     setActionError(null);
-    setSelectedPostIds((current) => {
-      if (current.includes(postId)) {
-        return current.filter((id) => id !== postId);
-      }
+    const exists = comparedPosts.some((p) => p.id === postId);
 
-      if (current.length >= maxCompareItems) {
-        setActionError("Chá»‰ cÃ³ thá»ƒ so sÃ¡nh tá»‘i Ä‘a 3 báº¥t Ä‘á»™ng sáº£n cÃ¹ng lÃºc.");
-        return current;
+    if (exists) {
+      const next = comparedPosts.filter((p) => p.id !== postId);
+      setComparedPosts(next);
+      localStorage.setItem("compared_posts", JSON.stringify(next));
+      window.dispatchEvent(new Event("compare_list_updated"));
+    } else {
+      if (comparedPosts.length >= maxCompareItems) {
+        setActionError("Chỉ có thể so sánh tối đa 3 bất động sản cùng lúc.");
+        return;
       }
-
-      return [...current, postId];
-    });
+      const post = savedPostMap.get(postId)?.post;
+      if (post) {
+        const next = [...comparedPosts, post];
+        setComparedPosts(next);
+        localStorage.setItem("compared_posts", JSON.stringify(next));
+        window.dispatchEvent(new Event("compare_list_updated"));
+      }
+    }
   };
 
   const removeFromCompare = (postId: string) => {
-    setSelectedPostIds((current) => current.filter((id) => id !== postId));
+    const next = comparedPosts.filter((p) => p.id !== postId);
+    setComparedPosts(next);
+    localStorage.setItem("compared_posts", JSON.stringify(next));
+    window.dispatchEvent(new Event("compare_list_updated"));
   };
 
   const clearCompare = () => {
-    setSelectedPostIds([]);
+    setComparedPosts([]);
+    localStorage.removeItem("compared_posts");
+    window.dispatchEvent(new Event("compare_list_updated"));
     setActionError(null);
   };
 
   const handleViewDetail = () => {
     if (selectedPosts.length === 0) {
-      setActionError("Vui lÃ²ng chá»n Ã­t nháº¥t má»™t báº¥t Ä‘á»™ng sáº£n Ä‘á»ƒ xem chi tiáº¿t.");
+      setActionError("Vui lòng chọn ít nhất một bất động sản để xem chi tiết.");
       return;
     }
 
@@ -308,7 +343,7 @@ export default function ComparePage() {
 
   const handleMessage = () => {
     if (selectedPosts.length === 0) {
-      setActionError("Vui lÃ²ng chá»n má»™t báº¥t Ä‘á»™ng sáº£n Ä‘á»ƒ nháº¯n tin.");
+      setActionError("Vui lòng chọn một bất động sản để nhắn tin.");
       return;
     }
 
@@ -324,7 +359,7 @@ export default function ComparePage() {
 
   const startConversation = async (targetPost: Post) => {
     if (user?.id === targetPost.author.id) {
-      setActionError("ÄÃ¢y lÃ  bÃ i Ä‘Äƒng cá»§a báº¡n. KhÃ´ng thá»ƒ tá»± táº¡o cuá»™c trÃ² chuyá»‡n.");
+      setActionError("Đây là bài đăng của bạn. Không thể tự tạo cuộc trò chuyện.");
       return;
     }
 
@@ -345,7 +380,7 @@ export default function ComparePage() {
       router.push(`/messages/${conversation.id}`);
     } catch (err) {
       const axiosError = err as AxiosError<{ message?: string }>;
-      setActionError(axiosError.response?.data?.message ?? "KhÃ´ng thá»ƒ báº¯t Ä‘áº§u cuá»™c trÃ² chuyá»‡n lÃºc nÃ y.");
+      setActionError(axiosError.response?.data?.message ?? "Không thể bắt đầu cuộc trò chuyện lúc này.");
     } finally {
       setIsStartingConversation(false);
     }
@@ -365,8 +400,8 @@ export default function ComparePage() {
         <aside className="glass-card h-fit p-4 xl:sticky xl:top-24">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold text-white">Báº¥t Ä‘á»™ng sáº£n Ä‘Ã£ lÆ°u</h2>
-              <p className="mt-1 text-sm text-gray-400">Chá»n tá»‘i Ä‘a 3 báº¥t Ä‘á»™ng sáº£n Ä‘á»ƒ so sÃ¡nh.</p>
+              <h2 className="text-lg font-semibold text-white">Bất động sản đã lưu</h2>
+              <p className="mt-1 text-sm text-gray-400">Chọn tối đa 3 bất động sản để so sánh.</p>
             </div>
             <span className="rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-sm font-semibold text-blue-200">
               {savedPosts.length}
@@ -381,9 +416,9 @@ export default function ComparePage() {
             </div>
           ) : savedPosts.length === 0 ? (
             <div className="rounded-xl border border-dashed border-white/10 p-5 text-sm text-gray-400">
-              Báº¡n chÆ°a lÆ°u báº¥t Ä‘á»™ng sáº£n nÃ o.
+              Bạn chưa lưu bất động sản nào.
               <Link href="/posts" className="mt-4 inline-flex text-blue-300 hover:text-blue-200">
-                Má»Ÿ báº£ng tin
+                Mở bảng tin
               </Link>
             </div>
           ) : (
@@ -398,11 +433,10 @@ export default function ComparePage() {
                     key={savedPost.id}
                     type="button"
                     onClick={() => toggleSelectedPost(post.id)}
-                    className={`flex w-full items-center gap-3 rounded-xl border p-2 text-left transition ${
-                      selected
+                    className={`flex w-full items-center gap-3 rounded-xl border p-2 text-left transition ${selected
                         ? "border-blue-400/40 bg-blue-500/10"
                         : "border-white/10 bg-white/5 hover:bg-white/10"
-                    }`}
+                      }`}
                   >
                     <img src={imageUrl} alt={post.title} className="h-16 w-16 shrink-0 rounded-lg object-cover" />
                     <span className="min-w-0 flex-1">
@@ -424,9 +458,9 @@ export default function ComparePage() {
             <div className="mb-2 inline-flex rounded-full bg-blue-500/15 p-2 text-blue-200">
               <Lightbulb className="h-5 w-5" />
             </div>
-            <h3 className="font-semibold text-white">Máº¹o so sÃ¡nh</h3>
+            <h3 className="font-semibold text-white">Mẹo so sánh</h3>
             <p className="mt-2 text-sm leading-6 text-gray-300">
-              CÃ¡c tiÃªu chÃ­ ná»•i báº­t sáº½ Ä‘Æ°á»£c Ä‘Ã¡nh dáº¥u báº±ng nhÃ£n xanh Ä‘á»ƒ báº¡n dá»… nháº­n ra lá»±a chá»n phÃ¹ há»£p.
+              Các tiêu chí nổi bật sẽ được đánh dấu bằng nhãn xanh để bạn dễ nhận ra lựa chọn phù hợp.
             </p>
           </div>
         </aside>
@@ -434,14 +468,14 @@ export default function ComparePage() {
         <main className="glass-card overflow-hidden p-4 md:p-6">
           <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-white md:text-4xl">So sÃ¡nh báº¥t Ä‘á»™ng sáº£n</h1>
+              <h1 className="text-3xl font-bold text-white md:text-4xl">So sánh bất động sản</h1>
               <p className="mt-2 max-w-3xl text-gray-400">
-                So sÃ¡nh chi tiáº¿t cÃ¡c báº¥t Ä‘á»™ng sáº£n Ä‘Ã£ lÆ°u Ä‘á»ƒ tÃ¬m lá»±a chá»n phÃ¹ há»£p nháº¥t vá»›i nhu cáº§u cá»§a báº¡n.
+                So sánh chi tiết các bất động sản đã lưu để tìm lựa chọn phù hợp nhất với nhu cầu của bạn.
               </p>
             </div>
             <div className="inline-flex w-fit items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-gray-200">
               <Scale className="h-4 w-4 text-blue-300" />
-              Äang so sÃ¡nh {selectedPosts.length}/{maxCompareItems} báº¥t Ä‘á»™ng sáº£n
+              Đang so sánh {selectedPosts.length}/{maxCompareItems} bất động sản
             </div>
           </div>
 
@@ -455,7 +489,7 @@ export default function ComparePage() {
             <div className="flex min-h-[420px] items-center justify-center">
               <div className="inline-flex items-center gap-3 text-gray-300">
                 <LoaderCircle className="h-5 w-5 animate-spin text-blue-300" />
-                Äang táº£i dá»¯ liá»‡u so sÃ¡nh...
+                Đang tải dữ liệu so sánh...
               </div>
             </div>
           ) : selectedPosts.length === 0 ? (
@@ -463,13 +497,13 @@ export default function ComparePage() {
               <div className="mb-5 rounded-full border border-blue-400/20 bg-blue-500/10 p-4 text-blue-300">
                 <Scale className="h-10 w-10" />
               </div>
-              <h2 className="text-2xl font-semibold text-white">ChÆ°a chá»n báº¥t Ä‘á»™ng sáº£n Ä‘á»ƒ so sÃ¡nh</h2>
+              <h2 className="text-2xl font-semibold text-white">Chưa chọn bất động sản để so sánh</h2>
               <p className="mt-3 max-w-xl text-gray-400">
-                Chá»n cÃ¡c báº¥t Ä‘á»™ng sáº£n Ä‘Ã£ lÆ°u á»Ÿ thanh bÃªn trÃ¡i hoáº·c lÆ°u thÃªm bÃ i Ä‘Äƒng tá»« báº£ng tin.
+                Chọn các bất động sản đã lưu ở thanh bên trái hoặc lưu thêm bài đăng từ bảng tin.
               </p>
               <Link href="/posts" className="btn-primary mt-6 inline-flex items-center gap-2">
                 <Plus className="h-4 w-4" />
-                ThÃªm báº¥t Ä‘á»™ng sáº£n
+                Thêm bất động sản
               </Link>
             </div>
           ) : (
@@ -486,7 +520,7 @@ export default function ComparePage() {
                           type="button"
                           onClick={() => removeFromCompare(post.id)}
                           className="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-950/65 text-white backdrop-blur transition hover:bg-red-500/80"
-                          aria-label="XÃ³a khá»i so sÃ¡nh"
+                          aria-label="Xóa khỏi so sánh"
                         >
                           <X className="h-5 w-5" />
                         </button>
@@ -503,7 +537,7 @@ export default function ComparePage() {
                         </div>
                         <p className="flex items-center gap-2 text-sm text-gray-400">
                           <CalendarDays className="h-4 w-4" />
-                          Cáº­p nháº­t: {formatDate(post.updatedAt)}
+                          Cập nhật: {formatDate(post.updatedAt)}
                         </p>
                       </div>
                     </article>
@@ -528,14 +562,14 @@ export default function ComparePage() {
                           return (
                             <td key={post.id} className="border-l border-white/10 px-4 py-4 text-gray-200">
                               <div className="flex items-center gap-2">
-                                {row.label === "NgÆ°á»i Ä‘Äƒng" && post.author.avatarUrl ? (
+                                {row.label === "Người đăng" && post.author.avatarUrl ? (
                                   <img src={post.author.avatarUrl} alt={post.author.fullName} className="h-8 w-8 rounded-full object-cover" />
                                 ) : null}
                                 <span>{row.getValue(post)}</span>
                                 {best ? (
                                   <span className="inline-flex items-center gap-1 rounded-md bg-blue-500/20 px-2 py-1 text-xs font-semibold text-blue-200">
                                     <Crown className="h-3 w-3" />
-                                    Tá»‘t nháº¥t
+                                    Tốt nhất
                                   </span>
                                 ) : null}
                               </div>
@@ -556,7 +590,7 @@ export default function ComparePage() {
                     className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-400/35 bg-blue-500/10 px-5 py-3 font-semibold text-blue-200 transition hover:bg-blue-500/20"
                   >
                     <Home className="h-5 w-5" />
-                    Xem chi tiáº¿t
+                    Xem chi tiết
                   </button>
                   <button
                     type="button"
@@ -569,7 +603,7 @@ export default function ComparePage() {
                     ) : (
                       <MessageCircle className="h-5 w-5" />
                     )}
-                    Nháº¯n tin
+                    Nhắn tin
                   </button>
                   <button
                     type="button"
@@ -577,7 +611,7 @@ export default function ComparePage() {
                     className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-400/35 bg-red-500/10 px-5 py-3 font-semibold text-red-200 transition hover:bg-red-500/20"
                   >
                     <Trash2 className="h-5 w-5" />
-                    XÃ³a khá»i so sÃ¡nh
+                    Xóa khỏi so sánh
                   </button>
                 </div>
               </div>
@@ -590,19 +624,19 @@ export default function ComparePage() {
                 <div className="mb-4 flex items-start justify-between gap-4">
                   <div>
                     <h2 className="text-xl font-semibold text-white">
-                      {actionPicker === "detail" ? "Chá»n cÄƒn Ä‘á»ƒ xem chi tiáº¿t" : "Chá»n ngÆ°á»i Ä‘á»ƒ nháº¯n tin"}
+                      {actionPicker === "detail" ? "Chọn căn để xem chi tiết" : "Chọn người để nhắn tin"}
                     </h2>
                     <p className="mt-1 text-sm text-gray-400">
                       {actionPicker === "detail"
-                        ? "Báº¥m vÃ o báº¥t Ä‘á»™ng sáº£n báº¡n muá»‘n má»Ÿ trang chi tiáº¿t."
-                        : "Báº¥m vÃ o bÃ i Ä‘Äƒng cá»§a ngÆ°á»i báº¡n muá»‘n báº¯t Ä‘áº§u cuá»™c trÃ² chuyá»‡n."}
+                        ? "Bấm vào bất động sản bạn muốn mở trang chi tiết."
+                        : "Bấm vào bài đăng của người bạn muốn bắt đầu cuộc trò chuyện."}
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setActionPicker(null)}
                     className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-gray-200 transition hover:bg-white/10"
-                    aria-label="ÄÃ³ng"
+                    aria-label="Đóng"
                   >
                     <X className="h-5 w-5" />
                   </button>
@@ -639,7 +673,7 @@ export default function ComparePage() {
                           </span>
                           {disabledMessage ? (
                             <span className="mt-2 inline-flex text-xs font-medium text-red-200">
-                              ÄÃ¢y lÃ  bÃ i Ä‘Äƒng cá»§a báº¡n
+                              Đây là bài đăng của bạn
                             </span>
                           ) : null}
                         </span>
@@ -658,4 +692,3 @@ export default function ComparePage() {
     </div>
   );
 }
-

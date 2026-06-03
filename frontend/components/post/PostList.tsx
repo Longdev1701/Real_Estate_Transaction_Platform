@@ -111,6 +111,10 @@ export function PostList() {
 
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const requestIdRef = useRef(0);
+  const scrollContainerRef = useRef<HTMLElement | null>(null);
+  const [isRestored, setIsRestored] = useState(false);
+  const [hasRestoredAttempted, setHasRestoredAttempted] = useState(false);
+  const isFirstMountRef = useRef(true);
 
   const fetchPosts = useCallback(
     async (nextPage: number, append: boolean, filter: PostFilterValue) => {
@@ -173,11 +177,82 @@ export function PostList() {
     [],
   );
 
+  // Restore state on mount matching search params
   useEffect(() => {
-    fetchPosts(1, false, activeFilter);
-  }, [activeFilter, fetchPosts]);
+    try {
+      const saved = sessionStorage.getItem("posts_page_state");
+      if (saved) {
+        const state = JSON.parse(saved);
+        if (state.searchParamString === searchParamString && state.posts && Array.isArray(state.posts)) {
+          setPosts(state.posts);
+          setPage(state.page || 1);
+          setHasMore(state.hasMore !== false);
+          setTotal(state.total || 0);
+          setDraftFilter(state.draftFilter || defaultPostFilter);
+          setActiveFilter(state.activeFilter || defaultPostFilter);
+          setIsRestored(true);
+          setIsLoading(false);
+
+          // Restore scroll position
+          setTimeout(() => {
+            if (scrollContainerRef.current && typeof state.scrollTop === "number") {
+              scrollContainerRef.current.scrollTop = state.scrollTop;
+            }
+          }, 150);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to restore post list state:", e);
+    } finally {
+      setHasRestoredAttempted(true);
+    }
+  }, [searchParamString]);
+
+  // Save state on updates
+  useEffect(() => {
+    if (isLoading || !hasRestoredAttempted) return;
+    try {
+      const saved = sessionStorage.getItem("posts_page_state");
+      const state = saved ? JSON.parse(saved) : {};
+      state.posts = posts;
+      state.page = page;
+      state.hasMore = hasMore;
+      state.total = total;
+      state.activeFilter = activeFilter;
+      state.draftFilter = draftFilter;
+      state.searchParamString = searchParamString;
+      sessionStorage.setItem("posts_page_state", JSON.stringify(state));
+    } catch {}
+  }, [posts, page, hasMore, total, activeFilter, draftFilter, searchParamString, isLoading, hasRestoredAttempted]);
+
+  const handleScroll = (e: React.UIEvent<HTMLElement>) => {
+    const target = e.currentTarget;
+    try {
+      const saved = sessionStorage.getItem("posts_page_state");
+      const state = saved ? JSON.parse(saved) : {};
+      state.scrollTop = target.scrollTop;
+      sessionStorage.setItem("posts_page_state", JSON.stringify(state));
+    } catch {}
+  };
 
   useEffect(() => {
+    if (!hasRestoredAttempted) {
+      return;
+    }
+
+    if (isFirstMountRef.current) {
+      isFirstMountRef.current = false;
+      if (isRestored) {
+        setIsRestored(false);
+        return;
+      }
+    }
+
+    fetchPosts(1, false, activeFilter);
+  }, [activeFilter, fetchPosts, hasRestoredAttempted]);
+
+  useEffect(() => {
+    if (isFirstMountRef.current) return;
     setDraftFilter(initialFilter);
     setActiveFilter(initialFilter);
   }, [initialFilter]);
@@ -276,7 +351,11 @@ export function PostList() {
         </div>
       </aside>
 
-      <section className="no-scrollbar h-full max-h-[calc(100vh-100px)] min-w-0 overflow-y-auto pr-1">
+      <section
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="no-scrollbar h-full max-h-[calc(100vh-100px)] min-w-0 overflow-y-auto pr-1"
+      >
         <div className="space-y-5">
           <section className="flex flex-wrap items-center gap-2 text-sm text-gray-400">
             <span>Trang chủ</span>

@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   BadgeCheck,
   Bookmark,
@@ -16,6 +16,7 @@ import {
   MapPin,
   MessageCircle,
   Ruler,
+  Scale,
   X,
 } from "lucide-react";
 
@@ -108,6 +109,47 @@ export function PostCard({ post }: { post: Post }) {
   const [isSaveSubmitting, setIsSaveSubmitting] = useState(false);
   const [saveEffect, setSaveEffect] = useState<{ key: number; type: "save" | "unsave" } | null>(null);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
+  const [isCompared, setIsCompared] = useState(false);
+
+  useEffect(() => {
+    const handleCompareUpdate = () => {
+      try {
+        const stored = localStorage.getItem("compared_posts");
+        const list = stored ? JSON.parse(stored) : [];
+        setIsCompared(Array.isArray(list) && list.some((item: any) => item.id === post.id));
+      } catch {
+        setIsCompared(false);
+      }
+    };
+    handleCompareUpdate();
+    window.addEventListener("compare_list_updated", handleCompareUpdate);
+    return () => window.removeEventListener("compare_list_updated", handleCompareUpdate);
+  }, [post.id]);
+
+  const handleCompareClick = () => {
+    try {
+      const stored = localStorage.getItem("compared_posts");
+      let list = stored ? JSON.parse(stored) : [];
+      if (!Array.isArray(list)) list = [];
+
+      const exists = list.some((item: any) => item.id === post.id);
+      if (exists) {
+        list = list.filter((item: any) => item.id !== post.id);
+        setIsCompared(false);
+      } else {
+        if (list.length >= 3) {
+          window.alert("Chỉ có thể so sánh tối đa 3 bất động sản cùng lúc.");
+          return;
+        }
+        list.push(post);
+        setIsCompared(true);
+      }
+      localStorage.setItem("compared_posts", JSON.stringify(list));
+      window.dispatchEvent(new Event("compare_list_updated"));
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const images = useMemo(
     () => (post.images.length > 0 ? post.images : [{ id: "fallback", imageUrl: imageFallback, order: 0 }]),
@@ -255,6 +297,20 @@ export function PostCard({ post }: { post: Post }) {
                 <TriangleAlert className="relative h-5 w-5 transition duration-300 group-hover/report:-translate-y-0.5 group-hover/report:scale-110 group-hover/report:drop-shadow-[0_0_10px_rgba(251,191,36,0.75)]" />
               </button>
             ) : null}
+            <button
+              type="button"
+              onClick={handleCompareClick}
+              className={`group/compare relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition ${
+                isCompared
+                  ? "border-blue-400/40 bg-blue-500/15 text-blue-200 hover:bg-blue-500/25 hover:text-white"
+                  : "border-white/15 bg-white/5 text-gray-300 hover:border-blue-400/30 hover:bg-blue-500/10 hover:text-blue-100"
+              }`}
+              aria-label="So sánh bất động sản"
+              title="So sánh bất động sản"
+            >
+              <span className={`pointer-events-none absolute inset-1 rounded-full opacity-0 blur-lg transition duration-300 group-hover/compare:opacity-100 ${isCompared ? "group-hover/compare:bg-blue-400/30" : "group-hover/compare:bg-blue-400/20"}`} />
+              <Scale className="relative h-5 w-5 transition duration-300 group-hover/compare:scale-110" />
+            </button>
             <button
               type="button"
               onClick={handleSaveClick}
