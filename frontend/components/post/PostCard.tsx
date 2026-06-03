@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -30,11 +31,16 @@ import { useSound } from "@/hooks/useSound";
 import { api } from "@/lib/api";
 import { writeSessionCache } from "@/lib/client-cache";
 import { useAuthStore } from "@/stores/auth.store";
-import CommentSection from "@/components/comment/CommentSection";
-import { ReportPostDialog } from "@/components/post/ReportPostDialog";
+
+const CommentSection = dynamic(() => import("@/components/comment/CommentSection"));
+const ReportPostDialog = dynamic(async () => {
+  const module = await import("@/components/post/ReportPostDialog");
+  return module.ReportPostDialog;
+});
 
 const imageFallback =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 760'><rect width='1200' height='760' fill='%230b1120'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-family='Arial' font-size='48'>TrustEstate</text></svg>";
+const POST_DETAIL_CACHE_TTL_MS = 2 * 60 * 1000;
 
 const getInitial = (name: string) => name.trim().charAt(0).toUpperCase() || "T";
 
@@ -127,7 +133,7 @@ export function PostCard({ post }: { post: Post }) {
       ...post,
       features: post.features ?? [],
       relatedPosts: post.relatedPosts ?? [],
-    });
+    }, { ttlMs: POST_DETAIL_CACHE_TTL_MS });
   };
 
   const goToPreviousImage = () => {

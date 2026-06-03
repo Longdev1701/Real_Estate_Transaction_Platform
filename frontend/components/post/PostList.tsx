@@ -35,6 +35,7 @@ import { PostCard } from "./PostCard";
 import { PostFilter } from "./PostFilter";
 
 const PAGE_SIZE = 8;
+const POST_LIST_CACHE_TTL_MS = 2 * 60 * 1000;
 
 const leftNavItems = [
   { icon: Newspaper, label: "Bảng tin", active: true },
@@ -136,6 +137,7 @@ export function PostList() {
             setHasMore(cachedPayload.meta.hasMore);
             setTotal(cachedPayload.meta.total ?? cachedPayload.items.length);
             setIsLoading(false);
+            return;
           }
         }
         const response = await api.get<{ data: PostListData }>(`/posts?${query}`);
@@ -150,7 +152,7 @@ export function PostList() {
         setHasMore(payload.meta.hasMore);
         setTotal(payload.meta.total ?? payload.items.length);
         if (!append) {
-          writeSessionCache(cacheKey, payload);
+          writeSessionCache(cacheKey, payload, { ttlMs: POST_LIST_CACHE_TTL_MS });
         }
       } catch (err) {
         const axiosError = err as AxiosError<{ message?: string }>;
