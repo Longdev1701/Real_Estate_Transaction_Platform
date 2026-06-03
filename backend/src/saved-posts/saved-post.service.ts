@@ -109,7 +109,6 @@ export const savePost = async (postId: string, user?: AuthenticatedUser) => {
         postId,
       },
     },
-    include: savedPostInclude,
   });
 
   if (existingSavedPost) {
@@ -124,7 +123,6 @@ export const savePost = async (postId: string, user?: AuthenticatedUser) => {
       userId: actor.id,
       postId,
     },
-    include: savedPostInclude,
   });
 
   if (post.authorId !== actor.id) {

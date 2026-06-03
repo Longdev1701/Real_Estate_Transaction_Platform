@@ -217,7 +217,15 @@ export default function ComparePage() {
     const handleCompareUpdate = () => {
       try {
         const stored = localStorage.getItem("compared_posts");
-        setComparedPosts(stored ? JSON.parse(stored) : []);
+        const parsed = stored ? JSON.parse(stored) : [];
+        setComparedPosts((current) => {
+          const currentIds = current.map((p) => p.id).join(",");
+          const parsedIds = parsed.map((p: any) => p.id).join(",");
+          if (currentIds === parsedIds) {
+            return current;
+          }
+          return parsed;
+        });
       } catch (e) {
         console.error(e);
       }
