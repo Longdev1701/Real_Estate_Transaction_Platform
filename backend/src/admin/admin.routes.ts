@@ -6,8 +6,10 @@ import { authorizeRoles } from "../middlewares/role.middleware.js";
 import {
   getAdminDashboardController,
   getAdminPostsController,
+  getAdminPostsStatsController,
   getAdminUserDetailController,
   getAdminUsersController,
+  getAdminUsersStatsController,
   updateAdminUserController,
 } from "./admin.controller.js";
 
@@ -25,6 +27,13 @@ adminRoutes.get(
   authenticate,
   authorizeRoles(UserRole.ADMIN),
   getAdminUsersController,
+);
+
+adminRoutes.get(
+  "/users/stats",
+  authenticate,
+  authorizeRoles(UserRole.ADMIN),
+  getAdminUsersStatsController,
 );
 
 adminRoutes.get(
@@ -46,4 +55,11 @@ adminRoutes.get(
   authenticate,
   authorizeRoles(UserRole.ADMIN),
   getAdminPostsController,
+);
+
+adminRoutes.get(
+  "/posts/stats",
+  authenticate,
+  authorizeRoles(UserRole.ADMIN),
+  getAdminPostsStatsController,
 );
