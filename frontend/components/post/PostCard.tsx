@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   BadgeCheck,
   Bookmark,
@@ -109,18 +109,22 @@ export function PostCard({ post }: { post: Post }) {
   const [isSaveSubmitting, setIsSaveSubmitting] = useState(false);
   const [saveEffect, setSaveEffect] = useState<{ key: number; type: "save" | "unsave" } | null>(null);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
-  const [isCompared, setIsCompared] = useState(() => {
-    if (typeof window !== "undefined") {
+  const [isCompared, setIsCompared] = useState(false);
+
+  useEffect(() => {
+    const handleCompareUpdate = () => {
       try {
         const stored = localStorage.getItem("compared_posts");
         const list = stored ? JSON.parse(stored) : [];
-        return Array.isArray(list) && list.some((item: any) => item.id === post.id);
+        setIsCompared(Array.isArray(list) && list.some((item: any) => item.id === post.id));
       } catch {
-        return false;
+        setIsCompared(false);
       }
-    }
-    return false;
-  });
+    };
+    handleCompareUpdate();
+    window.addEventListener("compare_list_updated", handleCompareUpdate);
+    return () => window.removeEventListener("compare_list_updated", handleCompareUpdate);
+  }, [post.id]);
 
   const handleCompareClick = () => {
     try {
