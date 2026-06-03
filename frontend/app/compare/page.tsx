@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -200,17 +200,41 @@ export default function ComparePage() {
   const router = useRouter();
   const { user, accessToken, hasHydrated, isLoadingUser } = useAuthStore();
   const [savedPosts, setSavedPosts] = useState<SavedPost[]>([]);
-  const [selectedPostIds, setSelectedPostIds] = useState<string[]>([]);
+  const [comparedPosts, setComparedPosts] = useState<Post[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("compared_posts");
+        return stored ? JSON.parse(stored) : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isStartingConversation, setIsStartingConversation] = useState(false);
   const [actionPicker, setActionPicker] = useState<"detail" | "message" | null>(null);
+
   useEffect(() => {
     if (hasHydrated && !accessToken && !user) {
       router.push("/auth/login");
     }
   }, [accessToken, hasHydrated, router, user]);
+
+  useEffect(() => {
+    const handleCompareUpdate = () => {
+      try {
+        const stored = localStorage.getItem("compared_posts");
+        setComparedPosts(stored ? JSON.parse(stored) : []);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    window.addEventListener("compare_list_updated", handleCompareUpdate);
+    return () => window.removeEventListener("compare_list_updated", handleCompareUpdate);
+  }, []);
 
   useEffect(() => {
     if (!hasHydrated || !user) {
@@ -228,7 +252,6 @@ export default function ComparePage() {
         const cachedSavedPosts = readSessionCache<SavedPost[]>(cacheKey);
         if (cachedSavedPosts && isMounted) {
           setSavedPosts(cachedSavedPosts);
-          setSelectedPostIds(cachedSavedPosts.slice(0, maxCompareItems).map((item) => item.postId));
           setIsLoading(false);
         }
         const response = await api.get<{ data: SavedPost[] }>("/saved-posts?includeFeatures=true&imageLimit=1");
@@ -236,13 +259,22 @@ export default function ComparePage() {
 
         if (isMounted) {
           setSavedPosts(items);
-          setSelectedPostIds(items.slice(0, maxCompareItems).map((item) => item.postId));
           writeSessionCache(cacheKey, items);
+
+          // If comparedPosts is empty, initialize it with first 3 saved posts
+          const stored = localStorage.getItem("compared_posts");
+          const parsed = stored ? JSON.parse(stored) : [];
+          if (parsed.length === 0 && items.length > 0) {
+            const initialCompared = items.slice(0, maxCompareItems).map((item) => item.post);
+            setComparedPosts(initialCompared);
+            localStorage.setItem("compared_posts", JSON.stringify(initialCompared));
+            window.dispatchEvent(new Event("compare_list_updated"));
+          }
         }
       } catch (err) {
         const axiosError = err as AxiosError<{ message?: string }>;
         if (isMounted) {
-          setError(axiosError.response?.data?.message ?? "KhÃ´ng thá»ƒ táº£i danh sÃ¡ch báº¥t Ä‘á»™ng sáº£n Ä‘Ã£ lÆ°u.");
+          setError(axiosError.response?.data?.message ?? "Không thể tải danh sách bất động sản đã lưu.");
         }
       } finally {
         if (isMounted) {
@@ -263,42 +295,54 @@ export default function ComparePage() {
     [savedPosts],
   );
 
-  const selectedPosts = useMemo(
-    () =>
-      selectedPostIds
-        .map((postId) => savedPostMap.get(postId)?.post)
-        .filter((post): post is Post => Boolean(post)),
-    [savedPostMap, selectedPostIds],
+  const selectedPosts = comparedPosts;
+
+  const selectedPostIds = useMemo(
+    () => comparedPosts.map((p) => p.id),
+    [comparedPosts]
   );
 
   const toggleSelectedPost = (postId: string) => {
     setActionError(null);
-    setSelectedPostIds((current) => {
-      if (current.includes(postId)) {
-        return current.filter((id) => id !== postId);
-      }
+    const exists = comparedPosts.some((p) => p.id === postId);
 
-      if (current.length >= maxCompareItems) {
-        setActionError("Chá»‰ cÃ³ thá»ƒ so sÃ¡nh tá»‘i Ä‘a 3 báº¥t Ä‘á»™ng sáº£n cÃ¹ng lÃºc.");
-        return current;
+    if (exists) {
+      const next = comparedPosts.filter((p) => p.id !== postId);
+      setComparedPosts(next);
+      localStorage.setItem("compared_posts", JSON.stringify(next));
+      window.dispatchEvent(new Event("compare_list_updated"));
+    } else {
+      if (comparedPosts.length >= maxCompareItems) {
+        setActionError("Chỉ có thể so sánh tối đa 3 bất động sản cùng lúc.");
+        return;
       }
-
-      return [...current, postId];
-    });
+      const post = savedPostMap.get(postId)?.post;
+      if (post) {
+        const next = [...comparedPosts, post];
+        setComparedPosts(next);
+        localStorage.setItem("compared_posts", JSON.stringify(next));
+        window.dispatchEvent(new Event("compare_list_updated"));
+      }
+    }
   };
 
   const removeFromCompare = (postId: string) => {
-    setSelectedPostIds((current) => current.filter((id) => id !== postId));
+    const next = comparedPosts.filter((p) => p.id !== postId);
+    setComparedPosts(next);
+    localStorage.setItem("compared_posts", JSON.stringify(next));
+    window.dispatchEvent(new Event("compare_list_updated"));
   };
 
   const clearCompare = () => {
-    setSelectedPostIds([]);
+    setComparedPosts([]);
+    localStorage.removeItem("compared_posts");
+    window.dispatchEvent(new Event("compare_list_updated"));
     setActionError(null);
   };
 
   const handleViewDetail = () => {
     if (selectedPosts.length === 0) {
-      setActionError("Vui lÃ²ng chá»n Ã­t nháº¥t má»™t báº¥t Ä‘á»™ng sáº£n Ä‘á»ƒ xem chi tiáº¿t.");
+      setActionError("Vui lòng chọn ít nhất một bất động sản để xem chi tiết.");
       return;
     }
 
@@ -308,7 +352,7 @@ export default function ComparePage() {
 
   const handleMessage = () => {
     if (selectedPosts.length === 0) {
-      setActionError("Vui lÃ²ng chá»n má»™t báº¥t Ä‘á»™ng sáº£n Ä‘á»ƒ nháº¯n tin.");
+      setActionError("Vui lòng chọn một bất động sản để nhắn tin.");
       return;
     }
 
@@ -324,7 +368,7 @@ export default function ComparePage() {
 
   const startConversation = async (targetPost: Post) => {
     if (user?.id === targetPost.author.id) {
-      setActionError("ÄÃ¢y lÃ  bÃ i Ä‘Äƒng cá»§a báº¡n. KhÃ´ng thá»ƒ tá»± táº¡o cuá»™c trÃ² chuyá»‡n.");
+      setActionError("Đây là bài đăng của bạn. Không thể tự tạo cuộc trò chuyện.");
       return;
     }
 
@@ -345,12 +389,18 @@ export default function ComparePage() {
       router.push(`/messages/${conversation.id}`);
     } catch (err) {
       const axiosError = err as AxiosError<{ message?: string }>;
-      setActionError(axiosError.response?.data?.message ?? "KhÃ´ng thá»ƒ báº¯t Ä‘áº§u cuá»™c trÃ² chuyá»‡n lÃºc nÃ y.");
+      setActionError(axiosError.response?.data?.message ?? "Không thể bắt đầu cuộc trò chuyện lúc này.");
     } finally {
       setIsStartingConversation(false);
     }
   };
 
+  if (!hasHydrated || isLoadingUser || (accessToken && !user)) {
+    return null;
+  }
+
+  if (!user) {
+    return null;
   if (!hasHydrated || isLoadingUser || (accessToken && !user)) {
     return null;
   }
