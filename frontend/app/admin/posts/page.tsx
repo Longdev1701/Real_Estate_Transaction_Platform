@@ -21,10 +21,12 @@ import {
 import { AdminShell, NeonCard, StatCard } from "@/components/admin/AdminShell";
 import {
   getAdminPosts,
+  getAdminPostsStats,
   updateAdminPostStatus,
   type AdminPost,
   type AdminPostsData,
   type AdminPostsFilter,
+  type AdminPostsStats,
   type AdminPostStatus,
 } from "@/lib/admin";
 import {
@@ -116,7 +118,9 @@ export default function AdminPostsPage() {
   const [keywordInput, setKeywordInput] = useState("");
   const [activeTab, setActiveTab] = useState<StatusTab>("ALL");
   const [data, setData] = useState<AdminPostsData | null>(null);
+  const [stats, setStats] = useState<AdminPostsStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
@@ -163,18 +167,46 @@ export default function AdminPostsPage() {
     };
   }, [filter, refreshKey]);
 
+  useEffect(() => {
+    let ignore = false;
+
+    const loadStats = async () => {
+      try {
+        setIsLoadingStats(true);
+        const result = await getAdminPostsStats();
+        if (!ignore) {
+          setStats(result);
+        }
+      } catch {
+        if (!ignore) {
+          setError("Không thể tải thống kê bài đăng.");
+        }
+      } finally {
+        if (!ignore) {
+          setIsLoadingStats(false);
+        }
+      }
+    };
+
+    loadStats();
+
+    return () => {
+      ignore = true;
+    };
+  }, [refreshKey]);
+
   const tabs = useMemo(
     () => [
-      { key: "ALL" as const, label: "Tất cả", count: data?.stats.totalPosts.total ?? 0 },
+      { key: "ALL" as const, label: "Tất cả", count: stats?.totalPosts.total ?? 0 },
       {
         key: "ACTIVE" as const,
         label: "Đang hiện thị",
-        count: data?.stats.activePosts.total ?? 0,
+        count: stats?.activePosts.total ?? 0,
       },
-      { key: "BANNED" as const, label: "Vi phạm", count: data?.stats.bannedPosts.total ?? 0 },
-      { key: "HIDDEN" as const, label: "Đã ẩn", count: data?.stats.hiddenPosts.total ?? 0 },
+      { key: "BANNED" as const, label: "Vi phạm", count: stats?.bannedPosts.total ?? 0 },
+      { key: "HIDDEN" as const, label: "Đã ẩn", count: stats?.hiddenPosts.total ?? 0 },
     ],
-    [data],
+    [stats],
   );
 
   const pageButtons = useMemo(() => {
@@ -258,24 +290,24 @@ export default function AdminPostsPage() {
             compact
             icon={ClipboardList}
             title="Tổng bài đăng"
-            value={isLoading ? "..." : formatNumber(data?.stats.totalPosts.total ?? 0)}
-            delta={isLoading ? "..." : formatDelta(data?.stats.totalPosts.deltaPercent ?? 0)}
+            value={isLoadingStats ? "..." : formatNumber(stats?.totalPosts.total ?? 0)}
+            delta={isLoadingStats ? "..." : formatDelta(stats?.totalPosts.deltaPercent ?? 0)}
             tone="blue"
           />
           <StatCard
             compact
             icon={Flag}
             title="Report cho xử lý"
-            value={isLoading ? "..." : formatNumber(data?.stats.pendingReports.total ?? 0)}
-            delta={isLoading ? "..." : formatDelta(data?.stats.pendingReports.deltaPercent ?? 0)}
+            value={isLoadingStats ? "..." : formatNumber(stats?.pendingReports.total ?? 0)}
+            delta={isLoadingStats ? "..." : formatDelta(stats?.pendingReports.deltaPercent ?? 0)}
             tone="orange"
           />
           <StatCard
             compact
             icon={CheckCircle2}
             title="Đang hiện thị"
-            value={isLoading ? "..." : formatNumber(data?.stats.activePosts.total ?? 0)}
-            delta={isLoading ? "..." : formatDelta(data?.stats.activePosts.deltaPercent ?? 0)}
+            value={isLoadingStats ? "..." : formatNumber(stats?.activePosts.total ?? 0)}
+            delta={isLoadingStats ? "..." : formatDelta(stats?.activePosts.deltaPercent ?? 0)}
             tone="green"
           />
           <StatCard
@@ -283,14 +315,14 @@ export default function AdminPostsPage() {
             icon={ShieldAlert}
             title="Ẩn / vi phạm"
             value={
-              isLoading
+              isLoadingStats
                 ? "..."
                 : formatNumber(
-                    (data?.stats.hiddenPosts.total ?? 0) +
-                      (data?.stats.bannedPosts.total ?? 0),
+                    (stats?.hiddenPosts.total ?? 0) +
+                      (stats?.bannedPosts.total ?? 0),
                   )
             }
-            delta={isLoading ? "..." : formatDelta(data?.stats.bannedPosts.deltaPercent ?? 0)}
+            delta={isLoadingStats ? "..." : formatDelta(stats?.bannedPosts.deltaPercent ?? 0)}
             tone="red"
           />
         </section>
