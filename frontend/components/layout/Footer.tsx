@@ -8,7 +8,7 @@ export function Footer() {
   if (
     pathname?.startsWith("/messages") ||
     pathname?.startsWith("/admin") ||
-    pathname === "/posts/create"
+    pathname?.startsWith("/posts")
   ) {
     return null;
   }

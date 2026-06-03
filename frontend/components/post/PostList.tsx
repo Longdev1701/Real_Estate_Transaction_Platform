@@ -229,29 +229,29 @@ export function PostList() {
   return (
     <div className="grid min-h-0 flex-1 gap-6 xl:grid-cols-[260px_minmax(0,1fr)_340px] 2xl:grid-cols-[280px_minmax(0,1fr)_360px]">
       <aside className="hidden min-h-0 xl:block">
-        <div className="sticky top-20 h-full max-h-[calc(100vh-100px)] space-y-5">
-          <div className="glass-card p-4">
-            <nav className="space-y-2">
+        <div className="sticky top-20 h-full max-h-[calc(100vh-100px)] space-y-5 overflow-y-auto pr-1 scrollbar-thin">
+          <div className="glass-card p-2.5">
+            <nav className="space-y-1">
               {leftNavItems.map((item) => (
                 <button
                   key={item.label}
                   type="button"
-                  className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-medium transition ${
+                  className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-xs font-semibold transition ${
                     item.active
-                      ? "border border-blue-500/40 bg-blue-500/10 text-blue-300 shadow-[0_0_24px_rgba(37,99,235,0.18)]"
-                      : "text-gray-200 hover:bg-white/5"
+                      ? "border border-blue-500/30 bg-blue-500/10 text-blue-300 shadow-[0_0_15px_rgba(37,99,235,0.12)]"
+                      : "text-gray-300 hover:bg-white/5"
                   }`}
                 >
-                  <item.icon className="h-4 w-4" />
+                  <item.icon className="h-3.5 w-3.5" />
                   {item.label}
                 </button>
               ))}
             </nav>
           </div>
 
-          <div className="glass-card p-5">
-            <h2 className="mb-4 text-xl font-semibold text-blue-300">Danh mục</h2>
-            <div className="space-y-2">
+          <div className="glass-card p-3.5">
+            <h2 className="mb-2.5 text-xs font-bold uppercase tracking-wider text-blue-400">Danh mục</h2>
+            <div className="space-y-1">
               {categoryItems.map((item) => {
                 const active = draftFilter.propertyType === item.value;
 
@@ -260,13 +260,13 @@ export function PostList() {
                     key={item.value || "all"}
                     type="button"
                     onClick={() => applyCategory(item.value)}
-                    className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition ${
+                    className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-medium text-left transition ${
                       active
-                        ? "border border-blue-500/40 bg-blue-500/10 text-blue-200 shadow-[0_0_24px_rgba(37,99,235,0.18)]"
-                        : "text-gray-200 hover:bg-white/5"
+                        ? "border border-blue-500/30 bg-blue-500/10 text-blue-200 shadow-[0_0_15px_rgba(37,99,235,0.12)]"
+                        : "text-gray-300 hover:bg-white/5"
                     }`}
                   >
-                    <item.icon className="h-4 w-4 shrink-0 text-blue-300" />
+                    <item.icon className="h-3.5 w-3.5 shrink-0 text-blue-300" />
                     <span className="line-clamp-1">{item.label}</span>
                   </button>
                 );
@@ -300,20 +300,20 @@ export function PostList() {
                   }}
                 >
                   <div className="flex flex-col gap-3 sm:flex-row">
-                  <div className="relative flex-1">
-                    <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-300" />
-                    <input
-                      type="search"
-                      value={draftFilter.keyword}
-                      onChange={(event) => setDraftFilter({ ...draftFilter, keyword: event.target.value })}
-                      className="input-dark pl-11 text-base"
-                      placeholder="Bạn đang tìm kiếm bất động sản nào?"
-                    />
-                  </div>
-                  <button type="submit" className="btn-primary inline-flex items-center justify-center gap-2 px-6 py-3">
-                    <Search className="h-4 w-4" />
-                    Tìm kiếm
-                  </button>
+                    <div className="relative flex-1">
+                      <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-300" />
+                      <input
+                        type="search"
+                        value={draftFilter.keyword}
+                        onChange={(event) => setDraftFilter({ ...draftFilter, keyword: event.target.value })}
+                        className="input-dark pl-11 text-base"
+                        placeholder="Bạn đang tìm kiếm bất động sản nào?"
+                      />
+                    </div>
+                    <button type="submit" className="btn-primary inline-flex items-center justify-center gap-2 px-6 py-3">
+                      <Search className="h-4 w-4" />
+                      Tìm kiếm
+                    </button>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {transactionItems.map((item) => {

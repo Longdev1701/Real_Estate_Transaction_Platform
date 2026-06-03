@@ -1,4 +1,4 @@
-﻿import type { Express } from "express";
+import type { Express } from "express";
 import type { Prisma } from "@prisma/client";
 
 import { PostStatus, ReportStatus, UserRole } from "@prisma/client";
@@ -377,6 +377,35 @@ export const createPost = async (
     throw error;
   }
 };
+const mapCityName = (city?: string): string | undefined => {
+  if (!city) return undefined;
+  const normalized = city.toLowerCase().trim();
+  if (normalized.includes("hồ chí minh") || normalized.includes("ho chi minh") || normalized.includes("hcm")) {
+    return "Ho Chi Minh City";
+  }
+  if (normalized.includes("hà nội") || normalized.includes("ha noi")) {
+    return "Hanoi";
+  }
+  return city;
+};
+
+const mapDistrictName = (district?: string): string | undefined => {
+  if (!district) return undefined;
+  const normalized = district.toLowerCase().trim();
+  const districtMatch = normalized.match(/quận\s+(\d+)/);
+  if (districtMatch) {
+    return `District ${districtMatch[1]}`;
+  }
+  if (normalized.includes("thủ đức")) {
+    return "Thu Duc";
+  }
+  if (normalized.includes("bình thạnh")) {
+    return "Binh Thanh";
+  }
+  return district
+    .replace(/^(quận|huyện|thành phố|thị xã)\s+/i, "")
+    .trim();
+};
 
 export const getPosts = async (
   filter: PostFilterInput,
@@ -392,6 +421,8 @@ export const getPosts = async (
   const maxArea = toOptionalNumber(filter.maxArea);
   const featureIds = toOptionalString(filter.featureIds);
   const authorId = toOptionalString(filter.authorId);
+  const filterCity = toOptionalString(filter.city);
+  const filterDistrict = toOptionalString(filter.district);
 
   const canViewOwnNonActivePosts =
     Boolean(user) &&
@@ -408,12 +439,6 @@ export const getPosts = async (
         : canViewOwnNonActivePosts
           ? filter.status
           : PostStatus.ACTIVE,
-    city: toOptionalString(filter.city)
-      ? { contains: toOptionalString(filter.city), mode: "insensitive" }
-      : undefined,
-    district: toOptionalString(filter.district)
-      ? { contains: toOptionalString(filter.district), mode: "insensitive" }
-      : undefined,
     postType: filter.postType,
     propertyType: filter.propertyType,
     price:
@@ -439,17 +464,43 @@ export const getPosts = async (
       : undefined,
   };
 
+  const andConditions: Prisma.PropertyPostWhereInput[] = [];
+
+  if (filterCity) {
+    andConditions.push({
+      OR: [
+        { city: { contains: filterCity, mode: "insensitive" } },
+        { city: { contains: mapCityName(filterCity) || "", mode: "insensitive" } }
+      ]
+    });
+  }
+
+  if (filterDistrict) {
+    andConditions.push({
+      OR: [
+        { district: { contains: filterDistrict, mode: "insensitive" } },
+        { district: { contains: mapDistrictName(filterDistrict) || "", mode: "insensitive" } }
+      ]
+    });
+  }
+
   if (featureIds) {
     const featureIdsArray = featureIds.split(",").map((id) => id.trim()).filter(Boolean);
     if (featureIdsArray.length > 0) {
-      where.AND = featureIdsArray.map((id) => ({
-        features: {
-          some: {
-            featureId: id,
+      featureIdsArray.forEach((id) => {
+        andConditions.push({
+          features: {
+            some: {
+              featureId: id,
+            },
           },
-        },
-      }));
+        });
+      });
     }
+  }
+
+  if (andConditions.length > 0) {
+    where.AND = andConditions;
   }
 
   const visibilityScope =

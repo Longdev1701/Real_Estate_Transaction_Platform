@@ -214,9 +214,11 @@ export const buildPostQuery = (
   params.set("limit", String(limit));
 
   Object.entries(normalizedFilter).forEach(([key, rawValue]) => {
-    const value = rawValue.trim();
-    if (value) {
-      params.set(key, value);
+    if (rawValue !== undefined && rawValue !== null) {
+      const value = String(rawValue).trim();
+      if (value) {
+        params.set(key, value);
+      }
     }
   });
 
