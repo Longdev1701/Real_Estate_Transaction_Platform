@@ -3,6 +3,7 @@ import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { FloatingCreateButton } from "@/components/layout/FloatingCreateButton";
+import { FloatingCompareBar } from "@/components/layout/FloatingCompareBar";
 import { MainContent } from "@/components/layout/MainContent";
 import { AuthSessionProvider } from "@/components/auth/AuthSessionProvider";
 
@@ -29,6 +30,7 @@ export default function RootLayout({
             <MainContent>{children}</MainContent>
             <Footer />
             <FloatingCreateButton />
+            <FloatingCompareBar />
           </div>
         </AuthSessionProvider>
       </body>
