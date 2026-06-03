@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Scale, X, ArrowRight } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Scale, X, ArrowRight, ChevronDown } from "lucide-react";
 import { getPrimaryImage, type Post } from "@/lib/posts";
 
 export function FloatingCompareBar() {
+  const pathname = usePathname();
   const [comparedPosts, setComparedPosts] = useState<Post[]>([]);
   const [isVisible, setIsVisible] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {
     const handleCompareUpdate = () => {
@@ -17,13 +20,19 @@ export function FloatingCompareBar() {
         if (Array.isArray(list)) {
           setComparedPosts(list);
           setIsVisible(list.length > 0);
+          // If no posts, make sure it's not collapsed next time
+          if (list.length === 0) {
+            setIsCollapsed(false);
+          }
         } else {
           setComparedPosts([]);
           setIsVisible(false);
+          setIsCollapsed(false);
         }
       } catch {
         setComparedPosts([]);
         setIsVisible(false);
+        setIsCollapsed(false);
       }
     };
 
@@ -49,32 +58,51 @@ export function FloatingCompareBar() {
       localStorage.removeItem("compared_posts");
       setComparedPosts([]);
       setIsVisible(false);
+      setIsCollapsed(false);
       window.dispatchEvent(new Event("compare_list_updated"));
     } catch (e) {
       console.error(e);
     }
   };
 
+  if (pathname?.startsWith("/admin") || pathname?.startsWith("/messages")) {
+    return null;
+  }
+
   if (!isVisible || comparedPosts.length === 0) return null;
 
+  if (isCollapsed) {
+    return (
+      <button
+        type="button"
+        onClick={() => setIsCollapsed(false)}
+        className="fixed bottom-6 left-6 z-[999] flex h-14 w-14 items-center justify-center rounded-full border border-blue-500/30 bg-slate-950/90 text-blue-400 shadow-[0_10px_30px_rgba(30,58,138,0.45)] backdrop-blur-xl hover:bg-slate-900 transition-all duration-300 hover:scale-105 active:scale-95 animate-in fade-in zoom-in-50 md:bottom-8 md:left-8"
+        title="Mở rộng thanh so sánh"
+      >
+        <Scale className="h-6 w-6 animate-pulse" />
+        <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white shadow-md border border-slate-950">
+          {comparedPosts.length}
+        </span>
+      </button>
+    );
+  }
+
   return (
-    <div className="fixed bottom-6 left-1/2 z-[999] w-[92%] max-w-xl -translate-x-1/2 animate-in fade-in slide-in-from-bottom-5 duration-300">
-      <div className="flex flex-col gap-3 rounded-2xl border border-blue-500/30 bg-slate-950/85 p-4 shadow-[0_20px_50px_rgba(30,58,138,0.4)] backdrop-blur-xl md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/20">
-            <Scale className="h-5 w-5 animate-pulse" />
-          </div>
-          <div>
-            <h4 className="text-sm font-semibold text-white">So sánh bất động sản</h4>
-            <p className="text-xs text-gray-400">Đã chọn {comparedPosts.length}/3 căn</p>
-          </div>
+    <div className="fixed bottom-6 left-1/2 z-[999] w-[90%] max-w-md -translate-x-1/2 animate-in fade-in slide-in-from-bottom-5 duration-300">
+      <div className="relative flex items-center justify-between gap-3 rounded-xl border border-blue-500/30 bg-slate-950/90 p-2 shadow-[0_15px_40px_rgba(30,58,138,0.45)] backdrop-blur-xl">
+        
+        {/* Left: Icon & Count */}
+        <div className="flex items-center gap-2 pl-1.5 shrink-0">
+          <Scale className="h-4.5 w-4.5 text-blue-400" />
+          <span className="text-xs font-bold text-white">{comparedPosts.length}/3</span>
         </div>
 
-        <div className="flex flex-1 items-center gap-2 overflow-x-auto py-1 md:justify-center">
+        {/* Center: Previews */}
+        <div className="flex items-center gap-1.5">
           {comparedPosts.map((post) => (
             <div
               key={post.id}
-              className="group relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-slate-900"
+              className="group relative h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-slate-900"
             >
               <img
                 src={getPrimaryImage(post)}
@@ -84,34 +112,38 @@ export function FloatingCompareBar() {
               <button
                 type="button"
                 onClick={() => handleRemove(post.id)}
-                className="absolute right-0.5 top-0.5 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-slate-950/80 text-gray-400 hover:bg-red-600 hover:text-white transition-colors"
+                className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity"
                 title="Bỏ chọn"
               >
-                <X className="h-3 w-3" />
+                <X className="h-3 w-3 text-white" />
               </button>
             </div>
           ))}
-          {comparedPosts.length < 3 && (
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-dashed border-white/20 bg-white/5 text-xs text-gray-500">
-              +{3 - comparedPosts.length}
-            </div>
-          )}
         </div>
 
-        <div className="flex items-center justify-end gap-2 shrink-0">
+        {/* Right: Actions */}
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={() => setIsCollapsed(true)}
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 hover:bg-white/5 hover:text-white transition-colors"
+            title="Thu gọn"
+          >
+            <ChevronDown className="h-4.5 w-4.5" />
+          </button>
           <button
             type="button"
             onClick={handleClearAll}
-            className="rounded-xl px-3 py-2 text-xs font-semibold text-gray-400 hover:bg-white/5 hover:text-white transition-colors"
+            className="rounded-lg px-2 py-1.5 text-xs font-semibold text-gray-400 hover:bg-white/5 hover:text-white transition-colors"
           >
             Xóa hết
           </button>
           <Link
             href="/compare"
-            className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-blue-500/25 hover:bg-blue-500 transition-colors"
+            className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-md shadow-blue-500/25 hover:bg-blue-500 transition-colors"
           >
             So sánh
-            <ArrowRight className="h-3.5 w-3.5" />
+            <ArrowRight className="h-3 w-3" />
           </Link>
         </div>
       </div>
