@@ -17,6 +17,8 @@ type PostViewTab = "ALL" | "SELL" | "RENT" | "SOLD" | "BANNED";
 export default function ProfilePostsPage() {
   const searchParams = useSearchParams();
   const authorId = searchParams.get("authorId");
+  const authorNameParam = searchParams.get("name");
+  const authorAvatarParam = searchParams.get("avatar");
   const { user, accessToken, hasHydrated, isLoadingUser } = useAuthStore();
   const [posts, setPosts] = useState<Post[]>([]);
   const [activeTab, setActiveTab] = useState<PostViewTab>("ALL");
@@ -167,9 +169,9 @@ export default function ProfilePostsPage() {
   }
 
   const displayName =
-    targetAuthor?.fullName ?? user?.fullName ?? user?.name ?? user?.email ?? "Người đăng";
+    authorNameParam ?? targetAuthor?.fullName ?? user?.fullName ?? user?.name ?? user?.email ?? "Người đăng";
   const email = targetAuthor?.email ?? user?.email ?? "";
-  const avatarUrl = targetAuthor?.avatarUrl ?? user?.avatarUrl ?? null;
+  const avatarUrl = targetAuthor?.avatarUrl ?? authorAvatarParam ?? user?.avatarUrl ?? null;
   const username = email ? email.split("@")[0] : "user";
 
   const listTitle = isOwnProfile ? "Bài đăng của tôi" : `Bài đăng của ${displayName}`;
@@ -196,9 +198,11 @@ export default function ProfilePostsPage() {
                   {displayName.charAt(0).toUpperCase()}
                 </div>
               )}
-              <div className="absolute bottom-2 right-2 flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-white/20 text-white backdrop-blur-md transition-colors hover:bg-white/30">
-                <Edit className="h-4 w-4" />
-              </div>
+              {isOwnProfile && (
+                <div className="absolute bottom-2 right-2 flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-white/20 text-white backdrop-blur-md transition-colors hover:bg-white/30">
+                  <Edit className="h-4 w-4" />
+                </div>
+              )}
             </div>
 
             <div className="w-full pb-2">

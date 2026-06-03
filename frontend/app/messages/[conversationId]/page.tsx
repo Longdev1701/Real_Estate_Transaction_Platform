@@ -493,7 +493,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
   };
 
   useEffect(() => {
-    if (!socket || !isConnected || !conversation || !user) return;
+    if (!socket || !isConnected || !conversation || !user || !conversation.buyer || !conversation.seller) return;
 
     const otherUserId = conversation.buyer.id === user.id ? conversation.seller.id : conversation.buyer.id;
 
@@ -876,7 +876,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
     });
   };
 
-  if (!hasHydrated || !user || !conversation) {
+  if (!hasHydrated || !user || !conversation || !conversation.buyer || !conversation.seller || !conversation.post) {
     if (hasHydrated && user && loadError) {
       return (
         <div className="flex h-full min-h-0 flex-1 items-center justify-center bg-[radial-gradient(circle_at_top,rgba(37,99,235,0.12),transparent_34%),linear-gradient(180deg,#071326_0%,#06101f_100%)] p-6">
@@ -893,7 +893,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
       );
     }
 
-    if (hasHydrated && user && !conversation && !loadError) {
+    if (hasHydrated && user && (!conversation || !conversation.buyer || !conversation.seller || !conversation.post) && !loadError) {
       return (
         <div className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-[26px] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(37,99,235,0.12),transparent_34%),linear-gradient(180deg,#071326_0%,#06101f_100%)]">
           <header className="flex h-[78px] shrink-0 items-center border-b border-white/10 bg-white/[0.03] px-5 lg:px-6">

@@ -826,6 +826,39 @@ export default function PostDetailPage() {
                   </div>
                 </div>
 
+                <div className="mt-5 space-y-2.5 relative">
+                  <button
+                    type="button"
+                    onClick={handleMessageClick}
+                    disabled={isStartingConversation}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-500 disabled:opacity-60 shadow-[0_0_15px_rgba(37,99,235,0.25)]"
+                  >
+                    <MessageCircle className="h-4.5 w-4.5 text-blue-100" />
+                    {isStartingConversation ? "Đang kết nối..." : "Nhắn tin trao đổi"}
+                  </button>
+                  <div className="flex gap-2">
+                    <a
+                      href={post.author.phone ? `tel:${post.author.phone}` : `mailto:${post.author.email}`}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-600/10 py-2.5 text-xs font-semibold text-emerald-400 transition hover:bg-emerald-600/25"
+                    >
+                      <Phone className="h-4.5 w-4.5" />
+                      Gọi điện
+                    </a>
+                    <a
+                      href={`mailto:${post.author.email}`}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2.5 text-xs font-medium text-gray-200 transition hover:bg-white/10"
+                    >
+                      <Mail className="h-4.5 w-4.5 text-gray-400" />
+                      Email
+                    </a>
+                  </div>
+                  {conversationError && (
+                    <p className="mt-2 text-xs rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-red-200">
+                      {conversationError}
+                    </p>
+                  )}
+                </div>
+
                 <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4 relative">
                   <div className="mb-3 flex items-center gap-2 text-white">
                     <ShieldCheck className="h-5 w-5 text-emerald-400" />
@@ -957,13 +990,15 @@ export default function PostDetailPage() {
           >
             <TriangleAlert className="h-5 w-5 text-amber-300" />
           </button>
-          <a
-            href={`mailto:${post.author.email}`}
-            className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 font-medium text-white transition hover:bg-white/10"
+          <button
+            type="button"
+            onClick={handleMessageClick}
+            disabled={isStartingConversation}
+            className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 font-medium text-white transition hover:bg-white/10 disabled:opacity-60"
           >
             <MessageCircle className="h-5 w-5" />
-            Nhắn tin
-          </a>
+            {isStartingConversation ? "Đang kết nối..." : "Nhắn tin"}
+          </button>
           <a
             href={post.author.phone ? `tel:${post.author.phone}` : `mailto:${post.author.email}`}
             className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 font-bold text-white shadow-[0_0_15px_rgba(5,150,105,0.3)] transition hover:bg-emerald-500"
