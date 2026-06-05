@@ -420,6 +420,13 @@ export const getPosts = async (
   const minArea = toOptionalNumber(filter.minArea);
   const maxArea = toOptionalNumber(filter.maxArea);
   const featureIds = toOptionalString(filter.featureIds);
+  const featureIdsArray = featureIds
+    ? featureIds
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean)
+        .sort()
+    : [];
   const authorId = toOptionalString(filter.authorId);
   const filterCity = toOptionalString(filter.city);
   const filterDistrict = toOptionalString(filter.district);
@@ -484,19 +491,16 @@ export const getPosts = async (
     });
   }
 
-  if (featureIds) {
-    const featureIdsArray = featureIds.split(",").map((id) => id.trim()).filter(Boolean);
-    if (featureIdsArray.length > 0) {
-      featureIdsArray.forEach((id) => {
-        andConditions.push({
-          features: {
-            some: {
-              featureId: id,
-            },
+  if (featureIdsArray.length > 0) {
+    featureIdsArray.forEach((id) => {
+      andConditions.push({
+        features: {
+          some: {
+            featureId: id,
           },
-        });
+        },
       });
-    }
+    });
   }
 
   if (andConditions.length > 0) {
@@ -525,6 +529,7 @@ export const getPosts = async (
         maxPrice: maxPrice ?? null,
         minArea: minArea ?? null,
         maxArea: maxArea ?? null,
+        featureIds: featureIdsArray.join(","),
         status: filter.status ?? "",
       })
     : null;
@@ -536,20 +541,25 @@ export const getPosts = async (
     }
   }
 
-  const rawItems = await prisma.propertyPost.findMany({
-    where,
-    select: postListSelect,
-    orderBy: [
-      {
-        createdAt: "desc",
-      },
-      {
-        id: "desc",
-      },
-    ],
-    skip,
-    take: limit + 1,
-  });
+  const [rawItems, total] = await Promise.all([
+    prisma.propertyPost.findMany({
+      where,
+      select: postListSelect,
+      orderBy: [
+        {
+          createdAt: "desc",
+        },
+        {
+          id: "desc",
+        },
+      ],
+      skip,
+      take: limit + 1,
+    }),
+    prisma.propertyPost.count({
+      where,
+    }),
+  ]);
 
   const hasMore = rawItems.length > limit;
   const pagedItems = hasMore ? rawItems.slice(0, limit) : rawItems;
@@ -563,8 +573,8 @@ export const getPosts = async (
     meta: {
       page,
       limit,
-      total: null,
-      totalPages: null,
+      total,
+      totalPages: Math.ceil(total / limit),
       hasMore,
     },
   };
