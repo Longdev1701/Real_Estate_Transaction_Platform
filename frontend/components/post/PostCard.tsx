@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   BadgeCheck,
   Bookmark,
@@ -110,6 +111,12 @@ export function PostCard({ post }: { post: Post }) {
   const [saveEffect, setSaveEffect] = useState<{ key: number; type: "save" | "unsave" } | null>(null);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [isCompared, setIsCompared] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
     const handleCompareUpdate = () => {
@@ -164,6 +171,7 @@ export function PostCard({ post }: { post: Post }) {
   const engagementSeed = post.id.split("").reduce((total, char) => total + char.charCodeAt(0), 0);
   const likeCount = 48 + (engagementSeed % 96);
   const commentCount = post.commentCount ?? 0;
+  const shouldShowDescriptionToggle = post.description.trim().length > 120;
 
   const openImageViewer = (index: number) => {
     setActiveImageIndex(index);
@@ -374,7 +382,24 @@ export function PostCard({ post }: { post: Post }) {
               {post.title}
             </h3>
           </Link>
-          <p className="mb-3 line-clamp-2 text-sm leading-5 text-gray-300">{post.description}</p>
+          <div className="mb-3">
+            <p
+              className={`text-sm leading-5 text-gray-300 ${
+                isDescriptionExpanded ? "" : "line-clamp-2"
+              }`}
+            >
+              {post.description}
+            </p>
+            {shouldShowDescriptionToggle ? (
+              <button
+                type="button"
+                onClick={() => setIsDescriptionExpanded((current) => !current)}
+                className="mt-1 text-sm font-medium text-blue-300 transition hover:text-blue-200"
+              >
+                {isDescriptionExpanded ? "Thu gọn" : "Xem thêm"}
+              </button>
+            ) : null}
+          </div>
 
           <div className={`grid overflow-hidden rounded-xl border border-white/10 bg-slate-900 ${getGalleryGridClassName(images.length)}`}>
             {visibleImages.map((image, index) => {
@@ -502,7 +527,8 @@ export function PostCard({ post }: { post: Post }) {
         </div>
       </article>
 
-      {isImageViewerOpen && (
+      {isClient && isImageViewerOpen &&
+        createPortal(
         <div
           className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/95 p-4 backdrop-blur-md"
           onClick={() => setIsImageViewerOpen(false)}
@@ -547,7 +573,7 @@ export function PostCard({ post }: { post: Post }) {
           )}
 
           <div
-            className="flex max-h-[90vh] w-full max-w-5xl flex-col items-center gap-4 px-12"
+            className="flex max-h-[96vh] w-full max-w-[min(96vw,1800px)] flex-col items-center gap-4 px-6 md:px-12"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="relative flex flex-1 items-center justify-center overflow-hidden">
@@ -555,7 +581,7 @@ export function PostCard({ post }: { post: Post }) {
                 key={activeImageIndex}
                 src={activeImage}
                 alt={`${post.title} ${activeImageIndex + 1}`}
-                className="max-h-[60vh] md:max-h-[70vh] max-w-full rounded-xl object-contain shadow-2xl animate-in fade-in zoom-in-95 duration-300"
+                className="max-h-[76vh] md:max-h-[84vh] max-w-full rounded-xl object-contain shadow-2xl animate-in fade-in zoom-in-95 duration-300"
               />
             </div>
             <div className="rounded-full bg-black/55 px-4 py-1.5 text-sm font-medium text-white ring-1 ring-white/10">
@@ -582,9 +608,10 @@ export function PostCard({ post }: { post: Post }) {
             )}
           </div>
         </div>
-      )}
+      , document.body)}
 
-      {isCommentOpen && (
+      {isClient && isCommentOpen &&
+        createPortal(
         <div
           className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/75 p-3 backdrop-blur-md md:p-6"
           onClick={() => setIsCommentOpen(false)}
@@ -624,7 +651,23 @@ export function PostCard({ post }: { post: Post }) {
 
             <div className="scrollbar-hidden overflow-y-auto p-4 md:p-5">
               <div className="relative overflow-hidden rounded-xl border border-white/10 bg-slate-900">
-                <img src={activeImage} alt={post.title} className="aspect-[16/9] w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setIsImageViewerOpen(true)}
+                  className="group/image block w-full text-left"
+                  aria-label="Phóng to ảnh bài đăng"
+                >
+                  <img
+                    src={activeImage}
+                    alt={post.title}
+                    className="aspect-[16/9] w-full object-cover transition duration-300 group-hover/image:scale-[1.02]"
+                  />
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between bg-gradient-to-t from-black/65 via-black/10 to-transparent px-3 py-3 opacity-100">
+                    <span className="rounded-full border border-white/15 bg-black/45 px-3 py-1 text-xs font-medium text-white backdrop-blur">
+                      Bấm để phóng to
+                    </span>
+                  </div>
+                </button>
                 <div className="absolute right-3 top-3 rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white backdrop-blur-md">
                   {activeImageIndex + 1}/{images.length}
                 </div>
@@ -715,7 +758,7 @@ export function PostCard({ post }: { post: Post }) {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
 
       <ReportPostDialog
         open={isReportDialogOpen}

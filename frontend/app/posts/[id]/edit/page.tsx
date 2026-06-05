@@ -17,24 +17,6 @@ import {
   Trash2,
   X,
   Check,
-  Wifi,
-  Wind,
-  Armchair,
-  Droplets,
-  Snowflake,
-  ThermometerSun,
-  Waves,
-  ArrowUpDown,
-  Car,
-  Bike,
-  Shield,
-  Trees,
-  Building,
-  Scroll,
-  Milestone,
-  Home,
-  Dog,
-  HelpCircle,
 } from "lucide-react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -44,6 +26,8 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 
 import { api } from "@/lib/api";
+import { FeatureIcon } from "@/lib/feature-icons";
+import { compressPropertyImage } from "@/lib/image-compression";
 import {
   POST_TYPES,
   PROPERTY_TYPES,
@@ -92,31 +76,6 @@ interface Feature {
   category: string | null;
 }
 
-const featureIconMap: Record<string, React.ComponentType<any>> = {
-  wifi: Wifi,
-  wind: Wind,
-  armchair: Armchair,
-  droplets: Droplets,
-  snowflake: Snowflake,
-  "thermometer-sun": ThermometerSun,
-  waves: Waves,
-  "arrow-up-down": ArrowUpDown,
-  car: Car,
-  bike: Bike,
-  shield: Shield,
-  trees: Trees,
-  building: Building,
-  scroll: Scroll,
-  milestone: Milestone,
-  home: Home,
-  dog: Dog,
-};
-
-const FeatureIcon = ({ name, className }: { name: string; className?: string }) => {
-  const IconComponent = featureIconMap[name] || HelpCircle;
-  return <IconComponent className={className} />;
-};
-
 type EditPostInput = z.input<typeof editPostSchema>;
 type EditPostValues = z.output<typeof editPostSchema>;
 type NewImagePreview = {
@@ -128,8 +87,36 @@ type NewImagePreview = {
 const imageFallback =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 800'><rect width='1200' height='800' fill='%230b1120'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-family='Arial' font-size='52'>TrustEstate</text></svg>";
 
+const acceptedExtensions = new Set([".jpg", ".jpeg", ".png", ".webp"]);
+const acceptedMimeTypes = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/jpg",
+  "image/pjpeg",
+]);
+const maxFileSizeInBytes = 5 * 1024 * 1024;
 const maxImages = 10;
 const acceptedImageTypes = "image/jpeg,image/png,image/webp,image/jpg";
+
+const getFileExtension = (fileName: string) => {
+  const lastDotIndex = fileName.lastIndexOf(".");
+  return lastDotIndex === -1 ? "" : fileName.slice(lastDotIndex).toLowerCase();
+};
+
+const getImageValidation = (file: File) => {
+  const extension = getFileExtension(file.name);
+  const isMimeValid = acceptedMimeTypes.has(file.type);
+  const isExtensionValid = acceptedExtensions.has(extension);
+  const isSizeValid = file.size <= maxFileSizeInBytes;
+
+  return {
+    isMimeValid,
+    isExtensionValid,
+    isSizeValid,
+    isUploadable: isSizeValid && (isMimeValid || isExtensionValid),
+  };
+};
 
 const CreatePostMap = dynamic(() => import("@/components/map/CreatePostMap"), {
   ssr: false,
@@ -355,14 +342,15 @@ export default function EditPostPage() {
     return name.charAt(0).toUpperCase();
   }, [post?.author.fullName, user?.fullName, user?.name]);
 
-  const handleSelectImages = (files: FileList | null) => {
+  const handleSelectImages = async (files: FileList | null) => {
     if (!files) {
       return;
     }
 
     setImageError(null);
     const incomingFiles = Array.from(files);
-    const availableSlots = Math.max(0, maxImages - totalImageCount);
+    const currentImageCount = images.length + newImagesRef.current.length;
+    const availableSlots = Math.max(0, maxImages - currentImageCount);
     const selectedFiles = incomingFiles.slice(0, availableSlots);
 
     if (selectedFiles.length === 0) {
@@ -370,14 +358,73 @@ export default function EditPostPage() {
       return;
     }
 
+    let processedFiles: Array<{
+      file: File;
+      validation: ReturnType<typeof getImageValidation>;
+    }>;
+
+    try {
+      processedFiles = await Promise.all(
+        selectedFiles.map(async (file) => {
+          const originalValidation = getImageValidation(file);
+
+          if (!originalValidation.isMimeValid && !originalValidation.isExtensionValid) {
+            return {
+              file,
+              validation: originalValidation,
+            };
+          }
+
+          const compressedFile = await compressPropertyImage(file);
+          return {
+            file: compressedFile,
+            validation: getImageValidation(compressedFile),
+          };
+        }),
+      );
+    } catch (error) {
+      console.error("Failed to prepare images before upload:", error);
+      setImageError("Không thể xử lý ảnh vừa chọn. Vui lòng thử lại.");
+      return;
+    }
+
     setNewImages((current) => [
       ...current,
-      ...selectedFiles.map((file) => ({
+      ...processedFiles.map(({ file }) => ({
         id: `${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2, 8)}`,
         file,
         url: URL.createObjectURL(file),
       })),
     ]);
+
+    const uploadableCount = processedFiles.filter(({ validation }) => validation.isUploadable).length;
+    const invalidTypeCount = processedFiles.filter(({ validation }) => {
+      return !validation.isMimeValid && !validation.isExtensionValid;
+    }).length;
+    const oversizedCount = processedFiles.filter(({ validation }) => !validation.isSizeValid).length;
+    const skippedCount = Math.max(0, incomingFiles.length - selectedFiles.length);
+
+    if (uploadableCount === 0) {
+      if (oversizedCount > 0 && invalidTypeCount > 0) {
+        setImageError("Tất cả ảnh vừa chọn đều vượt quá 5MB hoặc sai định dạng JPG, PNG, WEBP.");
+      } else if (oversizedCount > 0) {
+        setImageError("Tất cả ảnh vừa chọn đều vượt quá giới hạn 5MB.");
+      } else {
+        setImageError("Tất cả ảnh vừa chọn đều không đúng định dạng JPG, PNG, WEBP.");
+      }
+      return;
+    }
+
+    if (invalidTypeCount > 0 || oversizedCount > 0 || skippedCount > 0) {
+      const messages = [
+        invalidTypeCount > 0 ? `${invalidTypeCount} ảnh sai định dạng` : null,
+        oversizedCount > 0 ? `${oversizedCount} ảnh vượt 5MB` : null,
+        skippedCount > 0 ? `${skippedCount} ảnh vượt giới hạn ${maxImages}` : null,
+      ].filter(Boolean);
+
+      setImageError(`Đã thêm ${uploadableCount} ảnh hợp lệ. ${messages.join(", ")}.`);
+      return;
+    }
 
     if (selectedFiles.length < incomingFiles.length) {
       setImageError(`Đã thêm ${selectedFiles.length} ảnh. Các ảnh vượt giới hạn ${maxImages} đã bị bỏ qua.`);

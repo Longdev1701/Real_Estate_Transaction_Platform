@@ -26,24 +26,6 @@ import {
   TriangleAlert,
   Trash2,
   X,
-  Wifi,
-  Wind,
-  Armchair,
-  Droplets,
-  Snowflake,
-  ThermometerSun,
-  Waves,
-  ArrowUpDown,
-  Car,
-  Bike,
-  Shield,
-  Trees,
-  Building,
-  Scroll,
-  Milestone,
-  Home,
-  Dog,
-  HelpCircle,
   Hash,
   User,
   Map,
@@ -54,6 +36,7 @@ import {
 
 import { api } from "@/lib/api";
 import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
+import { FeatureIcon } from "@/lib/feature-icons";
 import {
   formatArea,
   formatLocation,
@@ -78,31 +61,6 @@ const PostDetailMap = dynamic(() => import("@/components/map/PostDetailMap"), {
     </div>
   ),
 });
-
-const featureIconMap: Record<string, React.ComponentType<any>> = {
-  wifi: Wifi,
-  wind: Wind,
-  armchair: Armchair,
-  droplets: Droplets,
-  snowflake: Snowflake,
-  "thermometer-sun": ThermometerSun,
-  waves: Waves,
-  "arrow-up-down": ArrowUpDown,
-  car: Car,
-  bike: Bike,
-  shield: Shield,
-  trees: Trees,
-  building: Building,
-  scroll: Scroll,
-  milestone: Milestone,
-  home: Home,
-  dog: Dog,
-};
-
-const FeatureIcon = ({ name, className }: { name: string; className?: string }) => {
-  const IconComponent = featureIconMap[name] || HelpCircle;
-  return <IconComponent className={className} />;
-};
 
 const imageFallback =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 800'><rect width='1200' height='800' fill='%230b1120'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-family='Arial' font-size='52'>TrustEstate</text></svg>";
@@ -364,7 +322,7 @@ export default function PostDetailPage() {
       <div className="container mx-auto flex min-h-[60vh] items-center justify-center px-4 py-10 lg:px-8">
         <div className="inline-flex items-center gap-3 text-gray-300">
           <LoaderCircle className="h-5 w-5 animate-spin text-blue-300" />
-          Dang tai chi tiet bai dang...
+          Đang tải chi tiết bài đăng...
         </div>
       </div>
     );
@@ -781,10 +739,12 @@ export default function PostDetailPage() {
               <div className="glass-card p-6 border-t-4 border-t-blue-500 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-blue-500/20 to-transparent pointer-events-none" />
                 <h2 className="text-xl font-semibold text-white relative">Quản lý bài đăng</h2>
-                <p className="text-sm text-gray-400 mt-2 relative">
-                  Bạn là người sở hữu bài đăng này. Bạn có quyền chỉnh sửa thông tin hoặc xoá bài viết.
-                </p>
-                <div className="mt-6 grid gap-3 sm:grid-cols-2 relative">
+                {isOwnPost ? (
+                  <p className="text-sm text-gray-400 mt-2 relative">
+                    Bạn là người sở hữu bài đăng này. Bạn có quyền chỉnh sửa thông tin hoặc xoá bài viết.
+                  </p>
+                ) : null}
+                <div className={`${isOwnPost ? "mt-6" : "mt-4"} grid gap-3 sm:grid-cols-2 relative`}>
                   <Link
                     href={`/posts/${post.id}/edit`}
                     className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-medium text-gray-100 transition hover:bg-white/10"

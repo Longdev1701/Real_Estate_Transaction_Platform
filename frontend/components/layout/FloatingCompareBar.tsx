@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Scale, X, ArrowRight, ChevronDown } from "lucide-react";
+import { Scale, X, ArrowRight, ChevronDown, Trash2 } from "lucide-react";
 import { getPrimaryImage, type Post } from "@/lib/posts";
 
 export function FloatingCompareBar() {
@@ -54,6 +54,10 @@ export function FloatingCompareBar() {
   };
 
   const handleClearAll = () => {
+    if (!window.confirm("Xóa toàn bộ bất động sản đã chọn để so sánh?")) {
+      return;
+    }
+
     try {
       localStorage.removeItem("compared_posts");
       setComparedPosts([]);
@@ -76,7 +80,7 @@ export function FloatingCompareBar() {
       <button
         type="button"
         onClick={() => setIsCollapsed(false)}
-        className="fixed bottom-6 left-6 z-[999] flex h-14 w-14 items-center justify-center rounded-full border border-blue-500/30 bg-slate-950/90 text-blue-400 shadow-[0_10px_30px_rgba(30,58,138,0.45)] backdrop-blur-xl hover:bg-slate-900 transition-all duration-300 hover:scale-105 active:scale-95 animate-in fade-in zoom-in-50 md:bottom-8 md:left-8"
+        className="fixed bottom-6 left-6 z-[999] flex h-14 w-14 items-center justify-center rounded-full border border-blue-500/30 bg-slate-950/90 text-blue-400 shadow-[0_10px_30px_rgba(30,58,138,0.45)] backdrop-blur-xl transition-all duration-200 hover:scale-105 hover:bg-slate-900 active:scale-95 animate-in fade-in zoom-in-75 slide-in-from-bottom-2 md:bottom-8 md:left-8"
         title="Mở rộng thanh so sánh"
       >
         <Scale className="h-6 w-6 animate-pulse" />
@@ -88,7 +92,7 @@ export function FloatingCompareBar() {
   }
 
   return (
-    <div className="fixed bottom-6 left-1/2 z-[999] w-[90%] max-w-md -translate-x-1/2 animate-in fade-in slide-in-from-bottom-5 duration-300">
+    <div className="fixed bottom-6 left-1/2 z-[999] w-[90%] max-w-md -translate-x-1/2 animate-in fade-in slide-in-from-bottom-5 duration-200">
       <div className="relative flex items-center justify-between gap-3 rounded-xl border border-blue-500/30 bg-slate-950/90 p-2 shadow-[0_15px_40px_rgba(30,58,138,0.45)] backdrop-blur-xl">
         
         {/* Left: Icon & Count */}
@@ -126,16 +130,18 @@ export function FloatingCompareBar() {
           <button
             type="button"
             onClick={() => setIsCollapsed(true)}
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 hover:bg-white/5 hover:text-white transition-colors"
+            className="group flex h-9 w-9 items-center justify-center rounded-lg bg-white/[0.04] text-gray-400 transition-all duration-200 hover:bg-white/10 hover:text-white"
             title="Thu gọn"
           >
-            <ChevronDown className="h-4.5 w-4.5" />
+            <ChevronDown className="h-4.5 w-4.5 transition-transform duration-200 group-hover:translate-y-0.5" />
           </button>
           <button
             type="button"
             onClick={handleClearAll}
-            className="rounded-lg px-2 py-1.5 text-xs font-semibold text-gray-400 hover:bg-white/5 hover:text-white transition-colors"
+            className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-gray-400 transition-colors hover:bg-red-500/10 hover:text-red-300"
+            title="Xóa toàn bộ mục đã chọn"
           >
+            <Trash2 className="h-3.5 w-3.5" />
             Xóa hết
           </button>
           <Link
