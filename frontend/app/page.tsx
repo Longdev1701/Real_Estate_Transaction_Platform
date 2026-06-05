@@ -7,9 +7,7 @@ import {
   LandPlot,
   MapPin,
   Ruler,
-  Search,
   ShieldCheck,
-  SlidersHorizontal,
   Sparkles,
   Store,
   UsersRound,
@@ -24,7 +22,6 @@ import {
   formatPrice,
   getPrimaryImage,
   postTypeLabels,
-  PROPERTY_TYPES,
   propertyTypeLabels,
   type Post,
   type PropertyType,
@@ -32,7 +29,7 @@ import {
 
 import { CompareButton } from "@/components/post/CompareButton";
 import { HeroSlideshow } from "@/components/home/HeroSlideshow";
-import { CitySelect } from "@/components/home/CitySelect";
+import { HomeSearchForm } from "@/components/home/HomeSearchForm";
 
 const heroImage =
   "https://images.pexels.com/photos/313782/pexels-photo-313782.jpeg?auto=compress&cs=tinysrgb&w=2400";
@@ -63,30 +60,6 @@ const categoryColors: Record<PropertyType, string> = {
 
 const formatCompactNumber = (value: number) =>
   new Intl.NumberFormat("vi-VN").format(value);
-
-function SelectField({
-  icon: Icon,
-  label,
-  name,
-  children,
-}: {
-  icon: LucideIcon;
-  label: string;
-  name: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="flex min-h-16 items-center gap-3 rounded-xl border border-white/10 bg-slate-950/45 px-4 transition focus-within:border-blue-400/40 hover:bg-white/10">
-      <Icon className="h-5 w-5 shrink-0 text-gray-300" />
-      <span className="min-w-0 flex-1">
-        <span className="block text-xs text-gray-400">{label}</span>
-        <select name={name} className="hero-select mt-1 w-full bg-transparent text-sm font-medium text-white outline-none">
-          {children}
-        </select>
-      </span>
-    </label>
-  );
-}
 
 function PropertyCard({ post, index }: { post: Post; index: number }) {
   const tag = index === 0 ? "M\u1edbi" : index === 1 ? "Hot" : "";
@@ -190,58 +163,7 @@ export default async function HomePage() {
             </p>
           </div>
 
-          <form action="/posts" className="mt-7 w-full max-w-[1360px] rounded-2xl border border-white/10 bg-slate-950/75 p-4 shadow-2xl shadow-blue-950/30 backdrop-blur-xl">
-            <div className="grid gap-3 lg:grid-cols-[1.15fr_1fr_1fr_1fr_auto]">
-              <label className="flex min-h-16 items-center gap-3 rounded-xl border border-white/10 bg-slate-950/45 px-4 transition hover:bg-white/10">
-                <MapPin className="h-5 w-5 shrink-0 text-gray-300" />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-xs text-gray-400">{"V\u1ecb tr\u00ed"}</span>
-                  <CitySelect />
-                </span>
-              </label>
-
-              <SelectField icon={Home} label={"Lo\u1ea1i b\u1ea5t \u0111\u1ed9ng s\u1ea3n"} name="propertyType">
-                <option value="">{"Ch\u1ecdn lo\u1ea1i"}</option>
-                {PROPERTY_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {propertyTypeLabels[type]}
-                  </option>
-                ))}
-              </SelectField>
-
-              <SelectField icon={SlidersHorizontal} label={"Kho\u1ea3ng gi\u00e1"} name="maxPrice">
-                <option value="">{"Ch\u1ecdn kho\u1ea3ng gi\u00e1"}</option>
-                <option value="1000000000">{"D\u01b0\u1edbi 1 t\u1ef7"}</option>
-                <option value="3000000000">{"D\u01b0\u1edbi 3 t\u1ef7"}</option>
-                <option value="5000000000">{"D\u01b0\u1edbi 5 t\u1ef7"}</option>
-                <option value="10000000000">{"D\u01b0\u1edbi 10 t\u1ef7"}</option>
-              </SelectField>
-
-              <SelectField icon={Ruler} label={"Di\u1ec7n t\u00edch"} name="minArea">
-                <option value="">{"Ch\u1ecdn di\u1ec7n t\u00edch"}</option>
-                <option value="30">{"T\u1eeb 30 m\u00b2"}</option>
-                <option value="50">{"T\u1eeb 50 m\u00b2"}</option>
-                <option value="80">{"T\u1eeb 80 m\u00b2"}</option>
-                <option value="120">{"T\u1eeb 120 m\u00b2"}</option>
-              </SelectField>
-
-              <button type="submit" className="btn-primary inline-flex min-h-16 items-center justify-center gap-2 rounded-xl px-8">
-                <Search className="h-5 w-5" />
-                {"T\u00ecm ki\u1ebfm"}
-              </button>
-            </div>
-
-            {popularLocations.length > 0 && (
-              <div className="mt-5 flex max-h-20 flex-wrap items-center gap-3 overflow-hidden text-sm">
-                <span className="text-gray-300">{"T\u00ecm ki\u1ebfm ph\u1ed5 bi\u1ebfn:"}</span>
-                {popularLocations.map((item) => (
-                  <Link key={item.city} href={`/posts?city=${encodeURIComponent(item.city)}`} className="rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-gray-200 transition hover:bg-white/10">
-                    {item.city}
-                  </Link>
-                ))}
-              </div>
-            )}
-          </form>
+          <HomeSearchForm popularLocations={popularLocations} />
         </div>
       </section>
 

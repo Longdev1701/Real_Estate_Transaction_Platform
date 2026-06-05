@@ -10,25 +10,6 @@ import {
   MapPin,
   Check,
   Save,
-  Wifi,
-  Wind,
-  Armchair,
-  Droplets,
-  Snowflake,
-  ThermometerSun,
-  Waves,
-  ArrowUpDown,
-  Car,
-  Bike,
-  Shield,
-  Trees,
-  Building,
-  Scroll,
-  Milestone,
-  Home,
-  Expand,
-  Dog,
-  HelpCircle,
   ChevronUp,
   ChevronDown,
 } from "lucide-react";
@@ -38,6 +19,8 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 
 import { api } from "@/lib/api";
+import { FeatureIcon } from "@/lib/feature-icons";
+import { compressPropertyImage } from "@/lib/image-compression";
 import { PROPERTY_TYPES, propertyTypeLabels } from "@/lib/posts";
 import { useAuthStore } from "@/stores/auth.store";
 
@@ -78,32 +61,6 @@ interface Feature {
   icon: string | null;
   category: string | null;
 }
-
-const featureIconMap: Record<string, React.ComponentType<any>> = {
-  wifi: Wifi,
-  wind: Wind,
-  armchair: Armchair,
-  droplets: Droplets,
-  snowflake: Snowflake,
-  "thermometer-sun": ThermometerSun,
-  waves: Waves,
-  "arrow-up-down": ArrowUpDown,
-  car: Car,
-  bike: Bike,
-  shield: Shield,
-  trees: Trees,
-  building: Building,
-  scroll: Scroll,
-  milestone: Milestone,
-  home: Home,
-  expand: Expand,
-  dog: Dog,
-};
-
-const FeatureIcon = ({ name, className }: { name: string; className?: string }) => {
-  const IconComponent = featureIconMap[name] || HelpCircle;
-  return <IconComponent className={className} />;
-};
 interface District {
   code: number;
   name: string;
@@ -556,41 +513,16 @@ export default function CreatePostPage() {
     [imagePreviews],
   );
 
-  const handleImageSelection = (files: FileList | null) => {
+  const handleImageSelection = async (files: FileList | null) => {
     if (!files) {
       return;
     }
 
     setImageError(null);
     const incomingFiles = Array.from(files);
-
-    setImagePreviews((currentImages) => {
-      const remainingSlots = Math.max(0, maxFiles - currentImages.length);
-      const filesToAppend = incomingFiles.slice(0, remainingSlots);
-      const nextPreviews = filesToAppend.map((file) => {
-        const validation = getImageValidation(file);
-
-        return {
-          file,
-          url: URL.createObjectURL(file),
-          id: `${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2, 8)}`,
-          isMimeValid: validation.isMimeValid,
-          isExtensionValid: validation.isExtensionValid,
-          isSizeValid: validation.isSizeValid,
-        };
-      });
-
-      return [...currentImages, ...nextPreviews];
-    });
-
-    const appendedFiles = incomingFiles.slice(0, maxFiles - imagePreviews.length);
+    const currentImageCount = previewsRef.current.length;
+    const appendedFiles = incomingFiles.slice(0, maxFiles - currentImageCount);
     const skippedCount = Math.max(0, incomingFiles.length - appendedFiles.length);
-    const uploadableCount = appendedFiles.filter((file) => getImageValidation(file).isUploadable).length;
-    const invalidTypeCount = appendedFiles.filter((file) => {
-      const validation = getImageValidation(file);
-      return !validation.isMimeValid && !validation.isExtensionValid;
-    }).length;
-    const oversizedCount = appendedFiles.filter((file) => !getImageValidation(file).isSizeValid).length;
 
     if (appendedFiles.length === 0) {
       setImageError(
@@ -598,6 +530,53 @@ export default function CreatePostPage() {
       );
       return;
     }
+
+    let processedFiles: Array<{
+      file: File;
+      validation: ReturnType<typeof getImageValidation>;
+    }>;
+
+    try {
+      processedFiles = await Promise.all(
+        appendedFiles.map(async (file) => {
+          const originalValidation = getImageValidation(file);
+
+          if (!originalValidation.isMimeValid && !originalValidation.isExtensionValid) {
+            return {
+              file,
+              validation: originalValidation,
+            };
+          }
+
+          const compressedFile = await compressPropertyImage(file);
+          return {
+            file: compressedFile,
+            validation: getImageValidation(compressedFile),
+          };
+        }),
+      );
+    } catch (error) {
+      console.error("Failed to prepare images before upload:", error);
+      setImageError("Không thể xử lý ảnh vừa chọn. Vui lòng thử lại.");
+      return;
+    }
+
+    const nextPreviews = processedFiles.map(({ file, validation }) => ({
+      file,
+      url: URL.createObjectURL(file),
+      id: `${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2, 8)}`,
+      isMimeValid: validation.isMimeValid,
+      isExtensionValid: validation.isExtensionValid,
+      isSizeValid: validation.isSizeValid,
+    }));
+
+    setImagePreviews((currentImages) => [...currentImages, ...nextPreviews]);
+
+    const uploadableCount = processedFiles.filter(({ validation }) => validation.isUploadable).length;
+    const invalidTypeCount = processedFiles.filter(({ validation }) => {
+      return !validation.isMimeValid && !validation.isExtensionValid;
+    }).length;
+    const oversizedCount = processedFiles.filter(({ validation }) => !validation.isSizeValid).length;
 
     if (uploadableCount === 0) {
       if (oversizedCount > 0 && invalidTypeCount > 0) {
