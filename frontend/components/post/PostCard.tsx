@@ -246,7 +246,7 @@ export function PostCard({ post }: { post: Post }) {
 
   return (
     <>
-      <article className="overflow-hidden rounded-2xl border border-blue-400/15 bg-slate-950/55 shadow-[0_20px_70px_rgba(0,0,0,0.32)] backdrop-blur-xl">
+      <article className="overflow-hidden rounded-2xl border border-blue-400/15 bg-slate-950/55 shadow-[0_20px_70px_rgba(0,0,0,0.32)] backdrop-blur-xl animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex items-start justify-between gap-4 px-4 pb-3 pt-4 md:px-5">
           <div className="flex min-w-0 items-center gap-3">
 
@@ -391,7 +391,7 @@ export function PostCard({ post }: { post: Post }) {
                   <img
                     src={imageError ? imageFallback : image.imageUrl}
                     alt={`${post.title} ${index + 1}`}
-                    className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.04]"
+                    className="h-full w-full object-cover transition-transform duration-[800ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-105"
                     onError={() => setImageError(true)}
                   />
                   {index === 0 && (
@@ -552,9 +552,10 @@ export function PostCard({ post }: { post: Post }) {
           >
             <div className="relative flex flex-1 items-center justify-center overflow-hidden">
               <img
+                key={activeImageIndex}
                 src={activeImage}
                 alt={`${post.title} ${activeImageIndex + 1}`}
-                className="max-h-[60vh] md:max-h-[70vh] max-w-full rounded-xl object-contain shadow-2xl"
+                className="max-h-[60vh] md:max-h-[70vh] max-w-full rounded-xl object-contain shadow-2xl animate-in fade-in zoom-in-95 duration-300"
               />
             </div>
             <div className="rounded-full bg-black/55 px-4 py-1.5 text-sm font-medium text-white ring-1 ring-white/10">

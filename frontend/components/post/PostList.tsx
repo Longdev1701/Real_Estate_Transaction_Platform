@@ -193,12 +193,17 @@ export function PostList() {
           setIsRestored(true);
           setIsLoading(false);
 
-          // Restore scroll position
-          setTimeout(() => {
+          // Restore scroll position as soon as layout completes
+          const restoreScroll = () => {
             if (scrollContainerRef.current && typeof state.scrollTop === "number") {
               scrollContainerRef.current.scrollTop = state.scrollTop;
             }
-          }, 150);
+          };
+          requestAnimationFrame(() => {
+            restoreScroll();
+            // Fallback for slower rendering pipelines
+            setTimeout(restoreScroll, 50);
+          });
         }
       }
     } catch (e) {
@@ -452,7 +457,9 @@ export function PostList() {
             <>
               <div className="space-y-5">
                 {posts.map((post) => (
-                  <PostCard key={post.id} post={post} />
+                  <div key={post.id} className="[content-visibility:auto] [contain-intrinsic-size:380px]">
+                    <PostCard post={post} />
+                  </div>
                 ))}
               </div>
 

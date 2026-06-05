@@ -201,7 +201,7 @@ export default function ComparePage() {
   const { user, accessToken, hasHydrated, isLoadingUser } = useAuthStore();
   const [savedPosts, setSavedPosts] = useState<SavedPost[]>([]);
   const [comparedPosts, setComparedPosts] = useState<Post[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isSavedPostsLoading, setIsSavedPostsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isStartingConversation, setIsStartingConversation] = useState(false);
@@ -217,7 +217,15 @@ export default function ComparePage() {
     const handleCompareUpdate = () => {
       try {
         const stored = localStorage.getItem("compared_posts");
-        setComparedPosts(stored ? JSON.parse(stored) : []);
+        const parsed = stored ? JSON.parse(stored) : [];
+        setComparedPosts((current) => {
+          const currentIds = current.map((p) => p.id).join(",");
+          const parsedIds = parsed.map((p: any) => p.id).join(",");
+          if (currentIds === parsedIds) {
+            return current;
+          }
+          return parsed;
+        });
       } catch (e) {
         console.error(e);
       }
@@ -229,7 +237,7 @@ export default function ComparePage() {
 
   useEffect(() => {
     if (!hasHydrated || !user) {
-      setIsLoading(false);
+      setIsSavedPostsLoading(false);
       return;
     }
 
@@ -237,13 +245,13 @@ export default function ComparePage() {
 
     const fetchSavedPosts = async () => {
       try {
-        setIsLoading(true);
+        setIsSavedPostsLoading(true);
         setError(null);
         const cacheKey = `compare:saved:${user.id}`;
         const cachedSavedPosts = readSessionCache<SavedPost[]>(cacheKey);
         if (cachedSavedPosts && isMounted) {
           setSavedPosts(cachedSavedPosts);
-          setIsLoading(false);
+          setIsSavedPostsLoading(false);
         }
         const response = await api.get<{ data: SavedPost[] }>("/saved-posts?includeFeatures=true&imageLimit=1");
         const items = response.data.data;
@@ -269,7 +277,7 @@ export default function ComparePage() {
         }
       } finally {
         if (isMounted) {
-          setIsLoading(false);
+          setIsSavedPostsLoading(false);
         }
       }
     };
@@ -408,7 +416,7 @@ export default function ComparePage() {
             </span>
           </div>
 
-          {isLoading ? (
+          {isSavedPostsLoading ? (
             <div className="space-y-3">
               {Array.from({ length: 4 }).map((_, index) => (
                 <div key={index} className="h-24 animate-pulse rounded-xl bg-white/5" />
@@ -485,14 +493,7 @@ export default function ComparePage() {
             </div>
           )}
 
-          {isLoading ? (
-            <div className="flex min-h-[420px] items-center justify-center">
-              <div className="inline-flex items-center gap-3 text-gray-300">
-                <LoaderCircle className="h-5 w-5 animate-spin text-blue-300" />
-                Đang tải dữ liệu so sánh...
-              </div>
-            </div>
-          ) : selectedPosts.length === 0 ? (
+          {selectedPosts.length === 0 ? (
             <div className="flex min-h-[420px] flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 p-10 text-center">
               <div className="mb-5 rounded-full border border-blue-400/20 bg-blue-500/10 p-4 text-blue-300">
                 <Scale className="h-10 w-10" />

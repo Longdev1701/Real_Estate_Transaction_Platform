@@ -307,6 +307,7 @@ model SavedPost {
 
   @@unique([userId, postId])
   @@index([postId])
+  @@index([userId, createdAt(sort: Desc)])
 }
 
 model RefreshToken {

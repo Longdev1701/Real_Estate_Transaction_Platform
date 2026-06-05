@@ -31,6 +31,8 @@ import {
 } from "@/lib/posts";
 
 import { CompareButton } from "@/components/post/CompareButton";
+import { HeroSlideshow } from "@/components/home/HeroSlideshow";
+import { CitySelect } from "@/components/home/CitySelect";
 
 const heroImage =
   "https://images.pexels.com/photos/313782/pexels-photo-313782.jpeg?auto=compress&cs=tinysrgb&w=2400";
@@ -164,11 +166,13 @@ export default async function HomePage() {
   return (
     <div className="pb-14">
       <section className="relative min-h-[560px] overflow-hidden border-b border-blue-500/20">
-        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${heroImage})` }} />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(2,6,23,0.96)_0%,rgba(2,6,23,0.82)_42%,rgba(2,6,23,0.48)_78%,rgba(2,6,23,0.72)_100%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(37,99,235,0.34),transparent_36%),radial-gradient(circle_at_76%_18%,rgba(14,165,233,0.18),transparent_32%)]" />
+        <div className="absolute inset-0 z-0">
+          <HeroSlideshow />
+        </div>
+        <div className="absolute inset-0 z-10 bg-[linear-gradient(90deg,rgba(2,6,23,0.96)_0%,rgba(2,6,23,0.82)_42%,rgba(2,6,23,0.48)_78%,rgba(2,6,23,0.72)_100%)]" />
+        <div className="absolute inset-0 z-10 bg-[radial-gradient(circle_at_18%_22%,rgba(37,99,235,0.34),transparent_36%),radial-gradient(circle_at_76%_18%,rgba(14,165,233,0.18),transparent_32%)]" />
 
-        <div className={`${sectionContainerClass} relative py-8 lg:py-10`}>
+        <div className={`${sectionContainerClass} relative z-20 py-8 lg:py-10`}>
           <div className="max-w-2xl">
             <div className="mb-5 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/10 px-4 py-2 text-sm font-medium text-blue-100 backdrop-blur">
               <ShieldCheck className="h-4 w-4 text-blue-300" />
@@ -192,7 +196,7 @@ export default async function HomePage() {
                 <MapPin className="h-5 w-5 shrink-0 text-gray-300" />
                 <span className="min-w-0 flex-1">
                   <span className="block text-xs text-gray-400">{"V\u1ecb tr\u00ed"}</span>
-                  <input name="city" className="mt-1 w-full bg-transparent text-sm font-medium text-white outline-none placeholder:text-gray-300" placeholder={"Nh\u1eadp t\u1ec9nh / th\u00e0nh ph\u1ed1"} />
+                  <CitySelect />
                 </span>
               </label>
 
@@ -323,6 +327,18 @@ export default async function HomePage() {
             .hero-select option:checked {
               background-color: #1d4ed8;
               color: #ffffff;
+            }
+
+            @keyframes kenburns {
+              0% {
+                transform: scale(1.05) translate(0, 0);
+              }
+              50% {
+                transform: scale(1.15) translate(-1%, -0.5%);
+              }
+              100% {
+                transform: scale(1.05) translate(0, 0);
+              }
             }
           `,
         }}
