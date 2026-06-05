@@ -406,23 +406,23 @@ export default function EditPostPage() {
 
     if (uploadableCount === 0) {
       if (oversizedCount > 0 && invalidTypeCount > 0) {
-        setImageError("Táº¥t cáº£ áº£nh vá»«a chá»n Ä‘á»u vÆ°á»£t quĂ¡ 5MB hoáº·c sai Ä‘á»‹nh dáº¡ng JPG, PNG, WEBP.");
+        setImageError("Tất cả ảnh vừa chọn đều vượt quá 5MB hoặc sai định dạng JPG, PNG, WEBP.");
       } else if (oversizedCount > 0) {
-        setImageError("Táº¥t cáº£ áº£nh vá»«a chá»n Ä‘á»u vÆ°á»£t quĂ¡ giá»›i háº¡n 5MB.");
+        setImageError("Tất cả ảnh vừa chọn đều vượt quá giới hạn 5MB.");
       } else {
-        setImageError("Táº¥t cáº£ áº£nh vá»«a chá»n Ä‘á»u khĂ´ng Ä‘Ăºng Ä‘á»‹nh dáº¡ng JPG, PNG, WEBP.");
+        setImageError("Tất cả ảnh vừa chọn đều không đúng định dạng JPG, PNG, WEBP.");
       }
       return;
     }
 
     if (invalidTypeCount > 0 || oversizedCount > 0 || skippedCount > 0) {
       const messages = [
-        invalidTypeCount > 0 ? `${invalidTypeCount} áº£nh sai Ä‘á»‹nh dáº¡ng` : null,
-        oversizedCount > 0 ? `${oversizedCount} áº£nh vÆ°á»£t 5MB` : null,
-        skippedCount > 0 ? `${skippedCount} áº£nh vÆ°á»£t giá»›i háº¡n ${maxImages}` : null,
+        invalidTypeCount > 0 ? `${invalidTypeCount} ảnh sai định dạng` : null,
+        oversizedCount > 0 ? `${oversizedCount} ảnh vượt 5MB` : null,
+        skippedCount > 0 ? `${skippedCount} ảnh vượt giới hạn ${maxImages}` : null,
       ].filter(Boolean);
 
-      setImageError(`ÄĂ£ thĂªm ${uploadableCount} áº£nh há»£p lá»‡. ${messages.join(", ")}.`);
+      setImageError(`Đã thêm ${uploadableCount} ảnh hợp lệ. ${messages.join(", ")}.`);
       return;
     }
 
