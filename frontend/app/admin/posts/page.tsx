@@ -49,11 +49,9 @@ const statusLabels: Record<AdminPostStatus, string> = {
 };
 
 const statusStyles: Record<AdminPostStatus, string> = {
-  ACTIVE:
-    "border-emerald-400/30 bg-emerald-500/12 text-emerald-300 shadow-[0_0_18px_rgba(16,185,129,0.12)]",
-  HIDDEN: "border-slate-500/35 bg-slate-500/12 text-slate-300",
-  BANNED:
-    "border-red-400/35 bg-red-500/12 text-red-300 shadow-[0_0_18px_rgba(239,68,68,0.12)]",
+  ACTIVE: "theme-badge-success",
+  HIDDEN: "theme-badge-warning",
+  BANNED: "theme-badge-danger",
 };
 
 const formatNumber = (value: number) => numberFormatter.format(value);
@@ -151,7 +149,7 @@ export default function AdminPostsPage() {
         }
       } catch {
         if (!ignore) {
-          setError("Khong the tai danh sach bai dang.");
+          setError("Không thể tải danh sách bài đăng.");
         }
       } finally {
         if (!ignore) {
@@ -259,7 +257,7 @@ export default function AdminPostsPage() {
       syncPost(buildPostPatch(post, { status }));
       setRefreshKey((current) => current + 1);
     } catch {
-      setError("Khong the cap nhat trang thai bai dang.");
+      setError("Không thể cập nhật trạng thái bài đăng.");
     } finally {
       setIsUpdating(false);
     }
@@ -280,7 +278,7 @@ export default function AdminPostsPage() {
     >
       <div className="space-y-4">
         {error && (
-          <NeonCard className="border-red-400/30 bg-red-950/20 p-3 text-sm text-red-200">
+          <NeonCard className="theme-badge-danger p-3 text-sm">
             {error}
           </NeonCard>
         )}
@@ -297,7 +295,7 @@ export default function AdminPostsPage() {
           <StatCard
             compact
             icon={Flag}
-            title="Report cho xử lý"
+            title="Báo cáo chờ xử lý"
             value={isLoadingStats ? "..." : formatNumber(stats?.pendingReports.total ?? 0)}
             delta={isLoadingStats ? "..." : formatDelta(stats?.pendingReports.deltaPercent ?? 0)}
             tone="orange"
@@ -329,10 +327,10 @@ export default function AdminPostsPage() {
 
         <NeonCard className="p-3">
           <div className="grid items-center gap-2 xl:grid-cols-[minmax(260px,1.45fr)_150px_170px_165px_minmax(250px,0.9fr)_auto]">
-            <label className="flex h-10 items-center gap-2 rounded-xl border border-blue-300/20 bg-slate-950/55 px-3 text-gray-400">
+            <label className="theme-admin-input flex h-10 items-center gap-2 rounded-xl px-3 text-[var(--muted-foreground)]">
               <Search className="h-4 w-4" />
               <input
-                className="w-full bg-transparent text-sm outline-none placeholder:text-gray-500"
+                className="w-full bg-transparent text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]"
                 placeholder="Tìm tiêu đề, người đăng, vị trí..."
                 value={keywordInput}
                 onChange={(event) => setKeywordInput(event.target.value)}
@@ -397,7 +395,7 @@ export default function AdminPostsPage() {
               <input
                 type="number"
                 min={0}
-                className="h-10 min-w-0 rounded-xl border border-blue-300/20 bg-slate-950/55 px-3 text-sm outline-none placeholder:text-gray-500"
+                className="theme-admin-input h-10 min-w-0 rounded-xl px-3 text-sm outline-none placeholder:text-[var(--muted-foreground)]"
                 placeholder="Giá từ"
                 value={filter.minPrice}
                 onChange={(event) =>
@@ -408,11 +406,11 @@ export default function AdminPostsPage() {
                   }))
                 }
               />
-              <span className="text-gray-500">-</span>
+              <span className="text-[var(--muted-foreground)]">-</span>
               <input
                 type="number"
                 min={0}
-                className="h-10 min-w-0 rounded-xl border border-blue-300/20 bg-slate-950/55 px-3 text-sm outline-none placeholder:text-gray-500"
+                className="theme-admin-input h-10 min-w-0 rounded-xl px-3 text-sm outline-none placeholder:text-[var(--muted-foreground)]"
                 placeholder="Giá đến"
                 value={filter.maxPrice}
                 onChange={(event) =>
@@ -426,7 +424,7 @@ export default function AdminPostsPage() {
             </div>
 
             <button
-              className="inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-blue-300/20 bg-white/5 px-3 text-sm font-medium text-gray-200 transition hover:bg-blue-500/10 disabled:opacity-60"
+              className="theme-admin-toolbar-button inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-3 text-sm font-medium transition disabled:opacity-60"
               disabled={isLoading}
               onClick={() => setRefreshKey((current) => current + 1)}
             >
@@ -442,13 +440,13 @@ export default function AdminPostsPage() {
               key={tab.key}
               className={`inline-flex h-10 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition ${
                 activeTab === tab.key
-                  ? "border-blue-400/60 bg-blue-600/20 text-white shadow-[0_0_22px_rgba(37,99,235,0.42)]"
-                  : "border-white/10 bg-white/[0.04] text-gray-300 hover:border-blue-400/30 hover:bg-blue-500/10"
+                  ? "theme-admin-tab-active"
+                  : "theme-admin-tab"
               }`}
               onClick={() => applyTab(tab.key)}
             >
               {tab.label}
-              <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-blue-100">
+              <span className="theme-admin-tab-count rounded-full px-2 py-0.5 text-xs">
                 {formatNumber(tab.count)}
               </span>
             </button>
@@ -456,7 +454,7 @@ export default function AdminPostsPage() {
         </div>
 
         <NeonCard className="overflow-hidden">
-          <div className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,0.85fr)_minmax(0,0.6fr)_minmax(0,0.7fr)_minmax(0,0.9fr)_110px_125px_136px] border-b border-white/10 px-3 py-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
+          <div className="theme-admin-table-head grid grid-cols-[minmax(0,1.8fr)_minmax(0,0.85fr)_minmax(0,0.6fr)_minmax(0,0.7fr)_minmax(0,0.9fr)_110px_125px_136px] border-b px-3 py-3 text-xs font-semibold uppercase tracking-wide">
             <div>Bài đăng</div>
             <div>Người đăng</div>
             <div>Loại BDS</div>
@@ -467,15 +465,15 @@ export default function AdminPostsPage() {
             <div className="text-right">Hành động</div>
           </div>
 
-          <div className="divide-y divide-white/5">
+          <div className="theme-admin-table-divider divide-y">
             {isLoading && (
-              <div className="px-5 py-10 text-center text-sm text-gray-400">
+              <div className="px-5 py-10 text-center text-sm text-[var(--muted-foreground)]">
                 Đang tải bài đăng...
               </div>
             )}
 
             {!isLoading && !data?.items.length && (
-              <div className="px-5 py-10 text-center text-sm text-gray-400">
+              <div className="px-5 py-10 text-center text-sm text-[var(--muted-foreground)]">
                 Không tìm thấy bài đăng phù hợp.
               </div>
             )}
@@ -492,7 +490,7 @@ export default function AdminPostsPage() {
               ))}
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-4 border-t border-white/10 px-5 py-3 text-sm text-gray-300">
+          <div className="theme-admin-table-head flex flex-wrap items-center justify-between gap-4 border-t px-5 py-3 text-sm text-[var(--secondary-foreground)]">
             <span>
               Hiển thị {startIndex} - {endIndex} của {formatNumber(data?.meta.total ?? 0)} bài đăng
             </span>
@@ -502,8 +500,8 @@ export default function AdminPostsPage() {
                   key={page}
                   className={`min-w-10 rounded-lg border px-3 py-2 ${
                     page === data?.meta.page
-                      ? "border-blue-500 bg-blue-600 text-white"
-                      : "border-white/10 bg-white/5"
+                      ? "theme-admin-tab-active"
+                      : "theme-admin-tab"
                   }`}
                   disabled={isLoading}
                   onClick={() => setFilter((current) => ({ ...current, page }))}
@@ -540,39 +538,39 @@ function PostRow({
   onUpdateStatus: (post: AdminPost, status: AdminPostStatus) => void;
 }) {
   return (
-    <div className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,0.85fr)_minmax(0,0.6fr)_minmax(0,0.7fr)_minmax(0,0.9fr)_110px_125px_136px] items-center gap-0 px-3 py-3 text-sm text-gray-200 transition hover:bg-blue-500/[0.04]">
+    <div className="theme-admin-table-row grid grid-cols-[minmax(0,1.8fr)_minmax(0,0.85fr)_minmax(0,0.6fr)_minmax(0,0.7fr)_minmax(0,0.9fr)_110px_125px_136px] items-center gap-0 px-3 py-3 text-sm transition">
       <div className="flex min-w-0 items-center gap-3 pr-3">
         <img
           src={post.images[0]?.imageUrl ?? imageFallback}
           alt={post.title}
-          className="h-16 w-24 shrink-0 rounded-xl border border-white/10 object-cover"
+          className="h-16 w-24 shrink-0 rounded-xl border border-[var(--border)] object-cover"
         />
         <div className="min-w-0">
-          <p className="line-clamp-2 font-semibold leading-5 text-white">{post.title}</p>
-          <p className="mt-1 text-xs text-gray-500">#{post.id.slice(-6).toUpperCase()}</p>
-          <p className="mt-1 text-xs text-blue-200">{postTypeLabels[post.postType]}</p>
+          <p className="line-clamp-2 font-semibold leading-5 text-[var(--foreground)]">{post.title}</p>
+          <p className="mt-1 text-xs text-[var(--muted-foreground)]">#{post.id.slice(-6).toUpperCase()}</p>
+          <p className="mt-1 text-xs text-[var(--accent)]">{postTypeLabels[post.postType]}</p>
         </div>
       </div>
 
       <div className="min-w-0 pr-3">
-        <p className="truncate font-medium text-white">{post.author.fullName}</p>
-        <p className="mt-1 truncate text-xs text-gray-500">{post.author.email}</p>
+        <p className="truncate font-medium text-[var(--foreground)]">{post.author.fullName}</p>
+        <p className="mt-1 truncate text-xs text-[var(--muted-foreground)]">{post.author.email}</p>
       </div>
 
-      <div className="line-clamp-2 pr-3 text-gray-300">
+      <div className="line-clamp-2 pr-3 text-[var(--secondary-foreground)]">
         {propertyTypeLabels[post.propertyType]}
       </div>
-      <div className="break-words pr-3 font-semibold leading-5 text-blue-100">
+      <div className="break-words pr-3 font-semibold leading-5 text-[var(--accent)]">
         {formatPrice(post.price)}
       </div>
-      <div className="line-clamp-2 pr-3 text-gray-300">{getLocation(post)}</div>
-      <div className="pr-3 text-gray-300">{formatDate(post.createdAt)}</div>
+      <div className="line-clamp-2 pr-3 text-[var(--secondary-foreground)]">{getLocation(post)}</div>
+      <div className="pr-3 text-[var(--secondary-foreground)]">{formatDate(post.createdAt)}</div>
       <StatusBadge status={post.status} />
 
       <div className="flex justify-end gap-1">
         <ActionButton
-          title="Xem chi tiet"
-          className="border-white/10 bg-white/5 text-gray-200 hover:border-blue-300/30 hover:bg-blue-500/15 hover:text-blue-100"
+          title="Xem chi tiết"
+          className="theme-admin-action-info"
           onClick={() => onOpenDetail(post)}
         >
           <Eye className="h-3.5 w-3.5" />
@@ -580,7 +578,7 @@ function PostRow({
         <ActionButton
           title="Đánh dấu vi phạm"
           disabled={isUpdating}
-          className="border-red-400/25 bg-red-500/10 text-red-300 hover:bg-red-500/20"
+          className="theme-admin-action-danger"
           onClick={() => onUpdateStatus(post, "BANNED")}
         >
           <ShieldAlert className="h-3.5 w-3.5" />
@@ -588,7 +586,7 @@ function PostRow({
         <ActionButton
           title="Ẩn bài"
           disabled={isUpdating}
-          className="border-amber-400/25 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20"
+          className="theme-admin-action-warn"
           onClick={() => onUpdateStatus(post, "HIDDEN")}
         >
           <Ban className="h-3.5 w-3.5" />
@@ -614,15 +612,15 @@ function PostDetailDrawer({
   const canBan = post.status !== "BANNED";
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/55 backdrop-blur-sm">
-      <aside className="h-full w-full max-w-[520px] overflow-y-auto border-l border-blue-300/20 bg-[#061225]/95 p-5 shadow-[0_0_60px_rgba(37,99,235,0.22)]">
+    <div className="theme-modal-backdrop fixed inset-0 z-50 flex justify-end backdrop-blur-sm">
+      <aside className="theme-admin-drawer h-full w-full max-w-[520px] overflow-y-auto p-5">
         <div className="mb-5 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-bold">Chi tiết bài đăng</h2>
-            <p className="text-sm text-gray-400">Mã bài đăng #{post.id.slice(-6).toUpperCase()}</p>
+            <p className="text-sm text-[var(--muted-foreground)]">Mã bài đăng #{post.id.slice(-6).toUpperCase()}</p>
           </div>
           <button
-            className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 bg-white/5 text-gray-300 hover:bg-white/10"
+            className="theme-admin-action grid h-9 w-9 place-items-center rounded-lg"
             onClick={onClose}
           >
             <X className="h-4 w-4" />
@@ -638,14 +636,14 @@ function PostDetailDrawer({
           <div className="p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
-                <h3 className="text-xl font-bold text-white">{post.title}</h3>
-                <p className="mt-1 text-sm text-blue-200">{postTypeLabels[post.postType]}</p>
+                <h3 className="text-xl font-bold text-[var(--foreground)]">{post.title}</h3>
+                <p className="mt-1 text-sm text-[var(--accent)]">{postTypeLabels[post.postType]}</p>
               </div>
               <StatusBadge status={post.status} />
             </div>
 
-            <p className="mt-4 text-2xl font-bold text-white">{formatPrice(post.price)}</p>
-            <p className="mt-1 text-sm text-gray-400">{post.area} m²</p>
+            <p className="mt-4 text-2xl font-bold text-[var(--foreground)]">{formatPrice(post.price)}</p>
+            <p className="mt-1 text-sm text-[var(--muted-foreground)]">{post.area} m²</p>
 
             <div className="mt-5 grid gap-3 text-sm">
               <InfoRow icon={MapPin} label="Địa chỉ" value={getFullAddress(post)} />
@@ -669,15 +667,15 @@ function PostDetailDrawer({
         </NeonCard>
 
         <div className="mt-4 grid grid-cols-3 gap-2">
-          <DrawerMetric label="Reports" value={post._count.reports} />
-          <DrawerMetric label="Comments" value={post._count.comments} />
-          <DrawerMetric label="Saved" value={post._count.savedBy} />
+          <DrawerMetric label="Báo cáo" value={post._count.reports} />
+          <DrawerMetric label="Bình luận" value={post._count.comments} />
+          <DrawerMetric label="Lượt lưu" value={post._count.savedBy} />
         </div>
 
         <NeonCard className="mt-4 p-4">
           <h3 className="mb-3 font-semibold">Người đăng</h3>
-          <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">
-            <p className="text-base font-semibold text-white">{post.author.fullName}</p>
+          <div className="theme-subtle-card rounded-xl p-4">
+            <p className="text-base font-semibold text-[var(--foreground)]">{post.author.fullName}</p>
             <div className="mt-3 grid gap-3 text-sm">
               <InfoRow icon={Mail} label="Email" value={post.author.email} />
               <InfoRow
@@ -691,7 +689,7 @@ function PostDetailDrawer({
 
         <NeonCard className="mt-4 p-4">
           <h3 className="mb-3 font-semibold">Mô tả bài đăng</h3>
-          <p className="whitespace-pre-wrap text-sm leading-6 text-gray-300">
+          <p className="whitespace-pre-wrap text-sm leading-6 text-[var(--secondary-foreground)]">
             {post.description || "Bài đăng chưa có mô tả."}
           </p>
         </NeonCard>
@@ -705,7 +703,7 @@ function PostDetailDrawer({
                   key={image.id}
                   src={image.imageUrl}
                   alt={post.title}
-                  className="h-20 w-full rounded-xl border border-white/10 object-cover"
+                  className="h-20 w-full rounded-xl border border-[var(--border)] object-cover"
                 />
               ))}
             </div>
@@ -716,7 +714,7 @@ function PostDetailDrawer({
             <button
               disabled={isUpdating}
               onClick={() => onUpdateStatus(post, "ACTIVE")}
-              className="h-11 rounded-xl border border-emerald-400/25 bg-emerald-500/10 font-semibold text-emerald-200 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+              className="theme-admin-action-info h-11 rounded-xl font-semibold disabled:cursor-not-allowed disabled:opacity-60"
             >
               Hiển thị lại bài đăng
             </button>
@@ -726,7 +724,7 @@ function PostDetailDrawer({
             <button
               disabled={isUpdating}
               onClick={() => onUpdateStatus(post, "HIDDEN")}
-              className="h-11 rounded-xl border border-amber-400/25 bg-amber-500/10 font-semibold text-amber-200 hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+              className="theme-admin-action-warn h-11 rounded-xl font-semibold disabled:cursor-not-allowed disabled:opacity-60"
             >
               Ẩn bài đăng
             </button>
@@ -736,7 +734,7 @@ function PostDetailDrawer({
             <button
               disabled={isUpdating}
               onClick={() => onUpdateStatus(post, "BANNED")}
-              className="h-11 rounded-xl border border-red-400/25 bg-red-500/10 font-semibold text-red-200 hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+              className="theme-admin-action-danger h-11 rounded-xl font-semibold disabled:cursor-not-allowed disabled:opacity-60"
             >
               Đánh dấu vi phạm
             </button>
@@ -757,13 +755,13 @@ function InfoRow({
   value: string;
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3">
-      <div className="mt-0.5 rounded-lg border border-blue-300/20 bg-blue-500/10 p-2 text-blue-200">
+    <div className="theme-subtle-card flex items-start gap-3 rounded-xl px-3 py-3">
+      <div className="theme-admin-action-primary mt-0.5 rounded-lg p-2">
         <Icon className="h-4 w-4" />
       </div>
       <div className="min-w-0">
-        <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
-        <p className="mt-1 text-sm text-gray-200">{value}</p>
+        <p className="text-xs uppercase tracking-wide text-[var(--muted-foreground)]">{label}</p>
+        <p className="mt-1 text-sm text-[var(--foreground)]">{value}</p>
       </div>
     </div>
   );
@@ -778,8 +776,8 @@ function DrawerMetric({
 }) {
   return (
     <NeonCard className="p-3 text-center">
-      <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
-      <p className="mt-2 text-lg font-bold text-white">{formatNumber(value)}</p>
+      <p className="text-xs uppercase tracking-wide text-[var(--muted-foreground)]">{label}</p>
+      <p className="mt-2 text-lg font-bold text-[var(--foreground)]">{formatNumber(value)}</p>
     </NeonCard>
   );
 }
@@ -795,12 +793,12 @@ function SelectBox({
 }) {
   return (
     <select
-      className="h-11 min-w-0 rounded-xl border border-blue-300/20 bg-slate-950/55 px-3 text-sm text-white outline-none"
+      className="theme-admin-select h-11 min-w-0 rounded-xl px-3 text-sm outline-none"
       value={value}
       onChange={(event) => onChange(event.target.value)}
     >
       {options.map((option) => (
-        <option key={option.value} value={option.value} className="bg-slate-950 text-white">
+        <option key={option.value} value={option.value}>
           {option.label}
         </option>
       ))}

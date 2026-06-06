@@ -229,27 +229,27 @@ export default function SavedPostsPage() {
       <div className="mx-auto max-w-7xl space-y-6">
         <section className="glass-card overflow-hidden p-0">
           <div className="relative overflow-hidden px-6 py-8 md:px-8 md:py-10">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_20%,rgba(59,130,246,0.18),transparent_30%),radial-gradient(circle_at_85%_10%,rgba(14,165,233,0.14),transparent_25%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_20%,color-mix(in_srgb,var(--accent)_18%,transparent),transparent_30%),radial-gradient(circle_at_85%_10%,color-mix(in_srgb,var(--info)_14%,transparent),transparent_25%)]" />
             <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div className="max-w-2xl">
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-sm font-medium text-blue-200">
-                  <Bookmark className="h-4 w-4 fill-blue-400 text-blue-400" />
+                <div className="theme-badge-info mb-4 inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium">
+                  <Bookmark className="h-4 w-4 fill-current text-current" />
                   Bộ sưu tập quan tâm
                 </div>
-                <h1 className="text-3xl font-bold text-white md:text-4xl">Bài đã lưu</h1>
-                <p className="mt-3 max-w-xl text-gray-300">
+                <h1 className="text-3xl font-bold text-[var(--foreground)] md:text-4xl">Bài đã lưu</h1>
+                <p className="mt-3 max-w-xl text-[var(--secondary-foreground)]">
                   Những bất động sản bạn đã lưu để xem lại, so sánh và liên hệ khi cần.
                 </p>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[340px]">
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-sm text-gray-400">Tổng bài đã lưu</p>
-                  <p className="mt-2 text-3xl font-bold text-white">{savedPosts.length}</p>
+                <div className="theme-subtle-card rounded-2xl p-4">
+                  <p className="text-sm text-[var(--muted)]">Tổng bài đã lưu</p>
+                  <p className="mt-2 text-3xl font-bold text-[var(--foreground)]">{savedPosts.length}</p>
                 </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-sm text-gray-400">Đang hiển thị</p>
-                  <p className="mt-2 text-3xl font-bold text-blue-300">{filteredSavedPosts.length}</p>
+                <div className="theme-subtle-card rounded-2xl p-4">
+                  <p className="text-sm text-[var(--muted)]">Đang hiển thị</p>
+                  <p className="mt-2 text-3xl font-bold text-[var(--accent)]">{filteredSavedPosts.length}</p>
                 </div>
               </div>
             </div>
@@ -259,7 +259,7 @@ export default function SavedPostsPage() {
         <section className="glass-card p-5 md:p-6">
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_repeat(4,minmax(0,1fr))]">
             <label className="relative">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-300" />
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--accent)]" />
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
@@ -316,18 +316,18 @@ export default function SavedPostsPage() {
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            <span className="inline-flex items-center gap-2 text-sm text-gray-400">
-              <SlidersHorizontal className="h-4 w-4 text-blue-300" />
+            <span className="inline-flex items-center gap-2 text-sm text-[var(--secondary-foreground)]">
+              <SlidersHorizontal className="h-4 w-4 text-[var(--accent)]" />
               Bộ lọc đang áp dụng
             </span>
             <button
               type="button"
               onClick={clearFilters}
-              className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-gray-200 transition hover:bg-white/10"
+              className="theme-button-secondary rounded-full px-4 py-2 text-sm font-medium transition"
             >
               Xóa tất cả bộ lọc
             </button>
-            <span className="inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-500/10 px-4 py-2 text-sm font-medium text-blue-200">
+            <span className="theme-badge-info inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium">
               <ArrowUpDown className="h-4 w-4" />
               {sortBy === "newest"
                 ? "Ưu tiên bài lưu gần đây"
@@ -339,7 +339,7 @@ export default function SavedPostsPage() {
         </section>
 
         {error ? (
-          <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
+          <div className="theme-badge-danger rounded-2xl p-4 text-sm">
             {error}
           </div>
         ) : null}
@@ -348,24 +348,24 @@ export default function SavedPostsPage() {
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {Array.from({ length: 6 }).map((_, index) => (
               <div key={index} className="glass-card overflow-hidden p-0">
-                <div className="aspect-[16/10] animate-pulse bg-white/5" />
+                <div className="theme-skeleton aspect-[16/10] animate-pulse" />
                 <div className="space-y-4 p-5">
-                  <div className="h-6 animate-pulse rounded-full bg-white/5" />
-                  <div className="h-4 w-2/3 animate-pulse rounded-full bg-white/5" />
-                  <div className="h-4 w-1/2 animate-pulse rounded-full bg-white/5" />
+                  <div className="theme-skeleton h-6 animate-pulse rounded-full" />
+                  <div className="theme-skeleton h-4 w-2/3 animate-pulse rounded-full" />
+                  <div className="theme-skeleton h-4 w-1/2 animate-pulse rounded-full" />
                 </div>
               </div>
             ))}
           </div>
         ) : filteredSavedPosts.length === 0 ? (
           <div className="glass-card flex min-h-[320px] flex-col items-center justify-center px-6 py-12 text-center">
-            <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-full border border-blue-400/20 bg-blue-500/10 text-blue-300">
-              <Bookmark className="h-9 w-9 fill-blue-400 text-blue-400" />
+            <div className="theme-badge-info mb-5 flex h-20 w-20 items-center justify-center rounded-full">
+              <Bookmark className="h-9 w-9 fill-current text-current" />
             </div>
-            <h2 className="text-2xl font-semibold text-white">
+            <h2 className="text-2xl font-semibold text-[var(--foreground)]">
               {savedPosts.length === 0 ? "Bạn chưa lưu bài đăng nào" : "Không có bài nào khớp bộ lọc"}
             </h2>
-            <p className="mt-3 max-w-xl text-gray-400">
+            <p className="mt-3 max-w-xl text-[var(--secondary-foreground)]">
               {savedPosts.length === 0
                 ? "Hãy khám phá bảng tin và lưu lại những bất động sản bạn quan tâm để xem lại sau."
                 : "Thử đổi từ khóa hoặc xóa bớt bộ lọc để xem thêm các bất động sản đã lưu."}
@@ -378,7 +378,7 @@ export default function SavedPostsPage() {
                 <button
                   type="button"
                   onClick={clearFilters}
-                  className="rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-medium text-gray-200 transition hover:bg-white/10"
+                  className="theme-button-secondary rounded-xl px-5 py-3 text-sm font-medium transition"
                 >
                   Xóa bộ lọc
                 </button>
@@ -415,66 +415,66 @@ export default function SavedPostsPage() {
                       <button
                         type="button"
                         onClick={() => togglePostSelection(post.id)}
-                        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-slate-950/70 text-white backdrop-blur-md transition hover:bg-white/10"
+                        className="theme-surface-strong inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--foreground)] backdrop-blur-md transition hover:bg-[var(--hover)]"
                         title={isSelected ? "Bỏ chọn" : "Chọn bài đăng"}
                       >
                         {isSelected ? (
-                          <CheckSquare className="h-4 w-4 text-blue-300" />
+                          <CheckSquare className="h-4 w-4 text-[var(--accent)]" />
                         ) : (
-                          <Square className="h-4 w-4 text-gray-300" />
+                          <Square className="h-4 w-4 text-[var(--secondary-foreground)]" />
                         )}
                       </button>
                       <button
                         type="button"
                         onClick={() => handleUnsave(post.id)}
                         disabled={removingPostId === post.id || isBulkRemoving}
-                        className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-slate-950/70 text-blue-300 backdrop-blur-md transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="theme-surface-strong inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--accent)] backdrop-blur-md transition hover:bg-[var(--hover)] disabled:cursor-not-allowed disabled:opacity-60"
                         title="Bỏ lưu"
                       >
                         {removingPostId === post.id ? (
                           <LoaderCircle className="h-4 w-4 animate-spin" />
                         ) : (
-                          <Bookmark className="h-4 w-4 fill-blue-400 text-blue-400" />
+                          <Bookmark className="h-4 w-4 fill-current text-current" />
                         )}
                       </button>
                     </div>
                   </div>
 
                   <div className="space-y-4 p-4">
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-gray-300">
-                      <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--secondary-foreground)]">
+                      <span className="theme-chip rounded-full px-2.5 py-1">
                         {postTypeLabels[post.postType]}
                       </span>
-                      <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1">
+                      <span className="theme-chip rounded-full px-2.5 py-1">
                         {propertyTypeLabels[post.propertyType]}
                       </span>
                     </div>
 
                     <div>
-                      <p className="text-2xl font-bold text-blue-300">{formatPrice(post.price)}</p>
+                      <p className="text-2xl font-bold text-[var(--accent)]">{formatPrice(post.price)}</p>
                       <Link
                         href={`/posts/${post.id}`}
                         onClick={() => writeSessionCache(`posts:detail:${post.id}`, post)}
-                        className="mt-2 block truncate text-lg font-semibold text-white transition hover:text-blue-300"
+                        className="mt-2 block truncate text-lg font-semibold text-[var(--foreground)] transition hover:text-[var(--accent)]"
                       >
                         {post.title}
                       </Link>
                     </div>
 
-                    <div className="flex items-start gap-2 text-sm text-gray-400">
-                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-blue-300" />
+                    <div className="flex items-start gap-2 text-sm text-[var(--secondary-foreground)]">
+                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent)]" />
                       <span className="line-clamp-1">
                         {[post.district, post.city].filter(Boolean).join(", ")}
                       </span>
                     </div>
 
-                    <p className="text-sm font-medium text-gray-300">{post.area} m²</p>
+                    <p className="text-sm font-medium text-[var(--secondary-foreground)]">{post.area} m²</p>
 
                     <button
                       type="button"
                       onClick={() => handleUnsave(post.id)}
                       disabled={removingPostId === post.id || isBulkRemoving}
-                      className="inline-flex w-full items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-gray-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="theme-button-secondary inline-flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {removingPostId === post.id ? "Đang bỏ lưu..." : "Bỏ lưu"}
                     </button>
@@ -487,21 +487,21 @@ export default function SavedPostsPage() {
 
         {selectedPostIds.length > 0 ? (
           <div className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4">
-            <div className="pointer-events-auto flex w-full max-w-3xl flex-wrap items-center justify-center gap-3 rounded-2xl border border-blue-400/20 bg-slate-950/90 px-4 py-3 shadow-[0_20px_80px_rgba(15,23,42,0.55)] backdrop-blur-xl">
-              <span className="text-sm font-medium text-white">
+            <div className="theme-floating-panel pointer-events-auto flex w-full max-w-3xl flex-wrap items-center justify-center gap-3 rounded-2xl border border-[var(--accent-border)] px-4 py-3 backdrop-blur-xl">
+              <span className="text-sm font-medium text-[var(--foreground)]">
                 Đã chọn {selectedPostIds.length} bài
               </span>
               <button
                 type="button"
                 onClick={selectAllVisiblePosts}
-                className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-gray-200 transition hover:bg-white/10"
+                className="theme-button-secondary rounded-full px-4 py-2 text-sm font-medium transition"
               >
                 Chọn tất cả
               </button>
               <button
                 type="button"
                 onClick={clearSelection}
-                className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-gray-200 transition hover:bg-white/10"
+                className="theme-button-secondary rounded-full px-4 py-2 text-sm font-medium transition"
               >
                 Bỏ chọn
               </button>
@@ -509,7 +509,7 @@ export default function SavedPostsPage() {
                 type="button"
                 onClick={handleBulkUnsave}
                 disabled={isBulkRemoving}
-                className="rounded-full border border-blue-400/20 bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+                className="btn-primary rounded-full px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isBulkRemoving ? "Đang bỏ lưu..." : "Bỏ lưu tất cả"}
               </button>

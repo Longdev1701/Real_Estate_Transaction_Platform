@@ -48,23 +48,23 @@ type ViewLog = {
 };
 
 const severityTone: Record<AdminLogSeverity, string> = {
-  INFO: "border-blue-400/25 bg-blue-500/12 text-blue-200",
-  WARNING: "border-amber-400/25 bg-amber-500/12 text-amber-200",
-  SECURITY: "border-violet-400/25 bg-violet-500/12 text-violet-200",
-  ERROR: "border-red-400/25 bg-red-500/12 text-red-200",
+  INFO: "theme-badge-info",
+  WARNING: "theme-badge-warning",
+  SECURITY: "theme-badge-premium",
+  ERROR: "theme-badge-danger",
 };
 
 const statusTone: Record<AdminLogStatus, string> = {
-  SUCCESS: "border-emerald-400/25 bg-emerald-500/12 text-emerald-200",
-  FAILED: "border-red-400/25 bg-red-500/12 text-red-200",
-  BLOCKED: "border-amber-400/25 bg-amber-500/12 text-amber-200",
+  SUCCESS: "theme-badge-success",
+  FAILED: "theme-badge-danger",
+  BLOCKED: "theme-badge-warning",
 };
 
 const categoryTabs: { key: LogCategory; label: string }[] = [
   { key: "ALL", label: "Tất cả" },
   { key: "AUTH", label: "Auth" },
-  { key: "USER", label: "User" },
-  { key: "POST", label: "Post" },
+  { key: "USER", label: "Người dùng" },
+  { key: "POST", label: "Bài đăng" },
   { key: "ADMIN", label: "Admin" },
   { key: "ERROR", label: "Error" },
 ];
@@ -102,24 +102,24 @@ const readMetadataValue = (metadata: AdminSystemLog["metadata"], key: string) =>
 const prettifyAction = (action: string) => {
   const actionMap: Record<string, string> = {
     LOGIN: "Login",
-    LOGIN_FAILED: "Login Failed",
+    LOGIN_FAILED: "Đăng nhập thất bại",
     LOGOUT: "Logout",
-    REFRESH_TOKEN: "Refresh Token",
-    REFRESH_TOKEN_FAILED: "Refresh Token Failed",
+    REFRESH_TOKEN: "Làm mới phiên đăng nhập",
+    REFRESH_TOKEN_FAILED: "Làm mới phiên đăng nhập thất bại",
     REGISTER: "Register",
-    CREATE_REPORT: "Create Report",
-    REPORT_RESOLVED: "Report Resolved",
-    REPORT_REJECTED: "Report Rejected",
-    UPDATE_USER_ROLE: "Update User Role",
-    BAN_USER: "Ban User",
-    ACTIVATE_USER: "Activate User",
-    CREATE_POST: "Create Post",
-    HIDE_POST: "Hide Post",
-    ADD_POST_IMAGES: "Add Post Images",
-    DELETE_POST_IMAGE: "Delete Post Image",
-    UPDATE_POST_STATUS_ACTIVE: "Update Post Status Active",
-    UPDATE_POST_STATUS_HIDDEN: "Update Post Status Hidden",
-    UPDATE_POST_STATUS_BANNED: "Update Post Status Banned",
+    CREATE_REPORT: "Tạo báo cáo",
+    REPORT_RESOLVED: "Xử lý báo cáo",
+    REPORT_REJECTED: "Từ chối báo cáo",
+    UPDATE_USER_ROLE: "Cập nhật vai trò người dùng",
+    BAN_USER: "Khóa người dùng",
+    ACTIVATE_USER: "Kích hoạt người dùng",
+    CREATE_POST: "Tạo bài đăng",
+    HIDE_POST: "Ẩn bài đăng",
+    ADD_POST_IMAGES: "Thêm ảnh bài đăng",
+    DELETE_POST_IMAGE: "Xóa ảnh bài đăng",
+    UPDATE_POST_STATUS_ACTIVE: "Duyệt bài đăng",
+    UPDATE_POST_STATUS_HIDDEN: "Ẩn trạng thái bài đăng",
+    UPDATE_POST_STATUS_BANNED: "Đánh dấu bài đăng vi phạm",
   };
 
   return actionMap[action] ?? action.replaceAll("_", " ");
@@ -184,7 +184,7 @@ const buildViewLog = (log: AdminSystemLog): ViewLog => ({
       log.actor?.role === "ADMIN"
         ? "Administrator"
         : log.actor?.role === "USER"
-          ? "User"
+          ? "Người dùng"
           : "Service",
     avatarUrl: log.actor?.avatarUrl,
   },
@@ -336,7 +336,7 @@ export default function AdminLogsPage() {
     >
       <div className="space-y-4">
         {error && (
-          <NeonCard className="border-red-400/30 bg-red-950/20 p-3 text-sm text-red-200">
+          <NeonCard className="theme-badge-danger p-3 text-sm">
             {error}
           </NeonCard>
         )}
@@ -378,10 +378,10 @@ export default function AdminLogsPage() {
 
         <NeonCard className="p-3">
           <div className="grid gap-2 xl:grid-cols-[minmax(280px,1.5fr)_180px_180px_180px_180px_auto]">
-            <label className="flex h-10 items-center gap-2 rounded-xl border border-blue-300/20 bg-slate-950/55 px-3 text-gray-400">
+            <label className="theme-admin-input flex h-10 items-center gap-2 rounded-xl px-3 text-[var(--muted-foreground)]">
               <Search className="h-4 w-4" />
               <input
-                className="w-full bg-transparent text-sm outline-none placeholder:text-gray-500"
+                className="w-full bg-transparent text-sm outline-none placeholder:text-[var(--muted-foreground)]"
                 placeholder="Tìm theo hành động, mô tả, người dùng hoặc module..."
                 value={keywordInput}
                 onChange={(event) => setKeywordInput(event.target.value)}
@@ -416,7 +416,7 @@ export default function AdminLogsPage() {
                 }))
               }
               options={[
-                { value: "", label: "Module" },
+                { value: "", label: "Mô-đun" },
                 ...modules.map((module) => ({
                   value: module,
                   label: module,
@@ -426,7 +426,7 @@ export default function AdminLogsPage() {
 
             <input
               type="date"
-              className="h-10 rounded-xl border border-blue-300/20 bg-slate-950/55 px-3 text-sm text-white outline-none [color-scheme:dark]"
+              className="theme-admin-select h-10 rounded-xl px-3 text-sm outline-none [color-scheme:inherit]"
               value={filter.dateFrom}
               onChange={(event) =>
                 setFilter((current) => ({
@@ -439,7 +439,7 @@ export default function AdminLogsPage() {
 
             <input
               type="date"
-              className="h-10 rounded-xl border border-blue-300/20 bg-slate-950/55 px-3 text-sm text-white outline-none [color-scheme:dark]"
+              className="theme-admin-select h-10 rounded-xl px-3 text-sm outline-none [color-scheme:inherit]"
               value={filter.dateTo}
               onChange={(event) =>
                 setFilter((current) => ({
@@ -451,7 +451,7 @@ export default function AdminLogsPage() {
             />
 
             <button
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-blue-300/20 bg-white/5 px-4 text-sm font-medium text-gray-200 transition hover:bg-blue-500/10"
+              className="theme-admin-toolbar-button inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-sm font-medium transition"
               onClick={() => setRefreshKey((current) => current + 1)}
             >
               <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
@@ -466,13 +466,13 @@ export default function AdminLogsPage() {
               key={tab.key}
               className={`inline-flex h-10 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition ${
                 category === tab.key
-                  ? "border-blue-400/60 bg-blue-600/20 text-white shadow-[0_0_22px_rgba(37,99,235,0.42)]"
-                  : "border-white/10 bg-white/[0.04] text-gray-300 hover:border-blue-400/30 hover:bg-blue-500/10"
+                  ? "theme-admin-tab-active"
+                  : "theme-admin-tab"
               }`}
               onClick={() => setCategory(tab.key)}
             >
               {tab.label}
-              <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-blue-100">
+              <span className="theme-admin-tab-count rounded-full px-2 py-0.5 text-xs">
                 {categoryCounts[tab.key]}
               </span>
             </button>
@@ -480,25 +480,25 @@ export default function AdminLogsPage() {
         </div>
 
         <NeonCard className="overflow-hidden">
-          <div className="grid grid-cols-[190px_220px_minmax(280px,1fr)_90px_110px_110px_72px] border-b border-white/10 px-3 py-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
+          <div className="theme-admin-table-head grid grid-cols-[190px_220px_minmax(280px,1fr)_90px_110px_110px_72px] border-b px-3 py-3 text-xs font-semibold uppercase tracking-wide">
             <div>Thời gian</div>
             <div>Người thực hiện</div>
             <div>Mô tả</div>
-            <div className="text-center">Module</div>
+            <div className="text-center">Mô-đun</div>
             <div className="text-center">Mức độ</div>
             <div className="text-center">Trạng thái</div>
             <div className="text-right">Thao tác</div>
           </div>
 
-          <div className="divide-y divide-white/5">
+          <div className="divide-y divide-[var(--border)]">
             {isLoading && (
-              <div className="px-5 py-10 text-center text-sm text-gray-400">
+              <div className="px-5 py-10 text-center text-sm text-[var(--muted-foreground)]">
                 Đang tải nhật ký hệ thống...
               </div>
             )}
 
             {!isLoading && !filteredLogs.length && (
-              <div className="px-5 py-10 text-center text-sm text-gray-400">
+              <div className="px-5 py-10 text-center text-sm text-[var(--muted-foreground)]">
                 Không tìm thấy sự kiện phù hợp.
               </div>
             )}
@@ -507,25 +507,25 @@ export default function AdminLogsPage() {
               filteredLogs.map((log) => (
                 <div
                   key={log.id}
-                  className="grid grid-cols-[190px_220px_minmax(280px,1fr)_90px_110px_110px_72px] items-center px-3 py-3 text-sm text-gray-200 transition hover:bg-blue-500/[0.04]"
+                  className="grid grid-cols-[190px_220px_minmax(280px,1fr)_90px_110px_110px_72px] items-center px-3 py-3 text-sm text-[var(--secondary-foreground)] transition hover:bg-[var(--accent-soft)]"
                 >
                   <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-blue-400" />
+                    <span className="h-2 w-2 rounded-full bg-[var(--accent)]" />
                     {formatDateTime(log.time)}
                   </div>
 
                   <div className="flex min-w-0 items-center gap-3 pr-3">
                     <ActorAvatar actor={log.actor} />
                     <div className="min-w-0">
-                      <p className="truncate font-medium text-white">{log.actor.name}</p>
-                      <p className="truncate text-xs text-gray-500">{log.actor.role}</p>
+                      <p className="truncate font-medium text-[var(--foreground)]">{log.actor.name}</p>
+                      <p className="truncate text-xs text-[var(--muted-foreground)]">{log.actor.role}</p>
                     </div>
                   </div>
 
-                  <div className="line-clamp-2 pr-4 text-sm leading-6 text-gray-300">
+                  <div className="line-clamp-2 pr-4 text-sm leading-6 text-[var(--secondary-foreground)]">
                     {log.description}
                   </div>
-                  <div className="text-center text-gray-300">{log.module}</div>
+                  <div className="text-center text-[var(--secondary-foreground)]">{log.module}</div>
                   <div className="flex justify-center">
                     <Badge text={log.severity} tone={severityTone[log.severity]} />
                   </div>
@@ -535,7 +535,7 @@ export default function AdminLogsPage() {
 
                   <div className="flex justify-end">
                     <button
-                      className="grid h-8 w-8 place-items-center rounded-lg border border-white/10 bg-white/5 text-gray-200 transition hover:border-blue-300/30 hover:bg-blue-500/15 hover:text-blue-100"
+                      className="theme-admin-action grid h-8 w-8 place-items-center rounded-lg transition"
                       title="Xem chi tiết"
                       onClick={() => setSelectedLog(log)}
                     >
@@ -546,7 +546,7 @@ export default function AdminLogsPage() {
               ))}
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-4 border-t border-white/10 px-5 py-3 text-sm text-gray-300">
+          <div className="theme-admin-table-head flex flex-wrap items-center justify-between gap-4 border-t px-5 py-3 text-sm text-[var(--secondary-foreground)]">
             <span>
               Hiển thị {startIndex} - {endIndex} của {data?.meta.total ?? 0} kết quả
             </span>
@@ -554,7 +554,7 @@ export default function AdminLogsPage() {
             <div className="flex items-center gap-3">
               <span>Hiển thị</span>
               <select
-                className="h-10 rounded-xl border border-blue-300/20 bg-slate-950/55 px-3 text-sm text-white outline-none"
+                className="theme-admin-select h-10 rounded-xl px-3 text-sm outline-none"
                 value={filter.limit}
                 onChange={(event) =>
                   setFilter((current) => ({
@@ -581,8 +581,8 @@ export default function AdminLogsPage() {
                     key={pageNumber}
                     className={`min-w-10 rounded-lg border px-3 py-2 ${
                       pageNumber === filter.page
-                        ? "border-blue-500 bg-blue-600 text-white"
-                        : "border-white/10 bg-white/5"
+                        ? "theme-admin-tab-active"
+                        : "theme-admin-tab"
                     }`}
                     onClick={() =>
                       setFilter((current) => ({
@@ -614,12 +614,12 @@ function LogDetailDrawer({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/55 backdrop-blur-sm">
-      <aside className="h-full w-full max-w-[420px] overflow-y-auto border-l border-blue-300/20 bg-[#061225]/95 p-5 shadow-[0_0_60px_rgba(37,99,235,0.22)]">
+    <div className="theme-modal-backdrop fixed inset-0 z-50 flex justify-end backdrop-blur-sm">
+      <aside className="theme-admin-drawer h-full w-full max-w-[420px] overflow-y-auto p-5">
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-lg font-bold">Chi tiết sự kiện</h2>
           <button
-            className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 bg-white/5 text-gray-300 hover:bg-white/10"
+            className="theme-admin-action grid h-9 w-9 place-items-center rounded-lg"
             onClick={onClose}
           >
             <X className="h-4 w-4" />
@@ -628,44 +628,44 @@ function LogDetailDrawer({
 
         <div className="space-y-3">
           <DrawerLine label="Event ID">
-            <span className="text-sm text-gray-200">{log.eventId}</span>
+            <span className="text-sm text-[var(--foreground)]">{log.eventId}</span>
           </DrawerLine>
 
           <DrawerLine label="Thời gian">
-            <span className="text-sm text-gray-200">{formatDateTime(log.time)}</span>
+            <span className="text-sm text-[var(--foreground)]">{formatDateTime(log.time)}</span>
           </DrawerLine>
 
           <DrawerLine label="Người thực hiện">
             <div className="flex items-center gap-3">
               <ActorAvatar actor={log.actor} />
               <div>
-                <p className="text-sm font-medium text-white">{log.actor.name}</p>
-                <p className="text-xs text-gray-500">{log.actor.role}</p>
+                <p className="text-sm font-medium text-[var(--foreground)]">{log.actor.name}</p>
+                <p className="text-xs text-[var(--muted-foreground)]">{log.actor.role}</p>
               </div>
             </div>
           </DrawerLine>
 
           <DrawerLine label="Hành động">
             <div className="space-y-1">
-              <p className="text-sm font-medium text-white">{log.action}</p>
-              <p className="text-xs text-gray-500">{log.actionCode}</p>
+              <p className="text-sm font-medium text-[var(--foreground)]">{log.action}</p>
+              <p className="text-xs text-[var(--muted-foreground)]">{log.actionCode}</p>
             </div>
           </DrawerLine>
 
           <DrawerLine label="Mô tả">
-            <p className="text-sm leading-6 text-gray-300">{log.description}</p>
+            <p className="text-sm leading-6 text-[var(--secondary-foreground)]">{log.description}</p>
           </DrawerLine>
 
-          <DrawerLine label="Module">
-            <span className="text-sm text-gray-200">{log.module}</span>
+          <DrawerLine label="Mô-đun">
+            <span className="text-sm text-[var(--foreground)]">{log.module}</span>
           </DrawerLine>
 
           <DrawerLine label="IP Address">
-            <span className="text-sm text-gray-200">{log.ipAddress}</span>
+            <span className="text-sm text-[var(--foreground)]">{log.ipAddress}</span>
           </DrawerLine>
 
-          <DrawerLine label="User Agent">
-            <p className="text-sm leading-6 text-gray-300">{log.userAgent}</p>
+          <DrawerLine label="Trình duyệt / thiết bị">
+            <p className="text-sm leading-6 text-[var(--secondary-foreground)]">{log.userAgent}</p>
           </DrawerLine>
 
           <DrawerLine label="Mức độ">
@@ -676,12 +676,12 @@ function LogDetailDrawer({
             <Badge text={log.status} tone={statusTone[log.status]} />
           </DrawerLine>
 
-          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+          <div className="theme-subtle-card rounded-xl p-4">
             <div className="mb-3 flex items-center gap-2">
-              <FileJson className="h-4 w-4 text-blue-200" />
+              <FileJson className="h-4 w-4 text-[var(--accent)]" />
               <h3 className="font-semibold">Metadata (JSON)</h3>
             </div>
-            <pre className="overflow-x-auto rounded-xl border border-white/10 bg-slate-950/65 p-4 text-xs leading-6 text-blue-100">
+            <pre className="overflow-x-auto rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 text-xs leading-6 text-[var(--secondary-foreground)]">
               {JSON.stringify(log.metadata, null, 2)}
             </pre>
           </div>
@@ -702,12 +702,12 @@ function SelectBox({
 }) {
   return (
     <select
-      className="h-10 min-w-0 rounded-xl border border-blue-300/20 bg-slate-950/55 px-3 text-sm text-white outline-none"
+      className="theme-admin-select h-10 min-w-0 rounded-xl px-3 text-sm outline-none"
       value={value}
       onChange={(event) => onChange(event.target.value)}
     >
       {options.map((option) => (
-        <option key={option.value} value={option.value} className="bg-slate-950 text-white">
+        <option key={option.value} value={option.value}>
           {option.label}
         </option>
       ))}
@@ -737,10 +737,10 @@ function ActorAvatar({ actor }: { actor: ViewLog["actor"] }) {
     <img
       src={actor.avatarUrl}
       alt={actor.name}
-      className="h-9 w-9 rounded-full border border-blue-300/25 object-cover"
+      className="h-9 w-9 rounded-full border border-[var(--accent-border)] object-cover"
     />
   ) : (
-    <div className="grid h-9 w-9 place-items-center rounded-full border border-blue-300/25 bg-blue-500/15 text-sm font-semibold text-blue-100">
+    <div className="theme-admin-avatar grid h-9 w-9 place-items-center rounded-full text-sm font-semibold">
       {getInitial(actor.name)}
     </div>
   );
@@ -754,8 +754,8 @@ function DrawerLine({
   children: ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-      <p className="mb-2 text-xs uppercase tracking-wide text-gray-500">{label}</p>
+    <div className="theme-subtle-card rounded-xl px-4 py-3">
+      <p className="mb-2 text-xs uppercase tracking-wide text-[var(--muted-foreground)]">{label}</p>
       {children}
     </div>
   );

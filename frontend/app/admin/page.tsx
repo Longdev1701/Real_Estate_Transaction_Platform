@@ -67,7 +67,7 @@ export default function AdminDashboardPage() {
     <AdminShell title="Tổng quan">
       <div className="space-y-6">
         {error && (
-          <NeonCard className="border-red-400/30 bg-red-950/20 p-4 text-sm text-red-200">
+          <NeonCard className="theme-badge-danger p-4 text-sm">
             {error}
           </NeonCard>
         )}
@@ -166,31 +166,33 @@ function DashboardChartCard({
   const palette =
     tone === "blue"
       ? {
-          primary: "#3b82f6",
-          secondary: "#38bdf8",
-          glow: "shadow-[0_0_34px_rgba(59,130,246,0.22)]",
-          badge: "border-blue-300/25 bg-blue-500/10 text-blue-200",
+          primary: "var(--chart-primary)",
+          secondary: "var(--chart-primary-soft)",
+          glow: "shadow-[0_14px_28px_color-mix(in_srgb,var(--chart-primary)_12%,transparent)] dark:shadow-[0_18px_38px_color-mix(in_srgb,var(--chart-primary)_22%,transparent)]",
+          badge:
+            "border-[color:var(--accent-border)] bg-[color:color-mix(in_srgb,var(--accent)_10%,var(--surface))] text-[var(--accent)]",
         }
       : {
-          primary: "#8b5cf6",
-          secondary: "#22d3ee",
-          glow: "shadow-[0_0_34px_rgba(139,92,246,0.22)]",
-          badge: "border-violet-300/25 bg-violet-500/10 text-violet-200",
+          primary: "var(--chart-secondary)",
+          secondary: "var(--chart-secondary-soft)",
+          glow: "shadow-[0_14px_28px_color-mix(in_srgb,var(--chart-secondary)_12%,transparent)] dark:shadow-[0_18px_38px_color-mix(in_srgb,var(--chart-secondary)_22%,transparent)]",
+          badge:
+            "border-[var(--accent-border)] bg-[var(--accent-soft)] text-[var(--accent)]",
         };
 
   return (
     <NeonCard className={`overflow-hidden p-5 ${palette.glow}`}>
       <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className={`rounded-xl border p-2 ${palette.badge}`}>
+          <div className={`rounded-xl border p-2 shadow-[0_8px_18px_color-mix(in_srgb,var(--muted-foreground)_16%,transparent)] ${palette.badge}`}>
             <BarChart3 className="h-5 w-5" />
           </div>
           <div>
             <h2 className="text-lg font-semibold">{title}</h2>
-            <p className="mt-1 text-xs text-gray-400">Dữ liệu 7 ngày gần nhất</p>
+            <p className="mt-1 text-xs text-[var(--muted-foreground)]">Dữ liệu 7 ngày gần nhất</p>
           </div>
         </div>
-        <span className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-gray-300">
+        <span className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-xs font-medium text-[var(--secondary-foreground)] shadow-[0_4px_14px_color-mix(in_srgb,var(--muted-foreground)_14%,transparent)]">
           7 ngày qua
         </span>
       </div>
@@ -206,7 +208,7 @@ function DashboardChartCard({
       </div>
 
       {isLoading ? (
-        <div className="grid h-72 place-items-center rounded-2xl border border-white/10 bg-slate-950/40 text-sm text-gray-400">
+        <div className="grid h-72 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--panel-bg)] text-sm text-[var(--muted-foreground)]">
           Đang tải biểu đồ...
         </div>
       ) : (
@@ -224,9 +226,9 @@ function DashboardChartCard({
 
 function MetricItem({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-slate-950/45 p-3">
-      <p className="text-[11px] uppercase tracking-wide text-gray-500">{label}</p>
-      <p className="mt-2 text-xl font-semibold text-white">{value}</p>
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 shadow-[0_8px_20px_var(--shadow-glow)]">
+      <p className="text-[11px] uppercase tracking-wide text-[var(--secondary-foreground)]">{label}</p>
+      <p className="mt-2 text-xl font-semibold text-[var(--foreground)]">{value}</p>
     </div>
   );
 }
@@ -253,8 +255,8 @@ function SevenDayChart({
   const chartWidth = width - left - right;
   const chartHeight = height - top - bottom;
   const maxValue = Math.max(1, ...data.flatMap((item) => [item.total, item.created]));
-  const gradientId = `bar-${primaryColor.replace("#", "")}`;
-  const glowId = `glow-${primaryColor.replace("#", "")}`;
+  const gradientId = `bar-${primaryColor.includes("chart-secondary") ? "secondary" : "primary"}`;
+  const glowId = `glow-${primaryColor.includes("chart-secondary") ? "secondary" : "primary"}`;
   const yTicks = Array.from({ length: 5 }, (_, index) =>
     Math.round((maxValue / 4) * (4 - index)),
   );
@@ -269,24 +271,24 @@ function SevenDayChart({
 
   if (!data.length) {
     return (
-      <div className="grid h-72 place-items-center rounded-2xl border border-white/10 bg-slate-950/40 text-sm text-gray-400">
+      <div className="grid h-72 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--panel-bg)] text-sm text-[var(--muted-foreground)]">
         Chưa có dữ liệu 7 ngày gần nhất.
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
-      <div className="mb-3 flex flex-wrap items-center gap-4 text-xs text-gray-300">
-        <span className="inline-flex items-center gap-2">
-          <span className="h-2.5 w-8 rounded-full" style={{ backgroundColor: primaryColor }} />
+    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[0_10px_24px_var(--shadow-glow)]">
+      <div className="mb-3 flex flex-wrap items-center gap-4 text-xs text-[var(--secondary-foreground)]">
+        <span className="inline-flex items-center gap-2 font-medium">
+          <span className="h-2.5 w-8 rounded-full shadow-[0_0_10px_var(--glow-soft)]" style={{ backgroundColor: primaryColor }} />
           {totalLabel}
         </span>
-        <span className="inline-flex items-center gap-2">
-          <span className="h-2.5 w-8 rounded-full" style={{ backgroundColor: secondaryColor }} />
+        <span className="inline-flex items-center gap-2 font-medium">
+          <span className="h-2.5 w-8 rounded-full shadow-[0_0_10px_var(--glow-strong)]" style={{ backgroundColor: secondaryColor }} />
           {createdLabel}
         </span>
-        <span className="inline-flex items-center gap-1 text-emerald-300">
+        <span className="inline-flex items-center gap-1 text-[var(--success-foreground)]">
           <TrendingUp className="h-3.5 w-3.5" />
           cập nhật theo ngày
         </span>
@@ -316,9 +318,9 @@ function SevenDayChart({
                 x2={width - right}
                 y1={y}
                 y2={y}
-                stroke="rgba(148,163,184,.16)"
+                stroke="var(--chart-grid)"
               />
-              <text x={left - 10} y={y + 4} textAnchor="end" className="fill-gray-500 text-[11px]">
+              <text x={left - 10} y={y + 4} textAnchor="end" className="fill-[var(--chart-label)] text-[11px]">
                 {formatCompact(tick)}
               </text>
             </g>
@@ -343,11 +345,11 @@ function SevenDayChart({
                 x={x}
                 y={Math.max(top + 12, barTop - 7)}
                 textAnchor="middle"
-                className="fill-cyan-200 text-[10px] font-semibold"
+                className="fill-[var(--chart-label)] text-[10px] font-semibold"
               >
                 {item.created}
               </text>
-              <text x={x} y={height - 20} textAnchor="middle" className="fill-gray-400 text-[11px]">
+              <text x={x} y={height - 20} textAnchor="middle" className="fill-[var(--chart-label)] text-[11px]">
                 {item.label}
               </text>
             </g>
@@ -369,8 +371,8 @@ function SevenDayChart({
           const y = getY(item.total);
           return (
             <g key={`${item.date}-point`}>
-              <circle cx={x} cy={y} r="5" fill={primaryColor} stroke="#dbeafe" strokeWidth="2" />
-              <text x={x} y={y - 13} textAnchor="middle" className="fill-white text-[10px] font-semibold">
+              <circle cx={x} cy={y} r="5" fill={primaryColor} stroke="var(--surface)" strokeWidth="2.5" />
+              <text x={x} y={y - 13} textAnchor="middle" className="fill-[var(--foreground)] text-[10px] font-semibold">
                 {formatCompact(item.total)}
               </text>
             </g>
