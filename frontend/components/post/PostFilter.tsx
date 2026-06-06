@@ -2,32 +2,15 @@
  
 import { useEffect, useState } from "react";
 import {
-  ArrowUpDown,
-  Bike,
-  Building,
-  Car,
   ChevronDown,
   ChevronUp,
   Filter,
-  HelpCircle,
-  Home,
-  Milestone,
   Search,
-  Shield,
-  Snowflake,
-  Trees,
-  Waves,
-  Wifi,
-  Wind,
-  Armchair,
-  Droplets,
-  ThermometerSun,
-  Scroll,
-  Dog,
   SlidersHorizontal,
 } from "lucide-react";
  
 import { api } from "@/lib/api";
+import { FeatureIcon } from "@/lib/feature-icons";
 import {
   PROPERTY_TYPES,
   propertyTypeLabels,
@@ -51,32 +34,10 @@ interface District {
   name: string;
 }
  
-const featureIconMap: Record<string, React.ComponentType<any>> = {
-  wifi: Wifi,
-  wind: Wind,
-  armchair: Armchair,
-  droplets: Droplets,
-  snowflake: Snowflake,
-  "thermometer-sun": ThermometerSun,
-  waves: Waves,
-  "arrow-up-down": ArrowUpDown,
-  car: Car,
-  bike: Bike,
-  shield: Shield,
-  trees: Trees,
-  building: Building,
-  scroll: Scroll,
-  milestone: Milestone,
-  home: Home,
-  dog: Dog,
-};
- 
 const clampNumericText = (value: string) => value.replace(/\D/g, "");
- 
-const FeatureIcon = ({ name, className }: { name: string; className?: string }) => {
-  const IconComponent = featureIconMap[name] || HelpCircle;
-  return <IconComponent className={className} />;
-};
+const parseNumericText = (value: string) => Number(clampNumericText(value)) || 0;
+const formatNumericText = (value: string) =>
+  value ? new Intl.NumberFormat("vi-VN").format(parseNumericText(value)) : "";
  
 function StepperInput({
   value,
@@ -92,7 +53,7 @@ function StepperInput({
   label: string;
 }) {
   const updateByStep = (direction: 1 | -1) => {
-    const currentValue = Number(value) || 0;
+    const currentValue = parseNumericText(value);
     const nextValue = Math.max(0, currentValue + step * direction);
     onChange(nextValue > 0 ? String(nextValue) : "");
   };
@@ -102,7 +63,7 @@ function StepperInput({
       <input
         type="text"
         inputMode="numeric"
-        value={value}
+        value={formatNumericText(value)}
         onChange={(event) => onChange(clampNumericText(event.target.value))}
         className="theme-input-surface w-full rounded-xl px-2 py-2 pr-7 text-xs placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none"
         placeholder={placeholder}
@@ -122,7 +83,7 @@ function StepperInput({
           disabled={!Number(value)}
           className="flex h-3.5 w-4 items-center justify-center border-t border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)] disabled:opacity-20"
           aria-label={`Giảm ${label}`}
-        >
+       >
           <ChevronDown className="h-3 w-3" />
         </button>
       </div>
@@ -407,13 +368,27 @@ export function PostFilter({
                 <SlidersHorizontal className="h-3.5 w-3.5" />
                 Tiện ích & Đặc trưng
               </span>
-              <span className="theme-badge-info rounded-full px-1.5 py-0.5 text-[10px]">
-                {selectedIds.length}
-              </span>
-            </button>
-            
-            {showFeatures && (
-              <div className="mt-2.5 animate-fadeIn border-t border-[var(--border)] pt-2.5">
+<span className="flex items-center gap-2">
+  <span className="theme-badge-info rounded-full px-1.5 py-0.5 text-[10px]">
+    {selectedIds.length}
+  </span>
+
+  <ChevronDown
+    className={`h-3.5 w-3.5 transition-transform duration-300 ${
+      showFeatures ? "rotate-180" : ""
+    }`}
+  />
+</span>
+</button>
+
+<div
+  className={`grid overflow-hidden transition-all duration-300 ease-out ${
+    showFeatures
+      ? "mt-2.5 border-t border-[var(--border)] pt-2.5 grid-rows-[1fr] opacity-100"
+      : "grid-rows-[0fr] opacity-0"
+  }`}
+>
+  <div className="overflow-hidden">
                 <div className="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto pr-1 custom-scrollbar">
                   {features.map((feature) => {
                     const isSelected = selectedIds.includes(feature.id);
@@ -435,7 +410,7 @@ export function PostFilter({
                   })}
                 </div>
               </div>
-            )}
+            </div>
           </div>
         )}
  

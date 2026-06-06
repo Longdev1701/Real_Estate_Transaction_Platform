@@ -26,24 +26,6 @@ import {
   TriangleAlert,
   Trash2,
   X,
-  Wifi,
-  Wind,
-  Armchair,
-  Droplets,
-  Snowflake,
-  ThermometerSun,
-  Waves,
-  ArrowUpDown,
-  Car,
-  Bike,
-  Shield,
-  Trees,
-  Building,
-  Scroll,
-  Milestone,
-  Home,
-  Dog,
-  HelpCircle,
   Hash,
   User,
   Map,
@@ -54,6 +36,7 @@ import {
 
 import { api } from "@/lib/api";
 import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
+import { FeatureIcon } from "@/lib/feature-icons";
 import {
   formatArea,
   formatLocation,
@@ -78,31 +61,6 @@ const PostDetailMap = dynamic(() => import("@/components/map/PostDetailMap"), {
     </div>
   ),
 });
-
-const featureIconMap: Record<string, React.ComponentType<any>> = {
-  wifi: Wifi,
-  wind: Wind,
-  armchair: Armchair,
-  droplets: Droplets,
-  snowflake: Snowflake,
-  "thermometer-sun": ThermometerSun,
-  waves: Waves,
-  "arrow-up-down": ArrowUpDown,
-  car: Car,
-  bike: Bike,
-  shield: Shield,
-  trees: Trees,
-  building: Building,
-  scroll: Scroll,
-  milestone: Milestone,
-  home: Home,
-  dog: Dog,
-};
-
-const FeatureIcon = ({ name, className }: { name: string; className?: string }) => {
-  const IconComponent = featureIconMap[name] || HelpCircle;
-  return <IconComponent className={className} />;
-};
 
 const imageFallback =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 800'><rect width='1200' height='800' fill='%230b1120'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-family='Arial' font-size='52'>TrustEstate</text></svg>";
@@ -360,15 +318,15 @@ export default function PostDetailPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="container mx-auto flex min-h-[60vh] items-center justify-center px-4 py-10 lg:px-8">
-        <div className="inline-flex items-center gap-3 text-[var(--secondary-foreground)]">
-          <LoaderCircle className="h-5 w-5 animate-spin text-[var(--accent)]" />
-          Đang tải chi tiết bài đăng...
-        </div>
+  return (
+    <div className="container mx-auto flex min-h-[60vh] items-center justify-center px-4 py-10 lg:px-8">
+      <div className="inline-flex items-center gap-3 text-[var(--secondary-foreground)]">
+        <LoaderCircle className="h-5 w-5 animate-spin text-[var(--accent)]" />
+        Đang tải chi tiết bài đăng...
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   if (error && !post) {
     return (
@@ -778,13 +736,18 @@ export default function PostDetailPage() {
         <aside className="space-y-5">
           <div className="lg:sticky lg:top-24 space-y-5">
             {canManagePost ? (
-              <div className="glass-card relative overflow-hidden border-t-4 border-t-[var(--accent)] p-6">
-                <div className="pointer-events-none absolute left-0 top-0 h-24 w-full bg-gradient-to-b from-[var(--accent-soft)] to-transparent" />
-                <h2 className="relative text-xl font-semibold text-[var(--foreground)]">Quản lý bài đăng</h2>
-                <p className="relative mt-2 text-sm text-[var(--muted-foreground)]">
-                  Bạn là người sở hữu bài đăng này. Bạn có quyền chỉnh sửa thông tin hoặc xoá bài viết.
-                </p>
-                <div className="mt-6 grid gap-3 sm:grid-cols-2 relative">
+<div className="glass-card relative overflow-hidden border-t-4 border-t-[var(--accent)] p-6">
+  <div className="pointer-events-none absolute left-0 top-0 h-24 w-full bg-gradient-to-b from-[var(--accent-soft)] to-transparent" />
+
+  <h2 className="relative text-xl font-semibold text-[var(--foreground)]">
+    Quản lý bài đăng
+  </h2>
+
+  <p className="relative mt-2 text-sm text-[var(--muted-foreground)]">
+    Bạn là người sở hữu bài đăng này. Bạn có quyền chỉnh sửa thông tin hoặc xoá bài viết.
+  </p>
+
+  <div className="mt-6 grid gap-3 sm:grid-cols-2 relative">
                   <Link
                     href={`/posts/${post.id}/edit`}
                     className="theme-surface-soft inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 font-medium text-[var(--foreground)] transition hover:bg-[var(--surface-muted)]"
