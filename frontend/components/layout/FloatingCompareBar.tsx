@@ -76,11 +76,11 @@ export function FloatingCompareBar() {
       <button
         type="button"
         onClick={() => setIsCollapsed(false)}
-        className="fixed bottom-6 left-6 z-[999] flex h-14 w-14 items-center justify-center rounded-full border border-blue-500/30 bg-slate-950/90 text-blue-400 shadow-[0_10px_30px_rgba(30,58,138,0.45)] backdrop-blur-xl hover:bg-slate-900 transition-all duration-300 hover:scale-105 active:scale-95 animate-in fade-in zoom-in-50 md:bottom-8 md:left-8"
+        className="theme-floating-panel fixed bottom-6 left-6 z-[999] flex h-14 w-14 items-center justify-center rounded-full border border-[var(--accent-border)] text-[var(--accent)] backdrop-blur-xl transition-all duration-300 hover:bg-[var(--hover)] hover:scale-105 active:scale-95 animate-in fade-in zoom-in-50 md:bottom-8 md:left-8"
         title="Mở rộng thanh so sánh"
       >
         <Scale className="h-6 w-6 animate-pulse" />
-        <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white shadow-md border border-slate-950">
+        <span className="theme-button-primary absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full border border-[var(--card)] text-xs font-bold shadow-md">
           {comparedPosts.length}
         </span>
       </button>
@@ -89,12 +89,12 @@ export function FloatingCompareBar() {
 
   return (
     <div className="fixed bottom-6 left-1/2 z-[999] w-[90%] max-w-md -translate-x-1/2 animate-in fade-in slide-in-from-bottom-5 duration-300">
-      <div className="relative flex items-center justify-between gap-3 rounded-xl border border-blue-500/30 bg-slate-950/90 p-2 shadow-[0_15px_40px_rgba(30,58,138,0.45)] backdrop-blur-xl">
+      <div className="theme-floating-panel relative flex items-center justify-between gap-3 rounded-xl border border-[var(--accent-border)] p-2 backdrop-blur-xl">
         
         {/* Left: Icon & Count */}
         <div className="flex items-center gap-2 pl-1.5 shrink-0">
-          <Scale className="h-4.5 w-4.5 text-blue-400" />
-          <span className="text-xs font-bold text-white">{comparedPosts.length}/3</span>
+          <Scale className="h-4.5 w-4.5 text-[var(--accent)]" />
+          <span className="text-xs font-bold text-[var(--foreground)]">{comparedPosts.length}/3</span>
         </div>
 
         {/* Center: Previews */}
@@ -102,7 +102,7 @@ export function FloatingCompareBar() {
           {comparedPosts.map((post) => (
             <div
               key={post.id}
-              className="group relative h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-slate-900"
+              className="group relative h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--card)]"
             >
               <img
                 src={getPrimaryImage(post)}
@@ -112,10 +112,10 @@ export function FloatingCompareBar() {
               <button
                 type="button"
                 onClick={() => handleRemove(post.id)}
-                className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="theme-overlay-strong absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100"
                 title="Bỏ chọn"
               >
-                <X className="h-3 w-3 text-white" />
+                <X className="h-3 w-3 text-[var(--foreground)]" />
               </button>
             </div>
           ))}
@@ -126,7 +126,7 @@ export function FloatingCompareBar() {
           <button
             type="button"
             onClick={() => setIsCollapsed(true)}
-            className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 hover:bg-white/5 hover:text-white transition-colors"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--muted)] transition-colors hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
             title="Thu gọn"
           >
             <ChevronDown className="h-4.5 w-4.5" />
@@ -134,13 +134,13 @@ export function FloatingCompareBar() {
           <button
             type="button"
             onClick={handleClearAll}
-            className="rounded-lg px-2 py-1.5 text-xs font-semibold text-gray-400 hover:bg-white/5 hover:text-white transition-colors"
+            className="rounded-lg px-2 py-1.5 text-xs font-semibold text-[var(--secondary-foreground)] transition-colors hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
           >
             Xóa hết
           </button>
           <Link
             href="/compare"
-            className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-md shadow-blue-500/25 hover:bg-blue-500 transition-colors"
+            className="btn-primary inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold"
           >
             So sánh
             <ArrowRight className="h-3 w-3" />

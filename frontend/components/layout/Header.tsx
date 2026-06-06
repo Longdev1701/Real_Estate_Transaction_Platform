@@ -83,21 +83,21 @@ export function Header() {
     <header className="fixed top-0 z-[120] w-full overflow-visible glass-panel">
       <div className="container mx-auto flex h-20 items-center justify-between overflow-visible px-4 lg:px-8">
         <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center gap-2 text-2xl font-bold tracking-wider text-white">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 shadow-lg shadow-blue-500/20">
+          <Link href="/" className="flex items-center gap-2 text-2xl font-bold tracking-wider text-[var(--foreground)]">
+            <span className="theme-header-brand flex h-8 w-8 items-center justify-center rounded-lg">
               T
             </span>
-            Trust<span className="text-blue-400">Estate</span>
+            Trust<span className="text-[var(--accent)]">Estate</span>
           </Link>
 
-          <nav className="hidden items-center gap-6 text-sm font-medium text-gray-300 md:flex">
-            <Link href="/" className="transition-colors hover:text-blue-400">
+          <nav className="hidden items-center gap-6 text-sm font-medium text-[var(--muted-foreground)] md:flex">
+            <Link href="/" className="transition-colors hover:text-[var(--foreground)]">
               Trang chủ
             </Link>
-            <Link href="/posts" className="transition-colors hover:text-blue-400">
+            <Link href="/posts" className="transition-colors hover:text-[var(--foreground)]">
               Bài đăng
             </Link>
-            <Link href="/compare" className="transition-colors hover:text-blue-400">
+            <Link href="/compare" className="transition-colors hover:text-[var(--foreground)]">
               So sánh
             </Link>
           </nav>
@@ -106,28 +106,33 @@ export function Header() {
         <div className="flex items-center gap-4">
           <Link
             href={user ? "/notifications" : "/auth/login"}
-            className={`relative p-2 transition-colors ${pathname === "/notifications" ? "text-blue-300" : "text-gray-400 hover:text-white"
+            className={`relative rounded-xl p-2 transition-colors ${pathname === "/notifications" ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--muted-foreground)] hover:bg-[var(--accent-soft)] hover:text-[var(--foreground)]"
               }`}
             aria-label="Thông báo"
           >
             <Bell size={20} />
             {unreadNotifications > 0 ? (
-              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-[11px] font-bold text-white shadow-[0_0_14px_rgba(37,99,235,0.7)]">
+              <span className="theme-header-notification-badge absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-bold">
                 {unreadNotifications > 99 ? "99+" : unreadNotifications}
               </span>
             ) : null}
             {pathname === "/notifications" ? (
-              <span className="absolute inset-x-1 -bottom-5 h-1 rounded-full bg-blue-500 shadow-[0_0_16px_rgba(37,99,235,0.8)]" />
+              <span className="theme-header-active-indicator absolute inset-x-1 -bottom-5 h-1 rounded-full" />
             ) : null}
           </Link>
 
-          <Link href="/messages" className="relative p-2 text-gray-400 transition-colors hover:text-blue-400">
+          <Link
+            href="/messages"
+            className="relative rounded-xl p-2 text-[var(--muted-foreground)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--foreground)]"
+            aria-label="Tin nhắn"
+          >
             <MessageSquare size={20} />
           </Link>
 
           <Link
             href={user ? "/profile/saved" : "/auth/login"}
-            className="p-2 text-gray-400 transition-colors hover:text-blue-400"
+            className="rounded-xl p-2 text-[var(--muted-foreground)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--foreground)]"
+            aria-label="Bài đăng đã lưu"
           >
             <Bookmark size={20} />
           </Link>
@@ -136,7 +141,7 @@ export function Header() {
             + Đăng bài
           </Link>
 
-          <div className="mx-2 h-8 w-px bg-white/10" />
+          <div className="mx-2 h-8 w-px bg-[var(--border)]" />
 
           <UserMenu />
         </div>
