@@ -267,8 +267,8 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
 
   return (
     <div className="mx-auto h-full max-w-[1520px] p-2.5 lg:p-4">
-      <div className="flex h-full overflow-hidden rounded-[26px] border border-blue-400/20 bg-[#061126] shadow-[0_20px_70px_rgba(2,6,23,0.58)]">
-        <aside className="hidden w-[84px] flex-col justify-between border-r border-white/10 bg-[linear-gradient(180deg,rgba(12,23,49,0.98),rgba(5,14,31,0.98))] px-3 py-5 md:flex">
+      <div className="theme-message-shell flex h-full overflow-hidden rounded-[26px] border border-[var(--accent-border)]">
+        <aside className="theme-message-rail hidden w-[84px] flex-col justify-between border-r border-[var(--border)] px-3 py-5 md:flex">
           <div className="space-y-2.5">
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -280,19 +280,19 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
                   key={item.href}
                   href={item.href}
                   className={`group relative flex items-center justify-center rounded-[20px] px-2 py-3 transition ${isActive
-                      ? "bg-[linear-gradient(135deg,rgba(64,86,255,0.24),rgba(130,91,255,0.2))] text-white shadow-[0_0_0_1px_rgba(129,140,248,0.45),0_16px_40px_rgba(79,70,229,0.25)]"
-                      : "text-slate-400 hover:bg-white/5 hover:text-white"
+                      ? "theme-message-nav-active"
+                      : "text-[var(--muted-foreground)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
                     }`}
                   aria-label={item.label}
                   title={item.label}
                 >
                   <span
-                    className={`flex h-11 w-11 items-center justify-center rounded-[16px] border ${isActive ? "border-blue-300/40 bg-white/10" : "border-white/10 bg-white/[0.03]"
+                    className={`flex h-11 w-11 items-center justify-center rounded-[16px] border ${isActive ? "border-[var(--accent-border)] bg-[var(--accent-soft)]" : "border-[var(--border)] bg-[var(--surface-muted)]"
                       }`}
                   >
                     <Icon className="h-[18px] w-[18px]" />
                   </span>
-                  <span className="pointer-events-none absolute left-full z-20 ml-3 whitespace-nowrap rounded-xl border border-white/10 bg-[#13213b] px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-xl transition group-hover:opacity-100">
+                  <span className="theme-message-popover pointer-events-none absolute left-full z-20 ml-3 whitespace-nowrap rounded-xl px-2.5 py-1.5 text-xs font-medium text-white opacity-0 transition group-hover:opacity-100">
                     {item.label}
                   </span>
                 </Link>
@@ -302,26 +302,26 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
 
           <div className="space-y-2.5">
             <button
-              className="group relative flex w-full items-center justify-center rounded-[20px] px-2 py-3 text-slate-400 transition hover:bg-white/5 hover:text-white"
+              className="group relative flex w-full items-center justify-center rounded-[20px] px-2 py-3 text-[var(--muted-foreground)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
               aria-label="Thông báo"
               title="Thông báo"
             >
-              <span className="flex h-11 w-11 items-center justify-center rounded-[16px] border border-white/10 bg-white/[0.03]">
+              <span className="flex h-11 w-11 items-center justify-center rounded-[16px] border border-[var(--border)] bg-[var(--surface-muted)]">
                 <Bell className="h-[18px] w-[18px]" />
               </span>
-              <span className="pointer-events-none absolute left-full z-20 ml-3 whitespace-nowrap rounded-xl border border-white/10 bg-[#13213b] px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-xl transition group-hover:opacity-100">
+              <span className="theme-message-popover pointer-events-none absolute left-full z-20 ml-3 whitespace-nowrap rounded-xl px-2.5 py-1.5 text-xs font-medium text-white opacity-0 transition group-hover:opacity-100">
                 Thông báo
               </span>
             </button>
             <button
-              className="group relative flex w-full items-center justify-center rounded-[20px] px-2 py-3 text-slate-400 transition hover:bg-white/5 hover:text-white"
+              className="group relative flex w-full items-center justify-center rounded-[20px] px-2 py-3 text-[var(--muted-foreground)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
               aria-label="Cài đặt"
               title="Cài đặt"
             >
-              <span className="flex h-11 w-11 items-center justify-center rounded-[16px] border border-white/10 bg-white/[0.03]">
+              <span className="flex h-11 w-11 items-center justify-center rounded-[16px] border border-[var(--border)] bg-[var(--surface-muted)]">
                 <Settings className="h-[18px] w-[18px]" />
               </span>
-              <span className="pointer-events-none absolute left-full z-20 ml-3 whitespace-nowrap rounded-xl border border-white/10 bg-[#13213b] px-2.5 py-1.5 text-xs font-medium text-white opacity-0 shadow-xl transition group-hover:opacity-100">
+              <span className="theme-message-popover pointer-events-none absolute left-full z-20 ml-3 whitespace-nowrap rounded-xl px-2.5 py-1.5 text-xs font-medium text-white opacity-0 transition group-hover:opacity-100">
                 Cài đặt
               </span>
             </button>
@@ -329,36 +329,36 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
         </aside>
 
         <section
-          className={`min-h-0 w-full shrink-0 border-r border-white/10 bg-[linear-gradient(180deg,rgba(10,22,44,0.96),rgba(6,18,37,0.98))] md:w-[350px] ${isMobileDetailView ? "hidden lg:flex" : "flex"
+          className={`theme-message-sidebar min-h-0 w-full shrink-0 border-r border-[var(--border)] md:w-[350px] ${isMobileDetailView ? "hidden lg:flex" : "flex"
             } flex-col`}
         >
-          <div className="border-b border-white/10 px-4 py-4">
+          <div className="border-b border-[var(--border)] px-4 py-4">
             <div className="mb-4">
               <h1 className="text-[2rem] font-semibold tracking-tight text-white">Tin nhắn</h1>
-              <p className="mt-1 text-sm text-slate-400">Theo dõi khách hàng và bất động sản đang trao đổi.</p>
+              <p className="mt-1 text-sm text-[var(--muted-foreground)]">Theo dõi khách hàng và bất động sản đang trao đổi.</p>
             </div>
 
             <div className="mb-3 flex items-center gap-2.5">
               <label className="relative flex-1">
-                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
                   placeholder="Tìm kiếm tin nhắn, người, BĐS..."
-                  className="w-full rounded-[18px] border border-white/10 bg-white/[0.04] py-2.5 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-blue-400/40 focus:bg-white/[0.06]"
+                  className="w-full rounded-[18px] border border-[var(--border)] bg-[var(--surface-muted)] py-2.5 pl-10 pr-4 text-sm text-[var(--foreground)] outline-none transition placeholder:text-[var(--muted-foreground)] focus:border-[var(--accent-border)] focus:bg-[var(--surface)]"
                 />
               </label>
-              <button className="flex h-11 w-11 items-center justify-center rounded-[18px] border border-white/10 bg-white/[0.04] text-slate-300 transition hover:bg-white/[0.08] hover:text-white">
+              <button className="flex h-11 w-11 items-center justify-center rounded-[18px] border border-[var(--border)] bg-[var(--surface-muted)] text-[var(--secondary-foreground)] transition hover:bg-[var(--surface)] hover:text-[var(--foreground)]">
                 <SlidersHorizontal className="h-[18px] w-[18px]" />
               </button>
             </div>
 
-            <div className="flex gap-1.5 rounded-[18px] border border-white/10 bg-[#09172f] p-1">
+            <div className="theme-message-chip flex gap-1.5 rounded-[18px] p-1">
               <button
                 type="button"
                 onClick={() => setActiveTab("all")}
-                className={`flex-1 rounded-[14px] px-4 py-2 text-sm transition ${activeTab === "all" ? "bg-white/10 text-white" : "text-slate-400 hover:text-white"
+                className={`flex-1 rounded-[14px] px-4 py-2 text-sm transition ${activeTab === "all" ? "bg-[var(--accent-soft)] text-[var(--foreground)]" : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
                   }`}
               >
                 Tất cả
@@ -366,7 +366,7 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
               <button
                 type="button"
                 onClick={() => setActiveTab("unread")}
-                className={`flex-1 rounded-[14px] px-4 py-2 text-sm transition ${activeTab === "unread" ? "bg-white/10 text-white" : "text-slate-400 hover:text-white"
+                className={`flex-1 rounded-[14px] px-4 py-2 text-sm transition ${activeTab === "unread" ? "bg-[var(--accent-soft)] text-[var(--foreground)]" : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
                   }`}
               >
                 Chưa đọc
@@ -381,17 +381,17 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
             {loading ? (
               <div className="space-y-3 px-2 py-2">
                 {Array.from({ length: 5 }).map((_, index) => (
-                  <div key={index} className="h-24 animate-pulse rounded-[24px] border border-white/8 bg-white/[0.03]" />
+                  <div key={index} className="h-24 animate-pulse rounded-[24px] border border-[var(--border)] bg-[var(--surface-muted)]" />
                 ))}
               </div>
             ) : filteredConversations.length === 0 ? (
               <div className="flex h-full min-h-[280px] items-center justify-center px-4">
                 <div className="max-w-xs text-center">
-                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-[22px] border border-white/10 bg-white/[0.04]">
-                    <MessageSquare className="h-7 w-7 text-slate-400" />
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-[22px] border border-[var(--border)] bg-[var(--surface-muted)]">
+                    <MessageSquare className="h-7 w-7 text-[var(--muted-foreground)]" />
                   </div>
-                  <p className="text-base font-medium text-white">Không có cuộc trò chuyện phù hợp</p>
-                  <p className="mt-2 text-sm leading-6 text-slate-500">
+                  <p className="text-base font-medium text-[var(--foreground)]">Không có cuộc trò chuyện phù hợp</p>
+                  <p className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">
                     Thử tìm theo tên người dùng hoặc tiêu đề bất động sản.
                   </p>
                 </div>
@@ -438,16 +438,16 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
                       }
                     }}
                     className={`group relative mb-2.5 block overflow-hidden rounded-[20px] border px-3.5 py-3.5 transition ${isActive
-                        ? "border-blue-400/50 bg-[linear-gradient(135deg,rgba(41,78,220,0.22),rgba(122,77,255,0.16))] shadow-[0_12px_40px_rgba(59,130,246,0.18)]"
-                        : "border-white/[0.06] bg-white/[0.03] hover:border-white/[0.12] hover:bg-white/[0.05]"
+                        ? "border-[var(--accent-border)] bg-[var(--accent-soft)] shadow-[0_12px_40px_var(--shadow-glow)]"
+                        : "border-[var(--border)] bg-[var(--surface-muted)] hover:border-[var(--accent-border)] hover:bg-[var(--surface)]"
                       }`}
                   >
                     <div className="flex items-start gap-3">
-                      <div className="relative mt-0.5 h-12 w-12 shrink-0 overflow-hidden rounded-full border border-white/10 bg-slate-800">
+                      <div className="relative mt-0.5 h-12 w-12 shrink-0 overflow-hidden rounded-full border border-[var(--border)] bg-[var(--surface-muted)]">
                         {otherUser.avatarUrl ? (
                           <img src={otherUser.avatarUrl} alt={otherUser.fullName} className="h-full w-full object-cover" />
                         ) : (
-                          <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-slate-300">
+                          <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-[var(--secondary-foreground)]">
                             {otherUser.fullName.charAt(0)}
                           </div>
                         )}
@@ -456,19 +456,19 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
                       <div className="min-w-0 flex-1 pr-8">
                         <div className="mb-1 flex items-start justify-between gap-3">
                           <h3 className="truncate text-[15px] font-semibold text-white">{otherUser.fullName}</h3>
-                          <span className="shrink-0 text-xs text-slate-400">
+                          <span className="shrink-0 text-xs text-[var(--muted-foreground)]">
                             {formatConversationTime(lastMessage?.createdAt)}
                           </span>
                         </div>
 
-                        <p className={`truncate text-[14px] ${isTyping ? "font-medium text-blue-300" : "text-slate-300"}`}>
+                        <p className={`truncate text-[14px] ${isTyping ? "font-medium text-[var(--accent)]" : "text-[var(--secondary-foreground)]"}`}>
                           {isTyping ? "Đang nhập..." : formatConversationPreview(lastMessage)}
                         </p>
-                        <p className="mt-1 truncate text-xs text-slate-500">{conversation.post.title}</p>
+                        <p className="mt-1 truncate text-xs text-[var(--muted-foreground)]">{conversation.post.title}</p>
                       </div>
 
                       {unreadCount > 0 && (
-                        <span className="absolute bottom-4 right-4 flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-blue-500 px-1.5 text-xs font-semibold text-white">
+                        <span className="absolute bottom-4 right-4 flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-[var(--accent)] px-1.5 text-xs font-semibold text-[var(--primary-foreground)]">
                           {unreadCount > 9 ? "9+" : unreadCount}
                         </span>
                       )}
@@ -480,17 +480,17 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
                             event.preventDefault();
                             setOpenConvMenuId(openConvMenuId === conversation.id ? null : conversation.id);
                           }}
-                          className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-slate-400 transition hover:text-white"
+                          className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface-muted)] text-[var(--muted-foreground)] transition hover:text-[var(--foreground)]"
                         >
                           <MoreVertical className="h-4 w-4" />
                         </button>
 
                         {openConvMenuId === conversation.id && (
-                          <div className="absolute right-0 top-10 z-20 w-40 overflow-hidden rounded-2xl border border-white/10 bg-[#13213b] p-1 shadow-2xl">
+                          <div className="theme-message-popover absolute right-0 top-10 z-20 w-40 overflow-hidden rounded-2xl p-1">
                             <button
                               type="button"
                               onClick={(event) => handleDeleteConversation(event, conversation.id)}
-                              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-red-300 transition hover:bg-red-500/10"
+                              className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-[var(--danger-foreground)] transition hover:bg-[var(--danger-soft)]"
                             >
                               <Trash2 className="h-4 w-4" />
                               Xóa đoạn chat
@@ -506,7 +506,7 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
 
             {isLoadingMore && (
               <div className="py-4 text-center">
-                <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-blue-400 border-t-transparent" />
+                <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
               </div>
             )}
           </div>

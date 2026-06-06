@@ -59,16 +59,16 @@ export function CompareButton({ post, className = "" }: CompareButtonProps) {
     <button
       type="button"
       onClick={handleCompareClick}
-      className={`group/compare relative inline-flex h-9 w-9 items-center justify-center rounded-full border transition-all duration-300 shadow-md backdrop-blur-md ${
+      className={`group/compare relative inline-flex h-9 w-9 items-center justify-center rounded-full transition-all duration-300 shadow-md backdrop-blur-md ${
         isCompared
-          ? "border-blue-400/50 bg-blue-600/90 text-white hover:bg-blue-500"
-          : "border-white/20 bg-slate-950/70 text-gray-200 hover:border-blue-400/40 hover:bg-blue-600/80 hover:text-white"
+          ? "theme-icon-button-active hover:text-[var(--accent)]"
+          : "theme-icon-button hover:text-[var(--accent)]"
       } ${className}`}
       aria-label="So sánh bất động sản"
       title="So sánh bất động sản"
     >
-      <span className={`pointer-events-none absolute inset-0.5 rounded-full opacity-0 blur-md transition duration-300 group-hover/compare:opacity-100 ${isCompared ? "group-hover/compare:bg-blue-400/30" : "group-hover/compare:bg-blue-400/20"}`} />
-      <Scale className="relative h-4.5 w-4.5 transition duration-300 group-hover/compare:scale-110" />
+        <span className={`pointer-events-none absolute inset-0.5 rounded-full opacity-0 blur-md transition duration-300 group-hover/compare:opacity-100 ${isCompared ? "group-hover/compare:bg-[color:color-mix(in_srgb,var(--info)_28%,transparent)]" : "group-hover/compare:bg-[color:color-mix(in_srgb,var(--info)_18%,transparent)]"}`} />
+        <Scale className="relative h-4.5 w-4.5 transition duration-300 group-hover/compare:scale-110" />
     </button>
   );
 }

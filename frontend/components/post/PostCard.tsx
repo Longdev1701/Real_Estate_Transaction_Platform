@@ -73,12 +73,12 @@ const Metric = ({
   label: string;
   value: string;
 }) => (
-  <div className="min-w-0 rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2">
+  <div className="theme-post-metric min-w-0 rounded-xl px-3 py-2">
     <div className="flex min-w-0 items-center gap-2">
-      <Icon className="h-4 w-4 shrink-0 text-blue-300" />
-      <p className="truncate text-sm font-semibold text-white">{value}</p>
+      <Icon className="h-4 w-4 shrink-0 text-[var(--accent)]" />
+      <p className="truncate text-sm font-semibold text-[var(--foreground)]">{value}</p>
     </div>
-    <p className="mt-1 pl-6 text-xs text-gray-400">{label}</p>
+    <p className="mt-1 pl-6 text-xs text-[var(--muted-foreground)]">{label}</p>
   </div>
 );
 
@@ -254,13 +254,13 @@ export function PostCard({ post }: { post: Post }) {
 
   return (
     <>
-      <article className="overflow-hidden rounded-2xl border border-blue-400/15 bg-slate-950/55 shadow-[0_20px_70px_rgba(0,0,0,0.32)] backdrop-blur-xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <article className="theme-post-card overflow-hidden rounded-2xl backdrop-blur-xl animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex items-start justify-between gap-4 px-4 pb-3 pt-4 md:px-5">
           <div className="flex min-w-0 items-center gap-3">
 
             <Link
               href={`/profile/posts?authorId=${post.author.id}&name=${encodeURIComponent(post.author.fullName)}&avatar=${encodeURIComponent(post.author.avatarUrl || "")}`}
-              className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-blue-300/30 bg-blue-500/10 text-sm font-semibold text-blue-100 transition hover:border-blue-300 hover:ring-2 hover:ring-blue-500/30"
+              className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--accent-border)] bg-[var(--accent-soft)] text-sm font-semibold text-[var(--accent)] transition hover:border-[var(--accent)] hover:ring-2 hover:ring-blue-500/30"
               aria-label={`Xem bài đăng của ${post.author.fullName}`}
             >
               {post.author.avatarUrl ? (
@@ -273,19 +273,19 @@ export function PostCard({ post }: { post: Post }) {
               <div className="flex min-w-0 items-center gap-2">
                 <Link
                   href={`/profile/posts?authorId=${post.author.id}&name=${encodeURIComponent(post.author.fullName)}&avatar=${encodeURIComponent(post.author.avatarUrl || "")}`}
-                  className="truncate font-semibold text-white hover:text-blue-300 transition-colors"
+                  className="truncate font-semibold text-[var(--foreground)] transition-colors hover:text-[var(--accent)]"
                 >
                   {post.author.fullName}
                 </Link>
-                <BadgeCheck className="h-4 w-4 shrink-0 fill-blue-500 text-slate-950" />
+                <BadgeCheck className="h-4 w-4 shrink-0 fill-[var(--primary)] text-[var(--background)]" />
               </div>
-              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-400">
+              <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[var(--muted-foreground)]">
                 <span>{getRelativeTime(post.createdAt)}</span>
-                <span className="h-1 w-1 rounded-full bg-gray-600" />
-                <span className="rounded-full bg-blue-500/15 px-2 py-0.5 font-medium text-blue-200">
+                <span className="h-1 w-1 rounded-full bg-[var(--notification-read-dot)]" />
+                <span className="theme-badge-info rounded-full px-2 py-0.5 font-medium">
                   {propertyTypeLabels[post.propertyType]}
                 </span>
-                <span className="rounded-full bg-white/5 px-2 py-0.5 font-medium text-gray-200">
+                <span className="theme-chip rounded-full px-2 py-0.5 font-medium">
                   {postTypeLabels[post.postType]}
                 </span>
               </div>
@@ -297,12 +297,12 @@ export function PostCard({ post }: { post: Post }) {
               <button
                 type="button"
                 onClick={handleReportClick}
-                className="group/report relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/5 text-amber-200 transition hover:border-amber-400/35 hover:bg-amber-500/10 hover:text-amber-100"
+                className="theme-icon-button group/report relative inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--warning-foreground)] transition hover:text-[var(--warning-foreground)]"
                 aria-label="Báo cáo bài đăng"
                 title="Báo cáo bài đăng"
               >
-                <span className="pointer-events-none absolute inset-1 rounded-full opacity-0 blur-lg transition duration-300 group-hover/report:bg-amber-400/20 group-hover/report:opacity-100" />
-                <TriangleAlert className="relative h-5 w-5 transition duration-300 group-hover/report:-translate-y-0.5 group-hover/report:scale-110 group-hover/report:drop-shadow-[0_0_10px_rgba(251,191,36,0.75)]" />
+                <span className="pointer-events-none absolute inset-1 rounded-full opacity-0 blur-lg transition duration-300 group-hover/report:bg-[color:color-mix(in_srgb,var(--warning)_22%,transparent)] group-hover/report:opacity-100" />
+                <TriangleAlert className="relative h-5 w-5 transition duration-300 group-hover/report:-translate-y-0.5 group-hover/report:scale-110 group-hover/report:drop-shadow-[0_0_10px_color-mix(in_srgb,var(--warning)_60%,transparent)]" />
               </button>
             ) : null}
             <button
@@ -310,13 +310,13 @@ export function PostCard({ post }: { post: Post }) {
               onClick={handleCompareClick}
               className={`group/compare relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition ${
                 isCompared
-                  ? "border-blue-400/40 bg-blue-500/15 text-blue-200 hover:bg-blue-500/25 hover:text-white"
-                  : "border-white/15 bg-white/5 text-gray-300 hover:border-blue-400/30 hover:bg-blue-500/10 hover:text-blue-100"
+                  ? "theme-icon-button-active hover:text-[var(--accent)]"
+                  : "theme-icon-button hover:text-[var(--accent)]"
               }`}
               aria-label="So sánh bất động sản"
               title="So sánh bất động sản"
             >
-              <span className={`pointer-events-none absolute inset-1 rounded-full opacity-0 blur-lg transition duration-300 group-hover/compare:opacity-100 ${isCompared ? "group-hover/compare:bg-blue-400/30" : "group-hover/compare:bg-blue-400/20"}`} />
+              <span className={`pointer-events-none absolute inset-1 rounded-full opacity-0 blur-lg transition duration-300 group-hover/compare:opacity-100 ${isCompared ? "group-hover/compare:bg-[color:color-mix(in_srgb,var(--info)_28%,transparent)]" : "group-hover/compare:bg-[color:color-mix(in_srgb,var(--info)_18%,transparent)]"}`} />
               <Scale className="relative h-5 w-5 transition duration-300 group-hover/compare:scale-110" />
             </button>
             <button
@@ -325,8 +325,8 @@ export function PostCard({ post }: { post: Post }) {
               disabled={isSaveSubmitting}
               className={`group/save relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition disabled:cursor-not-allowed disabled:opacity-70 ${
                 isSaved
-                  ? "border-blue-400/40 bg-blue-500/15 text-blue-200 hover:bg-blue-500/25 hover:text-white"
-                  : "border-white/15 bg-white/5 text-gray-300 hover:border-blue-400/30 hover:bg-blue-500/10 hover:text-blue-100"
+                  ? "theme-icon-button-active hover:text-[var(--accent)]"
+                  : "theme-icon-button hover:text-[var(--accent)]"
               }`}
               aria-label="Lưu bài đăng"
               title="Lưu bài đăng"
@@ -335,12 +335,12 @@ export function PostCard({ post }: { post: Post }) {
                 <span key={saveEffect.key} className="pointer-events-none absolute inset-0 z-20">
                   {saveEffect.type === "save" ? (
                     <>
-                      <span className="absolute -inset-2 rounded-full bg-blue-400/0" style={{ animation: "savePulse 720ms ease-out forwards" }} />
-                      <span className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-blue-200/0" style={{ animation: "saveRing 760ms ease-out forwards" }} />
+                      <span className="absolute -inset-2 rounded-full bg-[color:color-mix(in_srgb,var(--effect-save)_0%,transparent)]" style={{ animation: "savePulse 720ms ease-out forwards" }} />
+                      <span className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[color:color-mix(in_srgb,var(--effect-info-glow)_0%,transparent)]" style={{ animation: "saveRing 760ms ease-out forwards" }} />
                       {[0, 1, 2, 3, 4, 5].map((item) => (
                         <span
                           key={item}
-                          className="absolute left-1/2 top-1/2 h-1.5 w-1.5 rounded-full bg-blue-300 opacity-0 shadow-[0_0_10px_rgba(96,165,250,0.95)]"
+                          className="absolute left-1/2 top-1/2 h-1.5 w-1.5 rounded-full bg-[var(--reaction-active-foreground)] opacity-0 shadow-[0_0_10px_var(--effect-info-glow)]"
                           style={{
                             animation: "saveSpark 680ms cubic-bezier(0.16,1,0.3,1) forwards",
                             animationDelay: `${item * 45}ms`,
@@ -352,13 +352,13 @@ export function PostCard({ post }: { post: Post }) {
                     </>
                   ) : (
                     <>
-                      <span className="absolute -inset-3 rounded-full bg-red-500/0" style={{ animation: "killImpactFlash 620ms ease-out forwards" }} />
-                      <span className="absolute left-1/2 top-1/2 h-1.5 w-16 origin-center -translate-x-1/2 -translate-y-1/2 -rotate-45 rounded-full bg-gradient-to-r from-transparent via-red-500 to-yellow-100 opacity-0 shadow-[0_0_18px_rgba(248,113,113,0.95)]" style={{ animation: "killSlash 680ms cubic-bezier(0.16,1,0.3,1) forwards" }} />
-                      <span className="absolute left-1/2 top-1/2 h-1 w-12 origin-center -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-full bg-gradient-to-r from-transparent via-red-400 to-white opacity-0 shadow-[0_0_14px_rgba(239,68,68,0.9)]" style={{ animation: "killSlashSecondary 680ms cubic-bezier(0.16,1,0.3,1) 90ms forwards" }} />
+                      <span className="absolute -inset-3 rounded-full bg-[color:color-mix(in_srgb,var(--effect-danger-glow)_0%,transparent)]" style={{ animation: "killImpactFlash 620ms ease-out forwards" }} />
+                      <span className="absolute left-1/2 top-1/2 h-1.5 w-16 origin-center -translate-x-1/2 -translate-y-1/2 -rotate-45 rounded-full bg-[linear-gradient(to_right,transparent,var(--danger),var(--warning-soft))] opacity-0 shadow-[0_0_18px_var(--effect-danger-glow)]" style={{ animation: "killSlash 680ms cubic-bezier(0.16,1,0.3,1) forwards" }} />
+                      <span className="absolute left-1/2 top-1/2 h-1 w-12 origin-center -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-full bg-[linear-gradient(to_right,transparent,var(--danger-border),var(--primary-foreground))] opacity-0 shadow-[0_0_14px_var(--effect-danger-glow)]" style={{ animation: "killSlashSecondary 680ms cubic-bezier(0.16,1,0.3,1) 90ms forwards" }} />
                       {[0, 1, 2, 3, 4, 5].map((item) => (
                         <span
                           key={item}
-                          className="absolute left-1/2 top-1/2 h-1.5 w-1.5 rounded-full bg-red-400 opacity-0 shadow-[0_0_8px_rgba(248,113,113,0.9)]"
+                          className="absolute left-1/2 top-1/2 h-1.5 w-1.5 rounded-full bg-[var(--danger)] opacity-0 shadow-[0_0_8px_var(--effect-danger-glow)]"
                           style={{
                             animation: "killShard 620ms cubic-bezier(0.16,1,0.3,1) forwards",
                             animationDelay: `${item * 35}ms`,
@@ -371,37 +371,38 @@ export function PostCard({ post }: { post: Post }) {
                   )}
                 </span>
               )}
-              <span className={`pointer-events-none absolute inset-1 rounded-full opacity-0 blur-lg transition duration-300 group-hover/save:opacity-100 ${isSaved ? "group-hover/save:bg-blue-400/30" : "group-hover/save:bg-red-400/20"}`} />
-              <Bookmark className={`relative h-5 w-5 transition duration-300 group-hover/save:scale-110 ${saveEffect ? (saveEffect.type === "save" ? "animate-[saveIconPop_560ms_ease-out]" : "animate-[killIconShake_520ms_ease-out]") : ""} ${isSaved ? "fill-blue-400 text-blue-400" : ""}`} />
+              <span className={`pointer-events-none absolute inset-1 rounded-full opacity-0 blur-lg transition duration-300 group-hover/save:opacity-100 ${isSaved ? "group-hover/save:bg-[color:color-mix(in_srgb,var(--info)_28%,transparent)]" : "group-hover/save:bg-[color:color-mix(in_srgb,var(--danger)_18%,transparent)]"}`} />
+              <Bookmark className={`relative h-5 w-5 transition duration-300 group-hover/save:scale-110 ${saveEffect ? (saveEffect.type === "save" ? "animate-[saveIconPop_560ms_ease-out]" : "animate-[killIconShake_520ms_ease-out]") : ""} ${isSaved ? "fill-[var(--reaction-active-foreground)] text-[var(--reaction-active-foreground)]" : ""}`} />
             </button>
           </div>        </div>
 
         <div className="px-4 md:px-5">
           <Link href={`/posts/${post.id}`} onClick={cachePostDetailPreview} className="mb-1 block">
-            <h3 className="line-clamp-1 text-base font-semibold text-white transition hover:text-blue-200">
+            <h3 className="line-clamp-1 text-base font-semibold text-[var(--foreground)] transition hover:text-[var(--accent)]">
               {post.title}
             </h3>
           </Link>
-          <div className="mb-3">
-            <p
-              className={`text-sm leading-5 text-gray-300 ${
-                isDescriptionExpanded ? "" : "line-clamp-2"
-              }`}
-            >
-              {post.description}
-            </p>
-            {shouldShowDescriptionToggle ? (
-              <button
-                type="button"
-                onClick={() => setIsDescriptionExpanded((current) => !current)}
-                className="mt-1 text-sm font-medium text-blue-300 transition hover:text-blue-200"
-              >
-                {isDescriptionExpanded ? "Thu gọn" : "Xem thêm"}
-              </button>
-            ) : null}
-          </div>
+        <div className="mb-3">
+          <p
+            className={`text-sm leading-5 text-[var(--secondary-foreground)] ${
+              isDescriptionExpanded ? "" : "line-clamp-2"
+            }`}
+          >
+            {post.description}
+          </p>
 
-          <div className={`grid overflow-hidden rounded-xl border border-white/10 bg-slate-900 ${getGalleryGridClassName(images.length)}`}>
+          {shouldShowDescriptionToggle ? (
+            <button
+              type="button"
+              onClick={() => setIsDescriptionExpanded((current) => !current)}
+              className="mt-1 text-sm font-medium text-[var(--accent)] transition hover:text-[var(--foreground)]"
+            >
+              {isDescriptionExpanded ? "Thu gọn" : "Xem thêm"}
+            </button>
+          ) : null}
+        </div>          
+
+          <div className={`theme-post-gallery grid overflow-hidden rounded-xl ${getGalleryGridClassName(images.length)}`}>
             {visibleImages.map((image, index) => {
               const remainingImages = Math.max(0, totalImages - 3);
               const isLastVisibleImage = index === visibleImages.length - 1;
@@ -411,7 +412,7 @@ export function PostCard({ post }: { post: Post }) {
                   key={image.id}
                   type="button"
                   onClick={() => openImageViewer(index)}
-                  className={`group relative block overflow-hidden bg-slate-900 text-left ${getTileClassName(images.length, index)}`}
+                  className={`group relative block overflow-hidden bg-[var(--surface)] text-left ${getTileClassName(images.length, index)}`}
                 >
                   <img
                     src={imageError ? imageFallback : image.imageUrl}
@@ -420,12 +421,12 @@ export function PostCard({ post }: { post: Post }) {
                     onError={() => setImageError(true)}
                   />
                   {index === 0 && (
-                    <div className="absolute left-3 top-3 rounded-md bg-blue-600 px-2.5 py-1 text-xs font-semibold text-white shadow-[0_8px_24px_rgba(37,99,235,0.35)]">
+                    <div className="theme-button-primary absolute left-3 top-3 rounded-md px-2.5 py-1 text-xs font-semibold">
                       {propertyTypeLabels[post.propertyType]}
                     </div>
                   )}
                   {remainingImages > 0 && isLastVisibleImage && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-slate-950/35 text-2xl font-bold text-white backdrop-blur-[1px]">
+                    <div className="theme-overlay-strong absolute inset-0 flex items-center justify-center text-2xl font-bold text-[var(--foreground)] backdrop-blur-[1px]">
                       +{remainingImages}
                     </div>
                   )}
@@ -442,16 +443,16 @@ export function PostCard({ post }: { post: Post }) {
             <Metric icon={MapPin} label="Vị trí" value={location} />
           </div>
 
-          <div className="grid grid-cols-3 overflow-visible rounded-xl border border-white/10 bg-slate-950/25 text-sm text-gray-300">
+          <div className="theme-bottom-action grid grid-cols-3 overflow-visible rounded-xl text-sm">
             <button
               type="button"
               onClick={handleLikeClick}
-              className={`group/like relative inline-flex items-center justify-center gap-2 overflow-visible px-2 py-3 transition hover:bg-rose-500/10 ${
-                isLiked ? "text-rose-300" : "hover:text-rose-100"
+              className={`group/like relative inline-flex items-center justify-center gap-2 overflow-visible px-2 py-3 transition hover:bg-[color:color-mix(in_srgb,var(--danger)_10%,transparent)] ${
+                isLiked ? "theme-reaction-active" : "hover:text-[var(--danger-foreground)]"
               }`}
             >
-              <span className="pointer-events-none absolute inset-1 rounded-xl opacity-0 blur-xl transition duration-500 group-hover/like:bg-rose-500/20 group-hover/like:opacity-100" />
-              <span className="pointer-events-none absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full border border-rose-300/0 transition duration-500 group-hover/like:scale-150 group-hover/like:border-rose-300/25 group-hover/like:opacity-0" />
+              <span className="pointer-events-none absolute inset-1 rounded-xl opacity-0 blur-xl transition duration-500 group-hover/like:bg-[color:color-mix(in_srgb,var(--danger)_18%,transparent)] group-hover/like:opacity-100" />
+              <span className="pointer-events-none absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[color:color-mix(in_srgb,var(--danger-border)_0%,transparent)] transition duration-500 group-hover/like:scale-150 group-hover/like:border-[color:color-mix(in_srgb,var(--danger-border)_55%,transparent)] group-hover/like:opacity-0" />
               {likeBurstKey > 0 && (
                 <span key={likeBurstKey} className="pointer-events-none absolute left-1/2 top-1/2 z-20 h-1 w-1 -translate-x-1/2 -translate-y-1/2">
                   {[
@@ -465,7 +466,7 @@ export function PostCard({ post }: { post: Post }) {
                   ].map(([x, y, rotate, delay], index) => (
                     <span
                       key={index}
-                      className="absolute text-rose-400 opacity-0 drop-shadow-[0_0_10px_rgba(251,113,133,0.9)]"
+                      className="absolute text-[var(--danger)] opacity-0 drop-shadow-[0_0_10px_var(--effect-like)]"
                       style={{
                         animation: "heartBurst 760ms cubic-bezier(0.16, 1, 0.3, 1) forwards",
                         animationDelay: delay,
@@ -481,11 +482,11 @@ export function PostCard({ post }: { post: Post }) {
               )}
               <Heart
                 className={`relative h-4 w-4 transition duration-500 group-hover/like:-translate-y-0.5 group-hover/like:scale-125 group-hover/like:rotate-[-10deg] ${
-                  isLiked ? "scale-125 fill-rose-400 text-rose-400 drop-shadow-[0_0_10px_rgba(251,113,133,0.75)]" : ""
+                  isLiked ? "scale-125 fill-[var(--danger)] text-[var(--danger)] drop-shadow-[0_0_10px_var(--effect-like)]" : ""
                 }`}
               />
               <span className="hidden sm:inline">Thích</span>
-              <span className="text-xs text-gray-500">{likeCount + (isLiked ? 1 : 0)}</span>
+              <span className="text-xs text-[var(--muted-foreground)]">{likeCount + (isLiked ? 1 : 0)}</span>
             </button>
             <button
               type="button"
@@ -493,32 +494,32 @@ export function PostCard({ post }: { post: Post }) {
                 playComment();
                 setIsCommentOpen(true);
               }}
-              className="group/comment relative inline-flex items-center justify-center gap-2 overflow-hidden border-l border-white/10 px-2 py-3 text-blue-200 transition hover:bg-cyan-400/10 hover:text-cyan-100"
+              className="group/comment relative inline-flex items-center justify-center gap-2 overflow-hidden border-l border-[var(--border)] px-2 py-3 text-[var(--accent)] transition hover:bg-[var(--accent-soft)] hover:text-[var(--foreground)]"
             >
-              <span className="pointer-events-none absolute bottom-1 left-1/2 h-7 w-16 -translate-x-1/2 rounded-full bg-cyan-200/0 blur-md transition duration-500 group-hover/comment:bg-cyan-200/15" />
+              <span className="pointer-events-none absolute bottom-1 left-1/2 h-7 w-16 -translate-x-1/2 rounded-full bg-[color:color-mix(in_srgb,var(--effect-comment)_0%,transparent)] blur-md transition duration-500 group-hover/comment:bg-[color:color-mix(in_srgb,var(--effect-comment)_35%,transparent)]" />
               {[0, 1, 2, 3, 4].map((item) => (
                 <span
                   key={item}
-                  className="pointer-events-none absolute bottom-2 h-2 w-2 rounded-full bg-cyan-100/35 opacity-0 blur-[1px] group-hover/comment:animate-[commentSmoke_1.25s_ease-out_infinite]"
+                  className="pointer-events-none absolute bottom-2 h-2 w-2 rounded-full bg-[color:color-mix(in_srgb,var(--effect-comment)_44%,white)] opacity-0 blur-[1px] group-hover/comment:animate-[commentSmoke_1.25s_ease-out_infinite]"
                   style={{
                     left: `${34 + item * 8}%`,
                     animationDelay: `${item * 120}ms`,
                   }}
                 />
               ))}
-              <MessageCircle className="relative h-4 w-4 transition duration-500 group-hover/comment:-translate-y-0.5 group-hover/comment:scale-110 group-hover/comment:drop-shadow-[0_0_10px_rgba(103,232,249,0.8)]" />
+              <MessageCircle className="relative h-4 w-4 transition duration-500 group-hover/comment:-translate-y-0.5 group-hover/comment:scale-110 group-hover/comment:drop-shadow-[0_0_10px_var(--effect-comment)]" />
               <span className="hidden sm:inline">Bình luận</span>
-              <span className="relative text-xs text-gray-500">{commentCount}</span>
+              <span className="relative text-xs text-[var(--muted-foreground)]">{commentCount}</span>
             </button>
             <Link              href={`/posts/${post.id}`}
               onClick={() => {
                 cachePostDetailPreview();
                 playDetail();
               }}
-              className="group relative inline-flex items-center justify-center gap-2 overflow-hidden border-l border-cyan-300/25 bg-[linear-gradient(135deg,#0ea5e9,#2563eb_48%,#7c3aed)] px-2 py-3 font-semibold text-white shadow-[0_0_24px_rgba(14,165,233,0.35)] transition duration-300 hover:scale-[1.01] hover:shadow-[0_0_34px_rgba(34,211,238,0.55)]"
+              className="theme-button-primary group relative inline-flex items-center justify-center gap-2 overflow-hidden border-l border-[var(--info-border)] px-2 py-3 font-semibold transition duration-300 hover:scale-[1.01]"
             >
-              <span className="absolute inset-0 translate-x-[-120%] bg-[linear-gradient(120deg,transparent,rgba(255,255,255,0.35),transparent)] transition duration-700 group-hover:translate-x-[120%]" />
-              <span className="relative flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-cyan-100 ring-1 ring-white/20 transition duration-700 ease-out group-hover:rotate-[720deg] group-hover:scale-110 group-hover:bg-white/25 group-hover:text-white">
+              <span className="absolute inset-0 translate-x-[-120%] bg-[linear-gradient(120deg,transparent,color-mix(in_srgb,var(--primary-foreground)_35%,transparent),transparent)] transition duration-700 group-hover:translate-x-[120%]" />
+              <span className="relative flex h-7 w-7 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--primary-foreground)_16%,transparent)] text-[var(--primary-foreground)] ring-1 ring-[color:color-mix(in_srgb,var(--primary-foreground)_22%,transparent)] transition duration-700 ease-out group-hover:rotate-[720deg] group-hover:scale-110">
                 <Expand className="h-4 w-4 transition duration-700 ease-out group-hover:rotate-[360deg] group-hover:scale-125" />
               </span>
               <span className="relative">Xem chi tiết</span>
@@ -530,7 +531,7 @@ export function PostCard({ post }: { post: Post }) {
       {isClient && isImageViewerOpen &&
         createPortal(
         <div
-          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/95 p-4 backdrop-blur-md"
+          className="theme-media-backdrop fixed inset-0 z-[9999] flex flex-col items-center justify-center p-4 backdrop-blur-md"
           onClick={() => setIsImageViewerOpen(false)}
         >
           <button
@@ -539,7 +540,7 @@ export function PostCard({ post }: { post: Post }) {
               e.stopPropagation();
               setIsImageViewerOpen(false);
             }}
-            className="absolute right-4 top-4 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white transition hover:bg-white/20"
+            className="theme-media-control absolute right-4 top-4 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full transition"
             aria-label="Đóng ảnh"
           >
             <X className="h-5 w-5" />
@@ -553,7 +554,7 @@ export function PostCard({ post }: { post: Post }) {
                   e.stopPropagation();
                   goToPreviousImage();
                 }}
-                className="absolute left-4 top-1/2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white transition hover:bg-white/20"
+                className="theme-media-control absolute left-4 top-1/2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full transition"
                 aria-label="Ảnh trước"
               >
                 <ChevronLeft className="h-6 w-6" />
@@ -564,7 +565,7 @@ export function PostCard({ post }: { post: Post }) {
                   e.stopPropagation();
                   goToNextImage();
                 }}
-                className="absolute right-4 top-1/2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white transition hover:bg-white/20"
+                className="theme-media-control absolute right-4 top-1/2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full transition"
                 aria-label="Ảnh tiếp theo"
               >
                 <ChevronRight className="h-6 w-6" />
@@ -584,7 +585,7 @@ export function PostCard({ post }: { post: Post }) {
                 className="max-h-[76vh] md:max-h-[84vh] max-w-full rounded-xl object-contain shadow-2xl animate-in fade-in zoom-in-95 duration-300"
               />
             </div>
-            <div className="rounded-full bg-black/55 px-4 py-1.5 text-sm font-medium text-white ring-1 ring-white/10">
+            <div className="theme-count-pill rounded-full px-4 py-1.5 text-sm font-medium">
               {activeImageIndex + 1} / {images.length}
             </div>
             {images.length > 1 && (
@@ -598,7 +599,7 @@ export function PostCard({ post }: { post: Post }) {
                       setActiveImageIndex(index);
                     }}
                     className={`h-12 w-20 shrink-0 overflow-hidden rounded-lg border transition ${
-                      activeImageIndex === index ? "border-blue-400 scale-105 opacity-100" : "border-white/15 opacity-60 hover:opacity-100"
+                      activeImageIndex === index ? "border-[var(--info-border)] scale-105 opacity-100" : "border-[var(--border)] opacity-60 hover:opacity-100"
                     }`}
                   >
                     <img src={image.imageUrl} alt={`${post.title} ${index + 1}`} className="h-full w-full object-cover" />
@@ -613,16 +614,16 @@ export function PostCard({ post }: { post: Post }) {
       {isClient && isCommentOpen &&
         createPortal(
         <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/75 p-3 backdrop-blur-md md:p-6"
+          className="theme-modal-backdrop fixed inset-0 z-[9999] flex items-center justify-center p-3 backdrop-blur-md md:p-6"
           onClick={() => setIsCommentOpen(false)}
         >
           <div
-            className="relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-blue-400/30 bg-[#061225] shadow-[0_30px_120px_rgba(0,0,0,0.65)]"
+            className="theme-modal-surface relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between gap-4 border-b border-white/10 px-4 py-4 md:px-5">
+            <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] px-4 py-4 md:px-5">
               <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-blue-300/30 bg-blue-500/10 text-sm font-semibold text-blue-100">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--accent-border)] bg-[var(--accent-soft)] text-sm font-semibold text-[var(--accent)]">
                   {post.author.avatarUrl ? (
                     <img src={post.author.avatarUrl} alt={post.author.fullName} className="h-full w-full object-cover" />
                   ) : (
@@ -631,10 +632,10 @@ export function PostCard({ post }: { post: Post }) {
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="truncate font-semibold text-white">{post.author.fullName}</p>
-                    <BadgeCheck className="h-4 w-4 shrink-0 fill-blue-500 text-slate-950" />
+                    <p className="truncate font-semibold text-[var(--foreground)]">{post.author.fullName}</p>
+                    <BadgeCheck className="h-4 w-4 shrink-0 fill-[var(--primary)] text-[var(--background)]" />
                   </div>
-                  <p className="mt-1 text-xs text-gray-400">
+                  <p className="mt-1 text-xs text-[var(--muted-foreground)]">
                     {getRelativeTime(post.createdAt)} · {propertyTypeLabels[post.propertyType]}
                   </p>
                 </div>
@@ -642,7 +643,7 @@ export function PostCard({ post }: { post: Post }) {
               <button
                 type="button"
                 onClick={() => setIsCommentOpen(false)}
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-gray-300 transition hover:bg-white/10 hover:text-white"
+                className="theme-icon-button inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition"
                 aria-label="Đóng bình luận"
               >
                 <X className="h-5 w-5" />
@@ -650,7 +651,7 @@ export function PostCard({ post }: { post: Post }) {
             </div>
 
             <div className="scrollbar-hidden overflow-y-auto p-4 md:p-5">
-              <div className="relative overflow-hidden rounded-xl border border-white/10 bg-slate-900">
+              <div className="theme-post-gallery relative overflow-hidden rounded-xl">
                 <button
                   type="button"
                   onClick={() => setIsImageViewerOpen(true)}
@@ -663,12 +664,12 @@ export function PostCard({ post }: { post: Post }) {
                     className="aspect-[16/9] w-full object-cover transition duration-300 group-hover/image:scale-[1.02]"
                   />
                   <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between bg-gradient-to-t from-black/65 via-black/10 to-transparent px-3 py-3 opacity-100">
-                    <span className="rounded-full border border-white/15 bg-black/45 px-3 py-1 text-xs font-medium text-white backdrop-blur">
+                    <span className="theme-overlay-badge rounded-full px-3 py-1 text-xs font-medium backdrop-blur">
                       Bấm để phóng to
                     </span>
                   </div>
                 </button>
-                <div className="absolute right-3 top-3 rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white backdrop-blur-md">
+                <div className="theme-overlay-badge absolute right-3 top-3 rounded-full px-3 py-1 text-xs font-semibold backdrop-blur-md">
                   {activeImageIndex + 1}/{images.length}
                 </div>
                 {images.length > 1 && (
@@ -676,15 +677,15 @@ export function PostCard({ post }: { post: Post }) {
                     <button
                       type="button"
                       onClick={goToPreviousImage}
-                      className="absolute left-3 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white backdrop-blur transition hover:bg-black/70"
-                      aria-label="Ảnh trước"
+                      className="theme-media-control absolute left-3 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full backdrop-blur transition"
+                      aria-label="Ảnh trước"F
                     >
                       <ChevronLeft className="h-5 w-5" />
                     </button>
                     <button
                       type="button"
                       onClick={goToNextImage}
-                      className="absolute right-3 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-black/50 text-white backdrop-blur transition hover:bg-black/70"
+                      className="theme-media-control absolute right-3 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full backdrop-blur transition"
                       aria-label="Ảnh tiếp theo"
                     >
                       <ChevronRight className="h-5 w-5" />
@@ -701,7 +702,7 @@ export function PostCard({ post }: { post: Post }) {
                       type="button"
                       onClick={() => setActiveImageIndex(index)}
                       className={`h-12 w-20 shrink-0 overflow-hidden rounded-lg border transition ${
-                        activeImageIndex === index ? "border-blue-400" : "border-white/10 opacity-75 hover:opacity-100"
+                        activeImageIndex === index ? "border-[var(--info-border)]" : "border-[var(--border)] opacity-75 hover:opacity-100"
                       }`}
                     >
                       <img src={image.imageUrl} alt={`${post.title} ${index + 1}`} className="h-full w-full object-cover" />
@@ -711,8 +712,8 @@ export function PostCard({ post }: { post: Post }) {
               )}
 
               <div className="mt-4">
-                <h3 className="text-2xl font-bold text-white">{post.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-gray-300">{post.description}</p>
+                <h3 className="text-2xl font-bold text-[var(--foreground)]">{post.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-[var(--secondary-foreground)]">{post.description}</p>
               </div>
 
               <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -726,32 +727,32 @@ export function PostCard({ post }: { post: Post }) {
               </div>
               <div className="hidden">
                 <div className="mb-3 flex items-center justify-between">
-                  <h4 className="font-semibold text-white">Bình luận ({commentCount})</h4>
-                  <span className="text-xs text-gray-400">Mới nhất</span>
+                  <h4 className="font-semibold text-[var(--foreground)]">Bình luận ({commentCount})</h4>
+                  <span className="text-xs text-[var(--muted-foreground)]">Mới nhất</span>
                 </div>
                 <div className="flex gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-blue-500/10 text-xs font-semibold text-blue-100">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--accent-border)] bg-[var(--accent-soft)] text-xs font-semibold text-[var(--accent)]">
                     T
                   </div>
-                  <div className="flex min-w-0 flex-1 items-center rounded-xl border border-white/10 bg-slate-950/35 px-3 text-sm text-gray-400">
+                  <div className="theme-post-metric flex min-w-0 flex-1 items-center rounded-xl px-3 text-sm text-[var(--muted-foreground)]">
                     Viết bình luận của bạn...
                   </div>
                   <button
                     type="button"
-                    className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white transition hover:bg-blue-500"
+                    className="theme-button-primary inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition"
                     aria-label="Gửi bình luận"
                   >
                     <MessageCircle className="h-4 w-4" />
                   </button>
                 </div>
                 <div className="mt-4 space-y-3">
-                  <div className="rounded-xl bg-white/[0.04] p-3">
-                    <p className="text-sm font-semibold text-white">Nguyễn Hoàng</p>
-                    <p className="mt-1 text-sm text-gray-300">Vị trí đẹp, giá này có thương lượng thêm không?</p>
+                  <div className="theme-subtle-card rounded-xl p-3">
+                    <p className="text-sm font-semibold text-[var(--foreground)]">Nguyễn Hoàng</p>
+                    <p className="mt-1 text-sm text-[var(--secondary-foreground)]">Vị trí đẹp, giá này có thương lượng thêm không?</p>
                   </div>
-                  <div className="rounded-xl bg-white/[0.04] p-3">
-                    <p className="text-sm font-semibold text-white">Trần Mai Anh</p>
-                    <p className="mt-1 text-sm text-gray-300">Mình muốn xem thêm pháp lý và lịch hẹn xem nhà.</p>
+                  <div className="theme-subtle-card rounded-xl p-3">
+                    <p className="text-sm font-semibold text-[var(--foreground)]">Trần Mai Anh</p>
+                    <p className="mt-1 text-sm text-[var(--secondary-foreground)]">Mình muốn xem thêm pháp lý và lịch hẹn xem nhà.</p>
                   </div>
                 </div>
               </div>
@@ -799,17 +800,17 @@ export function PostCard({ post }: { post: Post }) {
         @keyframes killImpactFlash {
           0% {
             opacity: 0;
-            background: rgba(239, 68, 68, 0);
+            background: color-mix(in srgb, var(--effect-danger-glow) 0%, transparent);
             transform: scale(0.35);
           }
           20% {
             opacity: 1;
-            background: rgba(239, 68, 68, 0.28);
+            background: var(--effect-danger-glow);
             transform: scale(1);
           }
           100% {
             opacity: 0;
-            background: rgba(239, 68, 68, 0);
+            background: color-mix(in srgb, var(--effect-danger-glow) 0%, transparent);
             transform: scale(1.35);
           }
         }
@@ -817,17 +818,17 @@ export function PostCard({ post }: { post: Post }) {
         @keyframes savePulse {
           0% {
             opacity: 0;
-            background: rgba(59, 130, 246, 0);
+            background: color-mix(in srgb, var(--effect-save) 0%, transparent);
             transform: scale(0.35);
           }
           24% {
             opacity: 1;
-            background: rgba(59, 130, 246, 0.28);
+            background: var(--effect-save);
             transform: scale(1);
           }
           100% {
             opacity: 0;
-            background: rgba(59, 130, 246, 0);
+            background: color-mix(in srgb, var(--effect-save) 0%, transparent);
             transform: scale(1.35);
           }
         }
@@ -835,16 +836,16 @@ export function PostCard({ post }: { post: Post }) {
         @keyframes saveRing {
           0% {
             opacity: 0;
-            border-color: rgba(191, 219, 254, 0);
+            border-color: color-mix(in srgb, var(--effect-info-glow) 0%, transparent);
             transform: translate(-50%, -50%) scale(0.35);
           }
           28% {
             opacity: 1;
-            border-color: rgba(191, 219, 254, 0.9);
+            border-color: var(--effect-info-glow);
           }
           100% {
             opacity: 0;
-            border-color: rgba(191, 219, 254, 0);
+            border-color: color-mix(in srgb, var(--effect-info-glow) 0%, transparent);
             transform: translate(-50%, -50%) scale(1.6);
           }
         }

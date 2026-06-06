@@ -41,9 +41,9 @@ const statusLabels: Record<AdminReportStatus, string> = {
 };
 
 const statusStyles: Record<AdminReportStatus, string> = {
-  PENDING: "border-amber-400/30 bg-amber-500/12 text-amber-200",
-  RESOLVED: "border-emerald-400/30 bg-emerald-500/12 text-emerald-200",
-  REJECTED: "border-red-400/30 bg-red-500/12 text-red-200",
+  PENDING: "theme-badge-warning",
+  RESOLVED: "theme-badge-success",
+  REJECTED: "theme-badge-danger",
 };
 
 const numberFormatter = new Intl.NumberFormat("vi-VN");
@@ -85,7 +85,7 @@ const getAppealState = (report: AdminReport) => {
     return {
       label: "Có khiếu nại",
       detail: "Người đăng đã gửi khiếu nại và đang chờ admin xem xét.",
-      className: "border-rose-400/30 bg-rose-500/12 text-rose-100",
+      className: "theme-badge-danger",
     };
   }
 
@@ -93,14 +93,14 @@ const getAppealState = (report: AdminReport) => {
     return {
       label: "Đã chấp nhận khiếu nại",
       detail: "Admin đã mở lại bài đăng sau khi xem xét khiếu nại.",
-      className: "border-emerald-400/30 bg-emerald-500/12 text-emerald-100",
+      className: "theme-badge-success",
     };
   }
 
   return {
     label: "Đã bác khiếu nại",
     detail: "Admin đã xem xét và giữ nguyên quyết định khóa bài.",
-    className: "border-amber-400/30 bg-amber-500/12 text-amber-100",
+    className: "theme-badge-warning",
   };
 };
 
@@ -287,7 +287,7 @@ export default function AdminReportsPage() {
     >
       <div className="space-y-4">
         {error ? (
-          <NeonCard className="border-red-400/30 bg-red-950/20 p-3 text-sm text-red-200">
+          <NeonCard className="theme-badge-danger p-3 text-sm">
             {error}
           </NeonCard>
         ) : null}
@@ -333,13 +333,13 @@ export default function AdminReportsPage() {
               key={tab.key}
               className={`inline-flex h-10 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition ${
                 activeTab === tab.key
-                  ? "border-blue-400/60 bg-blue-600/20 text-white shadow-[0_0_22px_rgba(37,99,235,0.42)]"
-                  : "border-white/10 bg-white/[0.04] text-gray-300 hover:border-blue-400/30 hover:bg-blue-500/10"
+                  ? "theme-admin-tab-active"
+                  : "theme-admin-tab"
               }`}
               onClick={() => applyTab(tab.key)}
             >
               {tab.label}
-              <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-blue-100">
+              <span className="theme-admin-tab-count rounded-full px-2 py-0.5 text-xs">
                 {formatNumber(tab.count)}
               </span>
             </button>
@@ -348,10 +348,10 @@ export default function AdminReportsPage() {
 
         <NeonCard className="p-3">
           <div className="grid gap-2 xl:grid-cols-[minmax(0,1.6fr)_220px_auto]">
-            <label className="flex h-10 items-center gap-2 rounded-xl border border-blue-300/20 bg-slate-950/55 px-3 text-gray-400">
+            <label className="theme-admin-input flex h-10 items-center gap-2 rounded-xl px-3 text-[var(--muted-foreground)]">
               <Search className="h-4 w-4" />
               <input
-                className="w-full bg-transparent text-sm outline-none placeholder:text-gray-500"
+                className="w-full bg-transparent text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]"
                 placeholder="Tìm theo mã báo cáo, bài đăng, người báo cáo, khiếu nại..."
                 value={keywordInput}
                 onChange={(event) => setKeywordInput(event.target.value)}
@@ -378,7 +378,7 @@ export default function AdminReportsPage() {
             />
 
             <button
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-blue-300/20 bg-white/5 px-3 text-sm font-medium text-gray-200 transition hover:bg-blue-500/10 disabled:opacity-60"
+              className="theme-admin-toolbar-button inline-flex h-10 items-center justify-center gap-2 rounded-xl px-3 text-sm font-medium transition disabled:opacity-60"
               disabled={isLoading}
               onClick={() => setRefreshKey((current) => current + 1)}
             >
@@ -389,7 +389,7 @@ export default function AdminReportsPage() {
         </NeonCard>
 
         <NeonCard className="overflow-hidden">
-          <div className="hidden grid-cols-[128px_minmax(0,2fr)_minmax(0,1.15fr)_minmax(0,1.5fr)_148px_200px_132px] gap-4 border-b border-white/10 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-400 2xl:grid">
+          <div className="theme-admin-table-head hidden grid-cols-[128px_minmax(0,2fr)_minmax(0,1.15fr)_minmax(0,1.5fr)_148px_200px_132px] gap-4 border-b px-5 py-3 text-xs font-semibold uppercase tracking-wide 2xl:grid">
             <div>Mã báo cáo</div>
             <div>Bài đăng bị báo cáo</div>
             <div>Người báo cáo</div>
@@ -399,15 +399,15 @@ export default function AdminReportsPage() {
             <div className="text-right">Thao tác</div>
           </div>
 
-          <div className="divide-y divide-white/5">
+          <div className="theme-admin-table-divider divide-y">
             {isLoading ? (
-              <div className="px-5 py-10 text-center text-sm text-gray-400">
+              <div className="px-5 py-10 text-center text-sm text-[var(--muted-foreground)]">
                 Đang tải báo cáo...
               </div>
             ) : null}
 
             {!isLoading && !filteredItems.length ? (
-              <div className="px-5 py-10 text-center text-sm text-gray-400">
+              <div className="px-5 py-10 text-center text-sm text-[var(--muted-foreground)]">
                 Không tìm thấy báo cáo phù hợp.
               </div>
             ) : null}
@@ -426,7 +426,7 @@ export default function AdminReportsPage() {
               : null}
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-4 border-t border-white/10 px-5 py-3 text-sm text-gray-300">
+          <div className="theme-admin-table-head flex flex-wrap items-center justify-between gap-4 border-t px-5 py-3 text-sm text-[var(--secondary-foreground)]">
             <span>
               Hiển thị {startIndex} - {endIndex} của {formatNumber(data?.meta.total ?? 0)} báo cáo
             </span>
@@ -436,8 +436,8 @@ export default function AdminReportsPage() {
                   key={page}
                   className={`min-w-10 rounded-lg border px-3 py-2 ${
                     page === data?.meta.page
-                      ? "border-blue-500 bg-blue-600 text-white"
-                      : "border-white/10 bg-white/5"
+                      ? "theme-admin-tab-active"
+                      : "theme-admin-tab"
                   }`}
                   disabled={isLoading}
                   onClick={() => setFilter((current) => ({ ...current, page }))}
@@ -481,27 +481,27 @@ function ReportRow({
         type="button"
         onClick={onOpenDetail}
         className={`block w-full px-4 py-4 text-left transition 2xl:hidden ${
-          selected ? "bg-blue-500/[0.06]" : "hover:bg-blue-500/[0.04]"
+          selected ? "bg-[var(--accent-soft)]" : "hover:bg-[var(--accent-soft)]"
         }`}
       >
         <div className="flex gap-3">
           <img
             src={report.post.images[0]?.imageUrl ?? imageFallback}
             alt={report.post.title}
-            className="h-20 w-28 shrink-0 rounded-xl border border-white/10 object-cover"
+            className="h-20 w-28 shrink-0 rounded-xl border border-[var(--border)] object-cover"
           />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <p className="text-sm font-semibold text-white">{makeReportCode(report.id)}</p>
+              <p className="text-sm font-semibold text-[var(--foreground)]">{makeReportCode(report.id)}</p>
               <StatusBadge status={report.status} />
               <AppealPill report={report} />
             </div>
-            <p className="mt-2 line-clamp-2 text-sm font-medium text-blue-50">{report.post.title}</p>
-            <p className="mt-1 text-xs text-gray-400">
+            <p className="mt-2 line-clamp-2 text-sm font-medium text-[var(--foreground)]">{report.post.title}</p>
+            <p className="mt-1 text-xs text-[var(--muted-foreground)]">
               {report.reporter.fullName} • {report.reporter.email}
             </p>
-            <p className="mt-2 line-clamp-2 text-xs text-gray-300">{report.reason}</p>
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-gray-400">
+            <p className="mt-2 line-clamp-2 text-xs text-[var(--secondary-foreground)]">{report.reason}</p>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[var(--muted-foreground)]">
               <span>{formatDateTime(report.createdAt)}</span>
               <span>•</span>
               <span>{getLocation(report)}</span>
@@ -509,7 +509,7 @@ function ReportRow({
             <div className="mt-3 flex flex-wrap gap-2">
               <MiniActionButton
                 title="Xem chi tiết"
-                className="border-blue-400/30 bg-blue-600/15 text-blue-100"
+                className="theme-admin-action-primary"
                 onClick={(event) => {
                   event.stopPropagation();
                   onOpenDetail();
@@ -521,7 +521,7 @@ function ReportRow({
                 <>
                   <MiniActionButton
                     title="Từ chối báo cáo"
-                    className="border-white/10 bg-white/5 text-gray-200"
+                    className="theme-admin-action"
                     disabled={isUpdating}
                     onClick={(event) => {
                       event.stopPropagation();
@@ -532,7 +532,7 @@ function ReportRow({
                   </MiniActionButton>
                   <MiniActionButton
                     title="Xử lý báo cáo"
-                    className="border-emerald-400/30 bg-emerald-500/12 text-emerald-100"
+                    className="theme-admin-action-primary"
                     disabled={isUpdating}
                     onClick={(event) => {
                       event.stopPropagation();
@@ -550,46 +550,46 @@ function ReportRow({
 
       <div
         className={`hidden grid-cols-[128px_minmax(0,2fr)_minmax(0,1.15fr)_minmax(0,1.5fr)_148px_200px_132px] items-center gap-4 px-5 py-3 text-sm transition 2xl:grid ${
-          selected ? "bg-blue-500/[0.06]" : "hover:bg-blue-500/[0.04]"
+          selected ? "bg-[var(--accent-soft)]" : "hover:bg-[var(--accent-soft)]"
         }`}
       >
         <button type="button" onClick={onOpenDetail} className="min-w-0 text-left">
-          <p className="font-semibold text-white">{makeReportCode(report.id)}</p>
-          <p className="mt-1 text-xs text-gray-500">ID: {report.id.slice(-8)}</p>
+          <p className="font-semibold text-[var(--foreground)]">{makeReportCode(report.id)}</p>
+          <p className="mt-1 text-xs text-[var(--muted-foreground)]">ID: {report.id.slice(-8)}</p>
         </button>
 
         <button type="button" onClick={onOpenDetail} className="flex min-w-0 items-center gap-3 text-left">
           <img
             src={report.post.images[0]?.imageUrl ?? imageFallback}
             alt={report.post.title}
-            className="h-16 w-24 shrink-0 rounded-xl border border-white/10 object-cover"
+            className="h-16 w-24 shrink-0 rounded-xl border border-[var(--border)] object-cover"
           />
           <div className="min-w-0">
-            <p className="line-clamp-2 font-semibold text-white">{report.post.title}</p>
-            <p className="mt-1 line-clamp-1 text-xs text-gray-500">{getLocation(report)}</p>
+            <p className="line-clamp-2 font-semibold text-[var(--foreground)]">{report.post.title}</p>
+            <p className="mt-1 line-clamp-1 text-xs text-[var(--muted-foreground)]">{getLocation(report)}</p>
           </div>
         </button>
 
         <button type="button" onClick={onOpenDetail} className="min-w-0 text-left">
-          <p className="truncate font-medium text-white">{report.reporter.fullName}</p>
-          <p className="mt-1 truncate text-xs text-gray-500">{report.reporter.email}</p>
+          <p className="truncate font-medium text-[var(--foreground)]">{report.reporter.fullName}</p>
+          <p className="mt-1 truncate text-xs text-[var(--muted-foreground)]">{report.reporter.email}</p>
         </button>
 
         <button type="button" onClick={onOpenDetail} className="min-w-0 text-left">
-          <p className="line-clamp-2 text-gray-200">{report.reason}</p>
-          <p className="mt-1 line-clamp-1 text-xs text-gray-500">
+          <p className="line-clamp-2 text-[var(--secondary-foreground)]">{report.reason}</p>
+          <p className="mt-1 line-clamp-1 text-xs text-[var(--muted-foreground)]">
             {report.description || "Không có mô tả thêm"}
           </p>
           <AppealPill report={report} className="mt-2" />
         </button>
 
-        <button type="button" onClick={onOpenDetail} className="text-left text-gray-300">
+        <button type="button" onClick={onOpenDetail} className="text-left text-[var(--secondary-foreground)]">
           {formatDateTime(report.createdAt)}
         </button>
 
         <button type="button" onClick={onOpenDetail} className="space-y-2 text-left">
           <StatusBadge status={report.status} />
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-[var(--muted-foreground)]">
             {hasPendingAppeal(report)
               ? "Đang chờ duyệt khiếu nại"
               : report.appealStatus === "REVIEWED"
@@ -601,7 +601,7 @@ function ReportRow({
         <div className="flex justify-end gap-1.5">
           <IconButton
             title="Xem chi tiết"
-            className="border-blue-400/30 bg-blue-600/15 text-blue-100 hover:bg-blue-600/25"
+            className="theme-admin-action-primary"
             onClick={(event) => {
               event.stopPropagation();
               onOpenDetail();
@@ -615,7 +615,7 @@ function ReportRow({
           <IconButton
             title="Từ chối"
             disabled={isUpdating || report.status !== "PENDING"}
-            className="border-white/10 bg-white/5 text-gray-200 hover:bg-white/10"
+            className="theme-admin-action"
             onClick={(event) => {
               event.stopPropagation();
               onResolve(report.id, "REJECTED");
@@ -626,7 +626,7 @@ function ReportRow({
           <IconButton
             title="Đã xử lý"
             disabled={isUpdating || report.status !== "PENDING"}
-            className="border-emerald-400/30 bg-emerald-500/12 text-emerald-100 hover:bg-emerald-500/20"
+            className="theme-admin-action-primary"
             onClick={(event) => {
               event.stopPropagation();
               onResolve(report.id, "RESOLVED");
@@ -660,7 +660,7 @@ function ReportDetailModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/78 p-4 backdrop-blur-md">
+    <div className="theme-modal-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md">
       <button
         type="button"
         aria-label="Đóng chi tiết báo cáo"
@@ -669,11 +669,11 @@ function ReportDetailModal({
       />
 
       <div className="relative z-10 w-full max-w-5xl">
-        <NeonCard className="max-h-[88vh] overflow-hidden border-blue-300/30 shadow-[0_0_60px_rgba(37,99,235,0.18)]">
-          <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-4">
+        <NeonCard className="max-h-[88vh] overflow-hidden">
+          <div className="theme-admin-table-head flex items-start justify-between gap-4 border-b px-5 py-4">
             <div>
-              <h2 className="text-xl font-bold text-white">Chi tiết báo cáo</h2>
-              <p className="mt-1 text-sm text-gray-400">
+              <h2 className="text-xl font-bold text-[var(--foreground)]">Chi tiết báo cáo</h2>
+              <p className="mt-1 text-sm text-[var(--muted-foreground)]">
                 Kiểm tra nội dung báo cáo, bài đăng và xử lý khiếu nại trong cùng một cửa sổ.
               </p>
             </div>
@@ -682,7 +682,7 @@ function ReportDetailModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/5 text-gray-200 transition hover:bg-white/10"
+                className="theme-admin-action grid h-10 w-10 place-items-center rounded-xl transition"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -690,38 +690,38 @@ function ReportDetailModal({
           </div>
 
           {!report ? (
-            <div className="px-5 py-10 text-center text-sm text-gray-400">
+            <div className="px-5 py-10 text-center text-sm text-[var(--muted-foreground)]">
               Không có dữ liệu báo cáo.
             </div>
           ) : (
             <div className="max-h-[calc(88vh-88px)] overflow-y-auto p-5">
               <div className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
                 <div className="space-y-5">
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                    <p className="mb-3 text-sm font-semibold text-blue-100">Bài đăng bị báo cáo</p>
+                  <div className="theme-subtle-card rounded-2xl p-4">
+                    <p className="mb-3 text-sm font-semibold text-[var(--accent)]">Bài đăng bị báo cáo</p>
                     <div className="flex gap-3">
                       <img
                         src={report.post.images[0]?.imageUrl ?? imageFallback}
                         alt={report.post.title}
-                        className="h-32 w-40 shrink-0 rounded-2xl border border-white/10 object-cover"
+                        className="h-32 w-40 shrink-0 rounded-2xl border border-[var(--border)] object-cover"
                       />
                       <div className="min-w-0">
-                        <p className="line-clamp-2 text-lg font-semibold text-white">{report.post.title}</p>
-                        <div className="mt-2 flex items-center gap-2 text-sm text-gray-300">
-                          <UserRound className="h-4 w-4 text-blue-200" />
+                        <p className="line-clamp-2 text-lg font-semibold text-[var(--foreground)]">{report.post.title}</p>
+                        <div className="mt-2 flex items-center gap-2 text-sm text-[var(--secondary-foreground)]">
+                          <UserRound className="h-4 w-4 text-[var(--accent)]" />
                           <span className="truncate">{report.post.author.fullName}</span>
                         </div>
-                        <div className="mt-2 text-sm font-semibold text-blue-100">
+                        <div className="mt-2 text-sm font-semibold text-[var(--accent)]">
                           {formatPrice(report.post.price)}
                         </div>
-                        <div className="mt-2 flex items-start gap-2 text-sm text-gray-400">
-                          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-blue-200" />
+                        <div className="mt-2 flex items-start gap-2 text-sm text-[var(--muted-foreground)]">
+                          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent)]" />
                           <span className="line-clamp-3">{getLocation(report)}</span>
                         </div>
                         <div className="mt-4">
                           <Link
                             href={`/posts/${report.post.id}`}
-                            className="inline-flex items-center gap-2 rounded-xl border border-blue-400/30 bg-blue-600/15 px-3 py-2 text-sm font-semibold text-blue-100 transition hover:bg-blue-600/25"
+                            className="theme-admin-action-primary inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition"
                           >
                             <Eye className="h-4 w-4" />
                             Mở bài đăng
@@ -732,7 +732,7 @@ function ReportDetailModal({
                   </div>
 
                   <section className="space-y-3">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-400">
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
                       Thông tin báo cáo
                     </h3>
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -760,7 +760,7 @@ function ReportDetailModal({
                 <div className="space-y-5">
                   {report.appealStatus !== "NONE" ? (
                     <section className="space-y-3">
-                      <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-400">
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
                         Khiếu nại từ người đăng
                       </h3>
                       <AppealReviewCard
@@ -772,7 +772,7 @@ function ReportDetailModal({
                   ) : null}
 
                   <section className="space-y-3">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-400">
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
                       Lịch sử xử lý
                     </h3>
                     <TimelineItem
@@ -812,22 +812,22 @@ function ReportDetailModal({
                     ) : null}
                   </section>
 
-                  <section className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-400">
+                  <section className="theme-subtle-card space-y-3 rounded-2xl p-4">
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
                       Hành động nhanh
                     </h3>
                     <div className="grid gap-2 sm:grid-cols-2">
                       <button
                         disabled={isUpdating || report.status !== "PENDING"}
                         onClick={() => onResolve(report.id, "REJECTED")}
-                        className="h-11 rounded-xl border border-white/10 bg-white/5 font-semibold text-gray-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="theme-admin-action h-11 rounded-xl font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         Bỏ qua
                       </button>
                       <button
                         disabled={isUpdating || report.status !== "PENDING"}
                         onClick={() => onResolve(report.id, "RESOLVED")}
-                        className="h-11 rounded-xl border border-emerald-400/30 bg-emerald-500/12 font-semibold text-emerald-100 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="theme-admin-action-primary h-11 rounded-xl font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         Đánh dấu đã xử lý
                       </button>
@@ -854,12 +854,12 @@ function SelectBox({
 }) {
   return (
     <select
-      className="h-10 min-w-0 rounded-xl border border-blue-300/20 bg-slate-950/55 px-3 text-sm text-white outline-none"
+      className="theme-admin-select h-10 min-w-0 rounded-xl px-3 text-sm outline-none"
       value={value}
       onChange={(event) => onChange(event.target.value)}
     >
       {options.map((option) => (
-        <option key={option.value} value={option.value} className="bg-slate-950 text-white">
+        <option key={option.value} value={option.value}>
           {option.label}
         </option>
       ))}
@@ -917,31 +917,31 @@ function AppealReviewCard({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-rose-400/20 bg-[linear-gradient(140deg,rgba(157,23,77,0.17),rgba(15,23,42,0.96))]">
-      <div className="border-b border-white/10 px-4 py-4">
+    <div className="overflow-hidden rounded-2xl border border-[var(--danger-border)] bg-[linear-gradient(140deg,color-mix(in_srgb,var(--danger)_14%,var(--surface)),color-mix(in_srgb,var(--background)_94%,var(--surface)))]">
+      <div className="border-b border-[var(--border)] px-4 py-4">
         <div className="flex flex-wrap items-center gap-2">
           <span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide ${appeal.className}`}>
             {appeal.label}
           </span>
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-[var(--muted-foreground)]">
             {report.appealedAt ? formatDateTime(report.appealedAt) : "Chưa rõ thời gian gửi"}
           </span>
         </div>
-        <p className="mt-2 text-sm leading-6 text-gray-200">{appeal.detail}</p>
+        <p className="mt-2 text-sm leading-6 text-[var(--secondary-foreground)]">{appeal.detail}</p>
       </div>
 
       <div className="space-y-3 px-4 py-4">
         {report.appealMessage ? (
-          <div className="rounded-xl border border-white/10 bg-black/15 p-3">
-            <p className="text-xs uppercase tracking-wide text-rose-200/80">Nội dung khiếu nại</p>
-            <p className="mt-2 text-sm leading-6 text-white">{report.appealMessage}</p>
+          <div className="theme-subtle-card rounded-xl p-3">
+            <p className="text-xs uppercase tracking-wide text-[var(--badge-danger-text)]">Nội dung khiếu nại</p>
+            <p className="mt-2 text-sm leading-6 text-[var(--foreground)]">{report.appealMessage}</p>
           </div>
         ) : null}
 
         {report.appealEvidence ? (
-          <div className="rounded-xl border border-white/10 bg-black/15 p-3">
-            <p className="text-xs uppercase tracking-wide text-blue-200/80">Bằng chứng bổ sung</p>
-            <p className="mt-2 text-sm leading-6 text-gray-200">{report.appealEvidence}</p>
+          <div className="theme-subtle-card rounded-xl p-3">
+            <p className="text-xs uppercase tracking-wide text-[var(--accent)]">Bằng chứng bổ sung</p>
+            <p className="mt-2 text-sm leading-6 text-[var(--secondary-foreground)]">{report.appealEvidence}</p>
           </div>
         ) : null}
 
@@ -950,20 +950,20 @@ function AppealReviewCard({
             <button
               disabled={isUpdating}
               onClick={() => onReviewAppeal(report.id, "REJECT")}
-              className="h-11 rounded-xl border border-amber-400/30 bg-amber-500/12 font-semibold text-amber-100 transition hover:bg-amber-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+              className="theme-admin-action-warn h-11 rounded-xl font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
             >
               Giữ nguyên khóa bài
             </button>
             <button
               disabled={isUpdating}
               onClick={() => onReviewAppeal(report.id, "APPROVE")}
-              className="h-11 rounded-xl border border-emerald-400/30 bg-emerald-500/12 font-semibold text-emerald-100 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+              className="theme-admin-action-primary h-11 rounded-xl font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
             >
               Chấp nhận khiếu nại
             </button>
           </div>
         ) : (
-          <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3 text-sm text-gray-300">
+          <div className="theme-subtle-card px-3 py-3 text-sm text-[var(--secondary-foreground)]">
             {report.post.status === "ACTIVE"
               ? "Khiếu nại đã được chấp nhận và bài đăng hiện đã hoạt động lại."
               : "Khiếu nại đã được xem xét, quyết định khóa bài vẫn được giữ nguyên."}
@@ -986,10 +986,10 @@ function DetailItem({
   wrap?: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3">
-      <p className="text-xs uppercase tracking-wide text-gray-500">{label}</p>
-      <p className={`mt-1 text-sm text-white ${wrap ? "" : "truncate"}`}>{value}</p>
-      {subValue ? <p className="mt-1 text-xs text-gray-500">{subValue}</p> : null}
+    <div className="theme-subtle-card rounded-xl px-3 py-3">
+      <p className="text-xs uppercase tracking-wide text-[var(--muted-foreground)]">{label}</p>
+      <p className={`mt-1 text-sm text-[var(--foreground)] ${wrap ? "" : "truncate"}`}>{value}</p>
+      {subValue ? <p className="mt-1 text-xs text-[var(--muted-foreground)]">{subValue}</p> : null}
     </div>
   );
 }
@@ -1004,20 +1004,20 @@ function TimelineItem({
   tone: "amber" | "blue" | "green" | "red" | "rose" | "slate";
 }) {
   const colors = {
-    amber: "bg-amber-400",
-    blue: "bg-blue-400",
-    green: "bg-emerald-400",
-    red: "bg-red-400",
-    rose: "bg-rose-400",
-    slate: "bg-slate-500",
+    amber: "bg-[var(--warning)]",
+    blue: "bg-[var(--info)]",
+    green: "bg-[var(--success)]",
+    red: "bg-[var(--danger)]",
+    rose: "bg-[var(--danger-foreground)]",
+    slate: "bg-[var(--muted-foreground)]",
   };
 
   return (
-    <div className="flex gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3">
+    <div className="theme-subtle-card flex gap-3 rounded-xl px-3 py-3">
       <span className={`mt-1 h-3 w-3 shrink-0 rounded-full ${colors[tone]}`} />
       <div className="min-w-0">
-        <p className="text-sm font-medium text-white">{title}</p>
-        <p className="mt-1 text-xs text-gray-400">{time}</p>
+        <p className="text-sm font-medium text-[var(--foreground)]">{title}</p>
+        <p className="mt-1 text-xs text-[var(--muted-foreground)]">{time}</p>
       </div>
     </div>
   );
@@ -1036,7 +1036,7 @@ function IconLink({
     <Link
       href={href}
       title={title}
-      className="grid h-8 w-8 place-items-center rounded-lg border border-white/10 bg-white/5 text-gray-200 transition hover:border-blue-300/30 hover:bg-blue-500/15 hover:text-blue-100"
+      className="theme-admin-action grid h-8 w-8 place-items-center rounded-lg transition"
     >
       {children}
     </Link>

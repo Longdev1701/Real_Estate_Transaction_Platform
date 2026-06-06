@@ -65,14 +65,14 @@ function StepperInput({
         inputMode="numeric"
         value={formatNumericText(value)}
         onChange={(event) => onChange(clampNumericText(event.target.value))}
-        className="w-full text-xs rounded-xl border border-white/10 bg-slate-900/80 px-2 py-2 text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none pr-7"
+        className="theme-input-surface w-full rounded-xl px-2 py-2 pr-7 text-xs placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none"
         placeholder={placeholder}
       />
-      <div className="absolute right-1 top-1/2 flex -translate-y-1/2 flex-col overflow-hidden rounded bg-slate-950/70">
+      <div className="absolute right-1 top-1/2 flex -translate-y-1/2 flex-col overflow-hidden rounded bg-[var(--surface)]">
         <button
           type="button"
           onClick={() => updateByStep(1)}
-          className="flex h-3.5 w-4 items-center justify-center text-gray-400 hover:text-white"
+          className="flex h-3.5 w-4 items-center justify-center text-[var(--muted)] hover:text-[var(--foreground)]"
           aria-label={`Tăng ${label}`}
         >
           <ChevronUp className="h-3 w-3" />
@@ -80,10 +80,10 @@ function StepperInput({
         <button
           type="button"
           onClick={() => updateByStep(-1)}
-          disabled={!parseNumericText(value)}
-          className="flex h-3.5 w-4 items-center justify-center border-t border-white/10 text-gray-400 hover:text-white disabled:opacity-20"
+          disabled={!Number(value)}
+          className="flex h-3.5 w-4 items-center justify-center border-t border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)] disabled:opacity-20"
           aria-label={`Giảm ${label}`}
-        >
+       >
           <ChevronDown className="h-3 w-3" />
         </button>
       </div>
@@ -221,16 +221,16 @@ export function PostFilter({
         e.preventDefault();
         onSubmit();
       }}
-      className="glass-card border-white/10 bg-slate-950/55 p-4 rounded-2xl w-full"
+      className="glass-card w-full rounded-2xl p-4"
     >
       <div className="mb-4 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <div className="rounded-xl border border-blue-400/20 bg-blue-500/10 p-1.5 text-blue-300">
+          <div className="theme-badge-info rounded-xl p-1.5">
             <Filter className="h-4 w-4" />
           </div>
-          <h2 className="text-base font-semibold text-white">Bộ lọc tìm kiếm</h2>
+          <h2 className="text-base font-semibold text-[var(--foreground)]">Bộ lọc tìm kiếm</h2>
         </div>
-        <button type="button" onClick={onReset} className="text-xs font-medium text-blue-300 transition hover:text-blue-200">
+        <button type="button" onClick={onReset} className="text-xs font-medium text-[var(--accent)] transition hover:text-[var(--foreground)]">
           Đặt lại
         </button>
       </div>
@@ -239,14 +239,14 @@ export function PostFilter({
         
         {/* Từ khóa */}
         <div>
-          <label className="mb-1 block text-xs font-semibold text-gray-300">Từ khóa</label>
+          <label className="mb-1 block text-xs font-semibold text-[var(--secondary-foreground)]">Từ khóa</label>
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-blue-300" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--accent)]" />
             <input
               type="text"
               value={value.keyword}
               onChange={(event) => updateField("keyword", event.target.value)}
-              className="w-full text-xs rounded-xl border border-white/10 bg-slate-900/80 py-2 pl-9 pr-3 text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
+              className="theme-input-surface w-full rounded-xl py-2 pl-9 pr-3 text-xs placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none"
               placeholder="Tên bài đăng, địa chỉ..."
             />
           </div>
@@ -254,13 +254,13 @@ export function PostFilter({
  
         {/* Vị trí (Tỉnh/Thành & Quận/Huyện song song) */}
         <div>
-          <label className="mb-1 block text-xs font-semibold text-gray-300">Khu vực</label>
+          <label className="mb-1 block text-xs font-semibold text-[var(--secondary-foreground)]">Khu vực</label>
           <div className="grid grid-cols-2 gap-2">
             <div className="relative">
               <select
                 value={selectedProvinceCode}
                 onChange={(event) => handleProvinceChange(event.target.value)}
-                className="w-full text-xs rounded-xl border border-white/10 bg-slate-900/80 px-2 py-2 text-white appearance-none focus:border-blue-500 focus:outline-none pr-7 cursor-pointer"
+                className="theme-input-surface w-full appearance-none rounded-xl px-2 py-2 pr-7 text-xs focus:border-[var(--accent)] focus:outline-none"
               >
                 <option value="">Tỉnh/Thành</option>
                 {provinces.map((province) => (
@@ -269,14 +269,14 @@ export function PostFilter({
                   </option>
                 ))}
               </select>
-              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-500" />
+              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-[var(--muted)]" />
             </div>
             <div className="relative">
               <select
                 value={selectedDistrictCode}
                 onChange={(event) => handleDistrictChange(event.target.value)}
                 disabled={!selectedProvinceCode}
-                className="w-full text-xs rounded-xl border border-white/10 bg-slate-900/80 px-2 py-2 text-white appearance-none focus:border-blue-500 focus:outline-none pr-7 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                className="theme-input-surface w-full appearance-none rounded-xl px-2 py-2 pr-7 text-xs focus:border-[var(--accent)] focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <option value="">Quận/Huyện</option>
                 {districts.map((district) => (
@@ -285,21 +285,21 @@ export function PostFilter({
                   </option>
                 ))}
               </select>
-              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-500" />
+              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-[var(--muted)]" />
             </div>
           </div>
         </div>
  
         {/* Loại BĐS */}
         <div>
-          <label className="mb-1 block text-xs font-semibold text-gray-300">Loại BĐS</label>
+          <label className="mb-1 block text-xs font-semibold text-[var(--secondary-foreground)]">Loại BĐS</label>
           <div className="relative">
             <select
               value={value.propertyType}
               onChange={(event) =>
                 updateField("propertyType", event.target.value as PostFilterValue["propertyType"])
               }
-              className="w-full text-xs rounded-xl border border-white/10 bg-slate-900/80 px-3 py-2 text-white appearance-none focus:border-blue-500 focus:outline-none pr-8 cursor-pointer"
+              className="theme-input-surface w-full appearance-none rounded-xl px-3 py-2 pr-8 text-xs focus:border-[var(--accent)] focus:outline-none"
             >
               <option value="">Tất cả các loại</option>
               {PROPERTY_TYPES.map((propertyType) => (
@@ -308,13 +308,13 @@ export function PostFilter({
                 </option>
               ))}
             </select>
-            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-500" />
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--muted)]" />
           </div>
         </div>
  
         {/* Khoảng giá */}
         <div>
-          <label className="mb-1 block text-xs font-semibold text-gray-300">Giá bán (VNĐ)</label>
+          <label className="mb-1 block text-xs font-semibold text-[var(--secondary-foreground)]">Giá bán (VNĐ)</label>
           <div className="flex items-center gap-1.5">
             <StepperInput
               value={value.minPrice}
@@ -323,7 +323,7 @@ export function PostFilter({
               label="giá thấp nhất"
               onChange={(nextValue) => updateField("minPrice", nextValue)}
             />
-            <span className="text-gray-600 text-xs">-</span>
+            <span className="text-xs text-[var(--muted)]">-</span>
             <StepperInput
               value={value.maxPrice}
               placeholder="Đến"
@@ -336,7 +336,7 @@ export function PostFilter({
  
         {/* Diện tích */}
         <div>
-          <label className="mb-1 block text-xs font-semibold text-gray-300">Diện tích (m²)</label>
+          <label className="mb-1 block text-xs font-semibold text-[var(--secondary-foreground)]">Diện tích (m²)</label>
           <div className="flex items-center gap-1.5">
             <StepperInput
               value={value.minArea}
@@ -345,7 +345,7 @@ export function PostFilter({
               label="diện tích thấp nhất"
               onChange={(nextValue) => updateField("minArea", nextValue)}
             />
-            <span className="text-gray-600 text-xs">-</span>
+            <span className="text-xs text-[var(--muted)]">-</span>
             <StepperInput
               value={value.maxArea}
               placeholder="Đến"
@@ -358,34 +358,37 @@ export function PostFilter({
  
         {/* Tiện ích mở rộng (Collapsible) */}
         {features.length > 0 && (
-          <div className="pt-2 border-t border-white/5">
+          <div className="border-t border-[var(--border)] pt-2">
             <button
               type="button"
               onClick={() => setShowFeatures(!showFeatures)}
-              className="flex w-full items-center justify-between text-xs text-blue-300 hover:text-blue-200 transition font-medium"
+              className="flex w-full items-center justify-between text-xs font-medium text-[var(--accent)] transition hover:text-[var(--foreground)]"
             >
               <span className="flex items-center gap-1.5">
                 <SlidersHorizontal className="h-3.5 w-3.5" />
                 Tiện ích & Đặc trưng
               </span>
-              <span className="flex items-center gap-2">
-                <span className="bg-blue-500/20 text-blue-300 text-[10px] px-1.5 py-0.5 rounded-full">
-                  {selectedIds.length}
-                </span>
-                <ChevronDown
-                  className={`h-3.5 w-3.5 transition-transform duration-300 ${showFeatures ? "rotate-180" : ""}`}
-                />
-              </span>
-            </button>
+<span className="flex items-center gap-2">
+  <span className="theme-badge-info rounded-full px-1.5 py-0.5 text-[10px]">
+    {selectedIds.length}
+  </span>
 
-            <div
-              className={`grid overflow-hidden transition-all duration-300 ease-out ${
-                showFeatures
-                  ? "mt-2.5 border-t border-white/5 pt-2.5 grid-rows-[1fr] opacity-100"
-                  : "grid-rows-[0fr] opacity-0"
-              }`}
-            >
-              <div className="overflow-hidden">
+  <ChevronDown
+    className={`h-3.5 w-3.5 transition-transform duration-300 ${
+      showFeatures ? "rotate-180" : ""
+    }`}
+  />
+</span>
+</button>
+
+<div
+  className={`grid overflow-hidden transition-all duration-300 ease-out ${
+    showFeatures
+      ? "mt-2.5 border-t border-[var(--border)] pt-2.5 grid-rows-[1fr] opacity-100"
+      : "grid-rows-[0fr] opacity-0"
+  }`}
+>
+  <div className="overflow-hidden">
                 <div className="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto pr-1 custom-scrollbar">
                   {features.map((feature) => {
                     const isSelected = selectedIds.includes(feature.id);
@@ -396,8 +399,8 @@ export function PostFilter({
                         onClick={() => toggleFeatureId(feature.id)}
                         className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-medium transition-all duration-200 text-left truncate ${
                           isSelected
-                            ? "border-blue-500/40 bg-blue-500/10 text-blue-300"
-                            : "border-white/5 bg-white/[0.03] text-gray-400 hover:border-white/15 hover:text-gray-200"
+                            ? "border-[var(--accent-border)] bg-[var(--accent-soft)] text-[var(--accent)]"
+                            : "border-[var(--border)] bg-[var(--surface)] text-[var(--secondary-foreground)] hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
                         }`}
                       >
                         <FeatureIcon name={feature.icon || "help-circle"} className="h-2.5 w-2.5 shrink-0" />
@@ -417,7 +420,7 @@ export function PostFilter({
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full py-2.5 text-xs font-semibold bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl transition shadow-[0_0_15px_rgba(37,99,235,0.25)]"
+          className="btn-primary w-full py-2.5 text-xs font-semibold disabled:opacity-50"
         >
           {isLoading ? "Đang tải..." : "Áp dụng bộ lọc"}
         </button>
@@ -431,7 +434,7 @@ export function PostFilter({
           background: transparent;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.1);
+          background: color-mix(in srgb, var(--border) 70%, transparent);
           border-radius: 9px;
         }
       ` }} />

@@ -18,8 +18,7 @@ const normalizeSearchText = (value: string) =>
     .toLowerCase()
     .trim();
 
-const cleanName = (fullName: string) =>
-  fullName.replace(/^(Thành phố|Tỉnh)\s+/i, "");
+const cleanName = (fullName: string) => fullName.replace(/^(Thành phố|Tỉnh)\s+/i, "");
 
 export function CitySelect() {
   const [provinces, setProvinces] = useState<Province[]>([]);
@@ -27,6 +26,7 @@ export function CitySelect() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCityCode, setSelectedCityCode] = useState<number | null>(null);
   const [selectedCityName, setSelectedCityName] = useState("");
+  const rootRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
   const [dropdownStyle, setDropdownStyle] = useState<{
@@ -40,11 +40,13 @@ export function CitySelect() {
       try {
         const response = await fetch("https://production.cas.so/address-kit/2025-07-01/provinces");
         const payload = await response.json();
+
         if (payload && Array.isArray(payload.provinces)) {
-          const list = payload.provinces.map((province: any) => ({
+          const list = payload.provinces.map((province: Province) => ({
             code: province.code,
             name: String(province.name).replace(/\n/g, "").trim(),
           }));
+
           list.sort((a: Province, b: Province) => a.name.localeCompare(b.name, "vi"));
           setProvinces(list);
         }
@@ -58,7 +60,14 @@ export function CitySelect() {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+
+      if (
+        rootRef.current &&
+        !rootRef.current.contains(target) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(target)
+      ) {
         setIsOpen(false);
       }
     };
@@ -74,7 +83,11 @@ export function CitySelect() {
 
     const updatePosition = () => {
       const rect = triggerRef.current?.getBoundingClientRect();
-      if (!rect) return;
+
+      if (!rect) {
+        return;
+      }
+
       setDropdownStyle({
         top: rect.bottom + 10,
         left: rect.left,
@@ -111,7 +124,7 @@ export function CitySelect() {
   };
 
   return (
-    <div className="relative w-full" ref={dropdownRef}>
+    <div className="relative w-full" ref={rootRef}>
       <input type="hidden" name="city" value={selectedCityName} />
 
       <div
@@ -125,78 +138,80 @@ export function CitySelect() {
             setIsOpen((current) => !current);
           }
         }}
-        className="mt-1 flex w-full cursor-pointer items-center justify-between bg-transparent text-sm font-medium text-white outline-none"
+        className="mt-1 flex w-full cursor-pointer select-none items-center justify-between bg-transparent text-sm font-medium text-[var(--foreground)] outline-none"
       >
-        <span className="truncate">
-          {selectedCityName ? cleanName(selectedCityName) : "Tất cả vị trí"}
-        </span>
+        <span className="truncate">{selectedCityName ? cleanName(selectedCityName) : "Tất cả vị trí"}</span>
+
         <span className="flex items-center gap-1">
           {selectedCityName ? (
             <button
               type="button"
               onClick={handleClear}
-              className="rounded-full p-0.5 text-gray-400 hover:bg-white/10 hover:text-white"
+              className="theme-button-ghost rounded-full p-0.5"
               aria-label="Xóa vị trí đã chọn"
             >
               <X className="h-3 w-3" />
             </button>
           ) : null}
+
           <ChevronDown
-            className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+            className={`theme-text-muted h-4 w-4 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
           />
         </span>
       </div>
 
       {isOpen && dropdownStyle
         ? createPortal(
-        <div
-          ref={dropdownRef}
-          className="fixed z-[1200] min-w-[200px] overflow-hidden rounded-xl border border-white/10 bg-slate-950 p-2 shadow-[0_15px_40px_rgba(0,0,0,0.5)]"
-          style={{
-            top: dropdownStyle.top,
-            left: dropdownStyle.left,
-            width: dropdownStyle.width,
-          }}
-        >
-          <div className="relative mb-2">
-            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-500" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Tìm tỉnh/thành..."
-              className="w-full rounded-lg border border-white/5 bg-slate-900/60 py-1.5 pl-8 pr-3 text-xs text-white placeholder-gray-500 focus:border-blue-500 focus:outline-none"
-              onClick={(event) => event.stopPropagation()}
-            />
-          </div>
+            <div
+              ref={dropdownRef}
+              className="theme-popover fixed z-[1200] min-w-[200px] overflow-hidden rounded-xl p-2"
+              style={{
+                top: dropdownStyle.top,
+                left: dropdownStyle.left,
+                width: dropdownStyle.width,
+              }}
+            >
+              <div className="relative mb-2">
+                <Search className="theme-text-muted absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Tìm tỉnh/thành..."
+                  className="input-dark w-full rounded-lg py-1.5 pl-8 pr-3 text-xs"
+                  onClick={(event) => event.stopPropagation()}
+                />
+              </div>
 
-          <div className="custom-scrollbar max-h-40 space-y-0.5 overflow-y-auto pr-1">
-            {filteredProvinces.length === 0 ? (
-              <p className="p-2 text-center text-xs text-gray-500">Không tìm thấy vị trí</p>
-            ) : (
-              filteredProvinces.map((province) => {
-                const isSelected = selectedCityCode === province.code;
-                return (
-                  <button
-                    key={province.code}
-                    type="button"
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => handleSelect(province)}
-                    className={`w-full rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors ${
-                      isSelected
-                        ? "bg-blue-600/25 font-semibold text-blue-300"
-                        : "text-gray-300 hover:bg-white/5 hover:text-white"
-                    }`}
-                  >
-                    {cleanName(province.name)}
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </div>,
-        document.body,
-      ) : null}
+              <div className="custom-scrollbar max-h-40 space-y-0.5 overflow-y-auto pr-1">
+                {filteredProvinces.length === 0 ? (
+                  <p className="theme-empty-state p-2 text-center text-xs">Không tìm thấy vị trí</p>
+                ) : (
+                  filteredProvinces.map((province) => {
+                    const isSelected = selectedCityCode === province.code;
+
+                    return (
+                      <button
+                        key={province.code}
+                        type="button"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => handleSelect(province)}
+                        className={`w-full rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors ${
+                          isSelected
+                            ? "theme-button-info font-semibold"
+                            : "theme-text-secondary hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
+                        }`}
+                      >
+                        {cleanName(province.name)}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
 
       <style
         dangerouslySetInnerHTML={{
@@ -204,11 +219,13 @@ export function CitySelect() {
             .custom-scrollbar::-webkit-scrollbar {
               width: 3.5px;
             }
+
             .custom-scrollbar::-webkit-scrollbar-track {
               background: transparent;
             }
+
             .custom-scrollbar::-webkit-scrollbar-thumb {
-              background: rgba(255, 255, 255, 0.15);
+              background: color-mix(in srgb, var(--foreground) 18%, transparent);
               border-radius: 9px;
             }
           `,

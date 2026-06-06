@@ -121,7 +121,7 @@ const getImageValidation = (file: File) => {
 const CreatePostMap = dynamic(() => import("@/components/map/CreatePostMap"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-full w-full items-center justify-center bg-slate-950 text-sm text-gray-400">
+    <div className="theme-post-form-card flex h-full w-full items-center justify-center text-sm text-[var(--muted-foreground)]">
       Đang tải bản đồ...
     </div>
   ),
@@ -678,8 +678,8 @@ export default function EditPostPage() {
   if (isLoading) {
     return (
       <div className="container mx-auto flex min-h-[60vh] items-center justify-center px-4 py-10 lg:px-8">
-        <div className="inline-flex items-center gap-3 text-gray-300">
-          <LoaderCircle className="h-5 w-5 animate-spin text-blue-300" />
+        <div className="inline-flex items-center gap-3 text-[var(--secondary-foreground)]">
+          <LoaderCircle className="h-5 w-5 animate-spin text-[var(--accent)]" />
           Đang tải trang chỉnh sửa...
         </div>
       </div>
@@ -690,7 +690,7 @@ export default function EditPostPage() {
     return (
       <div className="container mx-auto px-4 py-10 lg:px-8">
         <div className="glass-card p-8 text-center">
-          <p className="text-lg text-red-200">{error}</p>
+          <p className="text-lg text-[var(--danger-foreground)]">{error}</p>
           <Link href={`/posts/${params.id}`} className="btn-primary mt-6 inline-flex">
             Quay lại bài đăng
           </Link>
@@ -710,14 +710,14 @@ export default function EditPostPage() {
           <div className="flex items-start gap-3">
             <Link
               href={`/posts/${post.id}`}
-              className="mt-1 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-gray-200 transition hover:bg-white/10"
+              className="theme-icon-button mt-1 inline-flex h-9 w-9 items-center justify-center rounded-full transition"
               title="Quay lại"
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
             <div>
               <h1 className="text-2xl font-bold text-white">Chỉnh sửa bài đăng</h1>
-              <p className="mt-1 text-sm text-gray-400">
+              <p className="mt-1 text-sm text-[var(--muted-foreground)]">
                 ID: #{post.id} • Đăng ngày {toDateTime(post.createdAt)}
               </p>
             </div>
@@ -726,7 +726,7 @@ export default function EditPostPage() {
           <div className="flex flex-wrap gap-3">
             <Link
               href={`/posts/${post.id}`}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-500/30 bg-white/5 px-5 py-3 text-sm font-medium text-white transition hover:bg-white/10"
+              className="theme-post-form-card inline-flex items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm font-medium text-[var(--foreground)] transition hover:bg-[var(--hover)]"
             >
               <Eye className="h-4 w-4" />
               Xem bài đăng
@@ -743,7 +743,7 @@ export default function EditPostPage() {
         </div>
 
         {error && (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
+          <div className="theme-badge-danger rounded-xl p-3 text-sm">
             {error}
           </div>
         )}
@@ -779,19 +779,19 @@ export default function EditPostPage() {
                     <Field className="lg:col-span-4" label="Giá" required error={errors.price?.message}>
                       <div className="relative">
                         <input type="number" {...register("price")} className="input-dark pr-14" />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-gray-400">VND</span>
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-[var(--muted-foreground)]">VND</span>
                       </div>
                     </Field>
                     <Field className="lg:col-span-4" label="Diện tích" required error={errors.area?.message}>
                       <div className="relative">
                         <input type="number" step="any" {...register("area")} className="input-dark pr-12" />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-gray-400">m²</span>
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-[var(--muted-foreground)]">m²</span>
                       </div>
                     </Field>
                   </div>
                 </section>
 
-                <section className="border-t border-white/10 pt-7">
+                <section className="border-t border-[var(--border)] pt-7">
                   <h2 className="text-xl font-semibold text-white">Vị trí & Bản đồ</h2>
                   <div className="mt-5 grid gap-5 lg:grid-cols-12">
                     <Field className="lg:col-span-12" label="Địa chỉ cụ thể" required error={errors.address?.message}>
@@ -828,16 +828,16 @@ export default function EditPostPage() {
                         ))}
                       </select>
                       {!selProvinceCode && (
-                        <p className="mt-1 text-xs text-red-500">Vui lòng chọn Tỉnh / Thành phố</p>
+                        <p className="mt-1 text-xs text-[var(--danger-foreground)]">Vui lòng chọn Tỉnh / Thành phố</p>
                       )}
                     </Field>
                     <div className="lg:col-span-12">
                       <div className="grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
                         <Field label="Vĩ độ (Lat)" required error={errors.latitude?.message}>
-                          <input type="number" step="any" {...register("latitude")} className="input-dark bg-slate-950/20" />
+                          <input type="number" step="any" {...register("latitude")} className="input-dark theme-post-input" />
                         </Field>
                         <Field label="Kinh độ (Lng)" required error={errors.longitude?.message}>
-                          <input type="number" step="any" {...register("longitude")} className="input-dark bg-slate-950/20" />
+                          <input type="number" step="any" {...register("longitude")} className="input-dark theme-post-input" />
                         </Field>
                         <button
                           type="button"
@@ -856,7 +856,7 @@ export default function EditPostPage() {
 
                       {latitude && longitude && Number(latitude) !== 0 && Number(longitude) !== 0 ? (
                         <>
-                          <div className="mt-5 h-[280px] overflow-hidden rounded-xl border border-white/10 shadow-lg">
+                          <div className="theme-post-gallery mt-5 h-[280px] overflow-hidden rounded-xl">
                             <CreatePostMap
                               latitude={Number(latitude)}
                               longitude={Number(longitude)}
@@ -933,7 +933,7 @@ export default function EditPostPage() {
                               }}
                             />
                           </div>
-                          <p className="mt-5 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-xs font-medium leading-relaxed text-amber-300">
+                          <p className="theme-badge-warning mt-5 flex items-start gap-2 rounded-lg p-4 text-xs font-medium leading-relaxed">
                             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                             <span>
                               <strong>Lưu ý:</strong> Bạn có thể kéo thả dấu mốc (Marker) hoặc click trực tiếp lên bản đồ trên để điều chỉnh vị trí mong muốn.
@@ -943,16 +943,16 @@ export default function EditPostPage() {
                       ) : null}
 
                       {geocodeStatus === "success" ? (
-                        <p className="mt-2 text-xs text-emerald-400">Đã cập nhật tọa độ bản đồ dựa vào địa chỉ.</p>
+                        <p className="mt-2 text-xs text-[var(--success-foreground)]">Đã cập nhật tọa độ bản đồ dựa vào địa chỉ.</p>
                       ) : null}
                       {geocodeStatus === "failed" ? (
-                        <p className="mt-2 text-xs text-amber-400">Không tìm thấy tọa độ phù hợp. Hãy kiểm tra lại địa chỉ hoặc tự nhập tay.</p>
+                        <p className="mt-2 text-xs text-[var(--warning-foreground)]">Không tìm thấy tọa độ phù hợp. Hãy kiểm tra lại địa chỉ hoặc tự nhập tay.</p>
                       ) : null}
                     </div>
                   </div>
                 </section>
 
-                <section className="border-t border-white/10 pt-7">
+                <section className="border-t border-[var(--border)] pt-7">
                   <h2 className="text-xl font-semibold text-white">Thông tin mô tả</h2>
                   <Field className="mt-5" label="Mô tả chi tiết" required error={errors.description?.message}>
                     <textarea
@@ -960,18 +960,18 @@ export default function EditPostPage() {
                       rows={9}
                       className="input-dark min-h-56 resize-y text-sm leading-7"
                     />
-                    <p className="mt-2 text-right text-xs text-gray-400">{watchedDescription.length}/2000 ký tự</p>
+                    <p className="mt-2 text-right text-xs text-[var(--muted-foreground)]">{watchedDescription.length}/2000 ký tự</p>
                   </Field>
                 </section>
 
                 {/* Đặc trưng bất động sản */}
                 {features.length > 0 && (
-                  <section className="border-t border-white/10 pt-7">
+                  <section className="border-t border-[var(--border)] pt-7">
                     <h2 className="text-xl font-semibold text-white mb-4">Đặc trưng bất động sản</h2>
                     <div className="space-y-4">
                       {Object.entries(groupedFeatures).map(([category, list]) => (
                         <div key={category} className="space-y-2">
-                          <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">{category}</h4>
+                          <h4 className="text-[11px] font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">{category}</h4>
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                             {list.map((feature) => {
                               const isSelected = selectedFeatureIds.includes(feature.id);
@@ -981,21 +981,21 @@ export default function EditPostPage() {
                                   onClick={() => toggleFeature(feature.id)}
                                   className={`flex items-center justify-between p-2.5 rounded-xl border transition-all duration-300 cursor-pointer select-none text-xs font-medium group ${
                                     isSelected
-                                      ? "border-blue-500/40 bg-blue-500/10 text-blue-300 ring-1 ring-blue-500/25 shadow-lg shadow-blue-500/5"
-                                      : "border-white/5 bg-slate-950/25 text-gray-400 hover:border-white/15 hover:bg-slate-950/45 hover:text-gray-200"
+                                      ? "border-[var(--accent-border)] bg-[var(--accent-soft)] text-[var(--accent)] ring-1 ring-[color:var(--accent-border)] shadow-[var(--shadow-glow)]"
+                                      : "border-[var(--border)] bg-[var(--surface)] text-[var(--secondary-foreground)] hover:border-[var(--accent-border)] hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
                                   }`}
                                 >
                                   <div className="flex items-center gap-2 min-w-0">
                                     <FeatureIcon
                                       name={feature.icon || "help-circle"}
                                       className={`h-4 w-4 shrink-0 transition-transform duration-300 group-hover:scale-110 ${
-                                        isSelected ? "text-blue-400" : "text-gray-500"
+                                        isSelected ? "text-[var(--accent)]" : "text-[var(--muted-foreground)]"
                                       }`}
                                     />
                                     <span className="truncate">{feature.name}</span>
                                   </div>
                                   {isSelected && (
-                                    <div className="h-4 w-4 rounded-full bg-blue-600 flex items-center justify-center text-white shrink-0 shadow-md">
+                                    <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--primary-foreground)] shadow-[var(--shadow-glow)]">
                                       <Check className="h-2.5 w-2.5 stroke-[3]" />
                                     </div>
                                   )}
@@ -1018,17 +1018,17 @@ export default function EditPostPage() {
               <h2 className="text-xl font-semibold text-white">Hình ảnh & Video</h2>
               <div className="mt-5">
                 <div className="mb-3 flex items-center justify-between">
-                  <label className="text-sm font-medium text-gray-300">
-                    Ảnh đại diện <span className="text-red-400">*</span>
+                  <label className="text-sm font-medium text-[var(--secondary-foreground)]">
+                    Ảnh đại diện <span className="text-[var(--danger)]">*</span>
                   </label>
-                  <span className="text-xs text-gray-400">{totalImageCount}/{maxImages}</span>
+                  <span className="text-xs text-[var(--muted-foreground)]">{totalImageCount}/{maxImages}</span>
                 </div>
-                <div className="group relative overflow-hidden rounded-lg border border-white/10 bg-slate-950">
+                    <div className="theme-upload-preview group relative overflow-hidden rounded-lg">
                   <img src={primaryImage} alt={post.title} className="aspect-[16/9] w-full object-cover" />
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="absolute bottom-3 right-3 inline-flex items-center gap-2 rounded-lg bg-slate-950/75 px-3 py-2 text-sm text-white backdrop-blur transition hover:bg-slate-950"
+                    className="theme-post-form-card absolute bottom-3 right-3 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-[var(--foreground)] backdrop-blur transition hover:bg-[var(--hover)]"
                   >
                     <Camera className="h-4 w-4" />
                     Thay ảnh
@@ -1037,16 +1037,16 @@ export default function EditPostPage() {
               </div>
 
               <div className="mt-5">
-                <div className="mb-3 text-sm font-medium text-gray-300">Thư viện ảnh ({totalImageCount}/{maxImages})</div>
+                <div className="mb-3 text-sm font-medium text-[var(--secondary-foreground)]">Thư viện ảnh ({totalImageCount}/{maxImages})</div>
                 <div className="grid grid-cols-3 gap-2">
                   {images.map((image) => (
-                    <div key={image.id} className="group relative overflow-hidden rounded-lg border border-white/10 bg-slate-950">
+                    <div key={image.id} className="theme-upload-preview group relative overflow-hidden rounded-lg">
                       <img src={image.imageUrl} alt={image.caption ?? post.title} className="aspect-[4/3] w-full object-cover" />
                       <button
                         type="button"
                         onClick={() => handleDeleteExistingImage(image.id)}
                         disabled={isDeletingImageId === image.id}
-                        className="absolute right-1.5 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-950/75 text-white transition hover:bg-red-600 disabled:opacity-60"
+                        className="theme-button-danger-solid absolute right-1.5 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full transition disabled:opacity-60"
                         title="Xóa ảnh"
                       >
                         {isDeletingImageId === image.id ? (
@@ -1058,12 +1058,12 @@ export default function EditPostPage() {
                     </div>
                   ))}
                   {newImages.map((image) => (
-                    <div key={image.id} className="group relative overflow-hidden rounded-lg border border-emerald-500/40 bg-slate-950">
+                    <div key={image.id} className="theme-upload-preview group relative overflow-hidden rounded-lg border-[var(--success-border)]">
                       <img src={image.url} alt={image.file.name} className="aspect-[4/3] w-full object-cover" />
                       <button
                         type="button"
                         onClick={() => handleRemoveNewImage(image.id)}
-                        className="absolute right-1.5 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-950/75 text-white transition hover:bg-red-600"
+                        className="theme-button-danger-solid absolute right-1.5 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full transition"
                         title="Xóa ảnh"
                       >
                         <X className="h-4 w-4" />
@@ -1074,7 +1074,7 @@ export default function EditPostPage() {
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="flex aspect-[4/3] items-center justify-center rounded-lg border border-dashed border-white/15 bg-white/[0.03] text-gray-400 transition hover:border-blue-400/50 hover:text-blue-300"
+                      className="theme-upload-zone flex aspect-[4/3] items-center justify-center rounded-lg text-[var(--muted-foreground)] transition hover:text-[var(--accent)]"
                     >
                       <ImagePlus className="h-6 w-6" />
                     </button>
@@ -1092,7 +1092,7 @@ export default function EditPostPage() {
                   }}
                 />
                 {imageError && (
-                  <p className="mt-3 rounded-lg border border-amber-500/20 bg-amber-500/10 p-2 text-xs text-amber-200">
+                  <p className="theme-badge-warning mt-3 rounded-lg p-2 text-xs">
                     {imageError}
                   </p>
                 )}
@@ -1102,7 +1102,7 @@ export default function EditPostPage() {
             <section className="glass-card p-5">
               <h2 className="text-lg font-semibold text-white">Thông tin người đăng</h2>
               <div className="mt-4 flex items-center gap-4">
-                <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white text-xl font-bold text-slate-900">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--card)] text-xl font-bold text-[var(--foreground)]">
                   {post.author.avatarUrl ? (
                     <img src={post.author.avatarUrl} alt={post.author.fullName} className="h-full w-full object-cover" />
                   ) : (
@@ -1112,10 +1112,10 @@ export default function EditPostPage() {
                 <div className="min-w-0">
                   <p className="flex items-center gap-1.5 font-semibold text-white">
                     <span className="truncate">{post.author.fullName}</span>
-                    <BadgeCheck className="h-4 w-4 shrink-0 text-blue-400" />
+                    <BadgeCheck className="h-4 w-4 shrink-0 text-[var(--accent)]" />
                   </p>
-                  <p className="mt-1 text-xs text-gray-400">Môi giới chuyên nghiệp</p>
-                  <p className="mt-2 text-xs text-gray-300">{post.author.email}</p>
+                  <p className="mt-1 text-xs text-[var(--muted-foreground)]">Môi giới chuyên nghiệp</p>
+                  <p className="mt-2 text-xs text-[var(--secondary-foreground)]">{post.author.email}</p>
                 </div>
               </div>
             </section>
@@ -1123,17 +1123,17 @@ export default function EditPostPage() {
             <section className="glass-card p-5">
               <h2 className="text-lg font-semibold text-white">Thống kê bài đăng</h2>
               <div className="mt-5 grid grid-cols-3 gap-3 text-center">
-                <Metric icon={<Eye className="h-4 w-4 text-blue-400" />} value="1,245" label="Lượt xem" />
-                <Metric icon={<Building2 className="h-4 w-4 text-rose-400" />} value={formatPrice(Number(watchedPrice) || post.price)} label="Giá" />
-                <Metric icon={<MessageCircle className="h-4 w-4 text-sky-400" />} value="23" label="Bình luận" />
+                <Metric icon={<Eye className="h-4 w-4 text-[var(--accent)]" />} value="1,245" label="Lượt xem" />
+                <Metric icon={<Building2 className="h-4 w-4 text-[var(--danger)]" />} value={formatPrice(Number(watchedPrice) || post.price)} label="Giá" />
+                <Metric icon={<MessageCircle className="h-4 w-4 text-[var(--info)]" />} value="23" label="Bình luận" />
               </div>
-              <div className="mt-5 grid gap-4 border-t border-white/10 pt-5 text-sm sm:grid-cols-2">
+              <div className="mt-5 grid gap-4 border-t border-[var(--border)] pt-5 text-sm sm:grid-cols-2">
                 <div>
-                  <p className="text-gray-400">Đăng ngày</p>
+                  <p className="text-[var(--muted-foreground)]">Đăng ngày</p>
                   <p className="mt-1 text-white">{toDateTime(post.createdAt)}</p>
                 </div>
                 <div>
-                  <p className="text-gray-400">Cập nhật lần cuối</p>
+                  <p className="text-[var(--muted-foreground)]">Cập nhật lần cuối</p>
                   <p className="mt-1 text-white">{toDateTime(post.updatedAt)}</p>
                 </div>
               </div>
@@ -1160,24 +1160,24 @@ function Field({
 }) {
   return (
     <label className={`block ${className}`}>
-      <span className="mb-2 block text-sm font-medium text-gray-300">
+      <span className="mb-2 block text-sm font-medium text-[var(--secondary-foreground)]">
         {label}
-        {required ? <span className="text-red-400"> *</span> : null}
+        {required ? <span className="text-[var(--danger)]"> *</span> : null}
       </span>
       {children}
-      {error ? <span className="mt-1.5 block text-xs text-red-300">{error}</span> : null}
+      {error ? <span className="mt-1.5 block text-xs text-[var(--danger-foreground)]">{error}</span> : null}
     </label>
   );
 }
 
 function Metric({ icon, value, label }: { icon: React.ReactNode; value: string; label: string }) {
   return (
-    <div className="min-w-0 border-r border-white/10 last:border-r-0">
+    <div className="min-w-0 border-r border-[var(--border)] last:border-r-0">
       <div className="flex items-center justify-center gap-2 font-semibold text-white">
         {icon}
         <span className="truncate">{value}</span>
       </div>
-      <p className="mt-1 text-xs text-gray-400">{label}</p>
+      <p className="mt-1 text-xs text-[var(--muted-foreground)]">{label}</p>
     </div>
   );
 }

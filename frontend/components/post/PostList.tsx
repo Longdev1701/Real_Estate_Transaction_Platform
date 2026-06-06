@@ -318,8 +318,8 @@ export function PostList() {
                   type="button"
                   className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-xs font-semibold transition ${
                     item.active
-                      ? "border border-blue-500/30 bg-blue-500/10 text-blue-300 shadow-[0_0_15px_rgba(37,99,235,0.12)]"
-                      : "text-gray-300 hover:bg-white/5"
+                      ? "theme-nav-active border"
+                      : "theme-nav-item"
                   }`}
                 >
                   <item.icon className="h-3.5 w-3.5" />
@@ -330,7 +330,7 @@ export function PostList() {
           </div>
 
           <div className="glass-card p-3.5">
-            <h2 className="mb-2.5 text-xs font-bold uppercase tracking-wider text-blue-400">Danh mục</h2>
+            <h2 className="mb-2.5 text-xs font-bold uppercase tracking-wider text-[var(--accent)]">Danh mục</h2>
             <div className="space-y-1">
               {categoryItems.map((item) => {
                 const active = draftFilter.propertyType === item.value;
@@ -342,11 +342,11 @@ export function PostList() {
                     onClick={() => applyCategory(item.value)}
                     className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-medium text-left transition ${
                       active
-                        ? "border border-blue-500/30 bg-blue-500/10 text-blue-200 shadow-[0_0_15px_rgba(37,99,235,0.12)]"
-                        : "text-gray-300 hover:bg-white/5"
+                        ? "theme-nav-active border"
+                        : "theme-nav-item"
                     }`}
                   >
-                    <item.icon className="h-3.5 w-3.5 shrink-0 text-blue-300" />
+                    <item.icon className={`h-3.5 w-3.5 shrink-0 ${active ? "text-[var(--accent)]" : "text-[var(--muted-foreground)]"}`} />
                     <span className="line-clamp-1">{item.label}</span>
                   </button>
                 );
@@ -362,15 +362,15 @@ export function PostList() {
         className="no-scrollbar h-full max-h-[calc(100vh-100px)] min-w-0 overflow-y-auto pr-1"
       >
         <div className="space-y-5">
-          <section className="flex flex-wrap items-center gap-2 text-sm text-gray-400">
+          <section className="flex flex-wrap items-center gap-2 text-sm text-[var(--muted-foreground)]">
             <span>Trang chủ</span>
             <span>/</span>
-            <span className="text-white">Bài đăng</span>
+            <span className="text-[var(--foreground)]">Bài đăng</span>
           </section>
 
           <div className="glass-card p-5 md:p-6">
             <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-blue-400/30 bg-blue-500/10 text-sm font-semibold text-blue-200">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--accent-border)] bg-[var(--accent-soft)] text-sm font-semibold text-[var(--accent)]">
                 T
               </div>
               <div className="flex-1">
@@ -385,7 +385,7 @@ export function PostList() {
                 >
                   <div className="flex flex-col gap-3 sm:flex-row">
                     <div className="relative flex-1">
-                      <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-300" />
+                      <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--accent)]" />
                       <input
                         type="search"
                         value={draftFilter.keyword}
@@ -409,8 +409,8 @@ export function PostList() {
                           onClick={() => applyPostType(item.value)}
                           className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
                             isActive
-                              ? "border-blue-500/50 bg-blue-600 text-white shadow-[0_0_18px_rgba(37,99,235,0.28)]"
-                              : "border-white/10 bg-white/5 text-gray-300 hover:border-blue-400/30 hover:bg-blue-500/10 hover:text-white"
+                              ? "theme-filter-chip-active"
+                              : "theme-filter-chip"
                           }`}
                         >
                           {item.label}
@@ -425,8 +425,8 @@ export function PostList() {
 
           <div className="flex items-center justify-between gap-4 px-1">
             <div>
-              <h2 className="text-2xl font-semibold text-white">Bảng tin bất động sản</h2>
-              <p className="mt-1 text-sm text-gray-400">
+              <h2 className="text-2xl font-semibold text-[var(--foreground)]">Bảng tin bất động sản</h2>
+              <p className="mt-1 text-sm text-[var(--muted-foreground)]">
                 {posts.length > 0
                   ? total > 0
                     ? `${total} bài đăng đang hiển thị`
@@ -437,20 +437,20 @@ export function PostList() {
           </div>
 
           {error && (
-            <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
+            <div className="theme-badge-danger rounded-2xl p-4 text-sm">
               {error}
             </div>
           )}
 
           {isLoading ? (
-            <div className="flex min-h-[280px] items-center justify-center rounded-3xl border border-white/10 bg-white/5">
-              <div className="inline-flex items-center gap-3 text-gray-300">
-                <LoaderCircle className="h-5 w-5 animate-spin text-blue-300" />
+            <div className="glass-card flex min-h-[280px] items-center justify-center rounded-3xl">
+              <div className="inline-flex items-center gap-3 text-[var(--muted-foreground)]">
+                <LoaderCircle className="h-5 w-5 animate-spin text-[var(--accent)]" />
                 Đang tải bài đăng...
               </div>
             </div>
           ) : posts.length === 0 ? (
-            <div className="glass-card flex min-h-[280px] items-center justify-center p-10 text-center text-gray-300">
+            <div className="glass-card flex min-h-[280px] items-center justify-center p-10 text-center text-[var(--muted-foreground)]">
               Không tìm thấy bài đăng nào khớp bộ lọc hiện tại.
             </div>
           ) : (
@@ -465,14 +465,14 @@ export function PostList() {
 
               <div ref={loadMoreRef} className="flex min-h-16 items-center justify-center">
                 {isLoadingMore ? (
-                  <div className="inline-flex items-center gap-3 text-sm text-gray-300">
-                    <LoaderCircle className="h-4 w-4 animate-spin text-blue-300" />
+                  <div className="inline-flex items-center gap-3 text-sm text-[var(--muted-foreground)]">
+                    <LoaderCircle className="h-4 w-4 animate-spin text-[var(--accent)]" />
                     Đang tải thêm...
                   </div>
                 ) : hasMore ? (
-                  <span className="text-sm text-gray-500">Cuộn để tải thêm bài đăng</span>
+                  <span className="text-sm text-[var(--muted-foreground)]">Cuộn để tải thêm bài đăng</span>
                 ) : (
-                  <span className="text-sm text-gray-500">Đã hiển thị toàn bộ bài đăng</span>
+                  <span className="text-sm text-[var(--muted-foreground)]">Đã hiển thị toàn bộ bài đăng</span>
                 )}
               </div>
             </>

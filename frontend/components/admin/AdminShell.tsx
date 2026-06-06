@@ -60,38 +60,38 @@ export function AdminShell({
 
   if (!hasHydrated || !user || user.role !== "ADMIN") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#020817] text-blue-100">
+      <div className="theme-admin-stage flex min-h-screen items-center justify-center text-[var(--secondary-foreground)]">
         Đang kiểm tra quyền truy cập...
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#020817] text-white">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_12%_8%,rgba(37,99,235,0.25),transparent_28%),radial-gradient(circle_at_86%_10%,rgba(14,165,233,0.18),transparent_26%),linear-gradient(180deg,#020817,#071426_54%,#020817)]" />
+    <div className="theme-admin-stage min-h-screen text-[var(--foreground)]">
+      <div className="theme-admin-overlay pointer-events-none fixed inset-0" />
 
       {mobileSidebarOpen ? (
         <button
           type="button"
           aria-label="Đóng điều hướng"
-          className="fixed inset-0 z-30 bg-slate-950/70 lg:hidden"
+          className="theme-overlay-dim fixed inset-0 z-30 lg:hidden"
           onClick={() => setMobileSidebarOpen(false)}
         />
       ) : null}
 
       <div className="relative min-h-screen">
         <aside
-          className={`fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-blue-400/20 bg-slate-950/85 backdrop-blur-xl transition-transform lg:w-56 ${
+          className={`theme-admin-sidebar fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r backdrop-blur-xl transition-transform lg:w-56 ${
             mobileSidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
           }`}
         >
           <div className="flex h-20 items-center gap-3 px-5">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-blue-400/50 bg-blue-500/10 text-blue-200 shadow-[0_0_24px_rgba(59,130,246,0.6)]">
-              <BuildingGlyph />
-            </div>
+          <div className="theme-admin-icon-blue flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--accent-border)] text-[var(--accent)]">
+            <BuildingGlyph />
+          </div>
             <div className="min-w-0">
               <p className="truncate text-xl font-bold tracking-wide">TrustEstate</p>
-              <p className="text-xs text-gray-400">Admin Dashboard</p>
+              <p className="text-xs text-[var(--muted-foreground)]">Bảng điều khiển quản trị</p>
             </div>
           </div>
 
@@ -106,11 +106,11 @@ export function AdminShell({
                   href={item.href}
                   className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition ${
                     active
-                      ? "border-blue-400/60 bg-blue-600/20 text-white shadow-[0_0_24px_rgba(37,99,235,0.42)]"
-                      : "border-transparent text-gray-300 hover:border-blue-400/25 hover:bg-blue-500/10 hover:text-white"
+                      ? "theme-admin-nav-active"
+                      : "theme-admin-nav-idle"
                   }`}
                 >
-                  <Icon className="h-5 w-5 shrink-0 text-blue-200" />
+                  <Icon className={`h-5 w-5 shrink-0 ${active ? "text-[var(--accent)]" : "text-[var(--muted-foreground)]"}`} />
                   <span className="truncate">{item.label}</span>
                 </Link>
               );
@@ -118,30 +118,30 @@ export function AdminShell({
 
             <Link
               href="/"
-              className="mt-4 flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-medium text-gray-300 transition hover:border-blue-400/25 hover:bg-blue-500/10 hover:text-white"
+              className="mt-4 flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--panel-bg)] px-4 py-3 text-sm font-medium text-[var(--muted-foreground)] transition hover:border-[var(--accent-border)] hover:bg-[var(--accent-soft)] hover:text-[var(--foreground)]"
             >
-              <ArrowLeft className="h-5 w-5 shrink-0 text-blue-200" />
+              <ArrowLeft className="h-5 w-5 shrink-0 text-[var(--muted-foreground)]" />
               <span className="truncate">Về trang khách</span>
             </Link>
           </nav>
 
-          <div className="mx-3 mb-3 mt-auto rounded-2xl border border-blue-400/20 bg-blue-950/25 p-4 shadow-[0_0_48px_rgba(37,99,235,0.18)]">
+          <div className="theme-admin-user-card mx-3 mb-3 mt-auto rounded-2xl p-4">
             <div className="flex items-center gap-2">
-              <AdminAvatar name={user.name} className="border-blue-300/30 bg-blue-500/15 text-blue-100" />
+              <AdminAvatar name={user.name} className="theme-admin-avatar" />
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-white">{getPrimaryName(user.name)}</p>
-                <p className="text-xs text-gray-400">Quản trị viên</p>
+                <p className="truncate text-sm font-semibold text-[var(--foreground)]">{getPrimaryName(user.name)}</p>
+                <p className="text-xs text-[var(--muted-foreground)]">Quản trị viên</p>
               </div>
             </div>
           </div>
         </aside>
 
         <section className="min-w-0 lg:pl-56">
-          <header className="sticky top-0 z-20 flex min-h-20 items-center justify-between gap-5 border-b border-blue-400/20 bg-slate-950/70 px-4 py-4 backdrop-blur-xl md:px-6">
+          <header className="theme-admin-header sticky top-0 z-20 flex min-h-20 items-center justify-between gap-5 border-b px-4 py-4 backdrop-blur-xl md:px-6">
             <div className="flex min-w-0 items-center gap-4">
               <button
                 type="button"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 lg:hidden"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--panel-bg)] lg:hidden"
                 onClick={() => setMobileSidebarOpen(true)}
               >
                 <Menu className="h-5 w-5" />
@@ -149,7 +149,7 @@ export function AdminShell({
               <div className="min-w-0">
                 <h1 className="text-2xl font-bold md:text-3xl">{title}</h1>
                 {subtitle ? (
-                  <p className="mt-1.5 hidden max-w-3xl text-sm leading-6 text-gray-300 md:block">
+                  <p className="mt-1.5 hidden max-w-3xl text-sm leading-6 text-[var(--muted-foreground)] md:block">
                     {subtitle}
                   </p>
                 ) : null}
@@ -158,14 +158,14 @@ export function AdminShell({
 
             <div className="ml-auto flex shrink-0 items-center gap-3">
               {action}
-              <div className="hidden items-center gap-3 border-l border-white/10 pl-4 md:flex">
+              <div className="hidden items-center gap-3 border-l border-[var(--border)] pl-4 md:flex">
                 <AdminAvatar
                   name={user.name}
-                  className="border-blue-300/30 bg-blue-500/15 text-blue-100"
+                  className="theme-admin-avatar"
                 />
                 <div className="min-w-0">
                   <p className="text-sm font-semibold">{getPrimaryName(user.name)}</p>
-                  <p className="text-xs text-gray-400">Quản trị viên</p>
+                  <p className="text-xs text-[var(--muted-foreground)]">Quản trị viên</p>
                 </div>
               </div>
             </div>
@@ -187,7 +187,7 @@ export function NeonCard({
 }) {
   return (
     <div
-      className={`rounded-2xl border border-blue-300/20 bg-slate-950/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_30px_rgba(37,99,235,0.16)] backdrop-blur-xl ${className}`}
+      className={`theme-admin-card rounded-2xl border border-[var(--border)] shadow-[var(--shadow-soft)] backdrop-blur-xl ${className}`}
     >
       {children}
     </div>
@@ -210,35 +210,43 @@ export function StatCard({
   compact?: boolean;
 }) {
   const colors = {
-    blue: "text-blue-300 bg-blue-500/15 shadow-blue-500/40",
-    violet: "text-violet-300 bg-violet-500/15 shadow-violet-500/40",
-    green: "text-emerald-300 bg-emerald-500/15 shadow-emerald-500/40",
-    orange: "text-amber-300 bg-amber-500/15 shadow-amber-500/40",
-    red: "text-red-300 bg-red-500/15 shadow-red-500/40",
+    blue: "theme-admin-icon-blue",
+    violet: "theme-admin-icon-violet",
+    green: "theme-admin-icon-green",
+    orange: "theme-admin-icon-orange",
+    red: "theme-admin-icon-red",
+  };
+
+  const glows = {
+    blue: "theme-admin-halo-info",
+    violet: "theme-admin-halo-accent",
+    green: "theme-admin-halo-success",
+    orange: "theme-admin-halo-warning",
+    red: "theme-admin-halo-danger",
   };
 
   return (
     <NeonCard className={`relative overflow-hidden ${compact ? "p-3.5" : "p-5"}`}>
-      <div className="absolute inset-x-8 bottom-0 h-12 rounded-t-full bg-blue-500/10 blur-2xl" />
+      <div className={`absolute inset-x-8 bottom-0 h-14 rounded-t-full blur-2xl ${glows[tone]}`} />
       <div className={`relative flex items-start ${compact ? "gap-3" : "gap-4"}`}>
         <div
-          className={`grid shrink-0 place-items-center rounded-full shadow-[0_0_24px] ${colors[tone]} ${
+          className={`grid shrink-0 place-items-center rounded-full shadow-[0_0_24px_color-mix(in_srgb,currentColor_22%,transparent)] ${colors[tone]} ${
             compact ? "h-10 w-10" : "h-14 w-14"
           }`}
         >
           <Icon className={compact ? "h-5 w-5" : "h-7 w-7"} />
         </div>
         <div className="min-w-0">
-          <p className={`${compact ? "text-xs" : "text-sm"} text-gray-300`}>{title}</p>
+          <p className={`${compact ? "text-xs" : "text-sm"} text-[var(--muted-foreground)]`}>{title}</p>
           <p className={`${compact ? "mt-1 text-2xl" : "mt-2 text-3xl"} font-bold tracking-tight`}>
             {value}
           </p>
           <p
             className={`${compact ? "mt-1.5 text-xs" : "mt-3 text-sm"} ${
-              tone === "red" ? "text-red-300" : "text-emerald-300"
+              tone === "red" ? "text-[var(--danger)]" : "text-[var(--success)]"
             }`}
           >
-            {delta} <span className="text-gray-400">so với tháng trước</span>
+            {delta} <span className="text-[var(--muted-foreground)]">so với tháng trước</span>
           </p>
         </div>
       </div>
@@ -255,11 +263,11 @@ function Sparkline({
   compact?: boolean;
 }) {
   const stroke = {
-    blue: "#3b82f6",
-    violet: "#8b5cf6",
-    green: "#22c55e",
-    orange: "#f59e0b",
-    red: "#ef4444",
+    blue: "var(--primary)",
+    violet: "var(--info-foreground)",
+    green: "var(--success)",
+    orange: "var(--badge-warning-text)",
+    red: "var(--danger)",
   }[tone];
 
   return (
@@ -323,7 +331,7 @@ function BuildingGlyph() {
 
 export function AddUserButton() {
   return (
-    <button className="hidden h-11 items-center gap-2 whitespace-nowrap rounded-xl bg-blue-600 px-4 font-semibold text-white shadow-[0_0_24px_rgba(37,99,235,0.45)] transition hover:bg-blue-500 sm:inline-flex">
+    <button className="btn-primary hidden h-11 items-center gap-2 whitespace-nowrap rounded-xl px-4 font-semibold sm:inline-flex">
       <Plus className="h-4 w-4" />
       Thêm người dùng
     </button>

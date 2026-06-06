@@ -159,7 +159,7 @@ export default function ProfilePostsPage() {
     return (
       <div className="container mx-auto px-4 py-8 lg:px-8 lg:py-10">
         <div className="glass-card mx-auto max-w-3xl p-8 text-center">
-          <p className="text-lg text-gray-300">Vui lòng đăng nhập để xem hồ sơ của bạn.</p>
+          <p className="text-lg text-[var(--secondary-foreground)]">Vui lòng đăng nhập để xem hồ sơ của bạn.</p>
           <Link href="/auth/login" className="btn-primary mt-6 inline-flex">
             Đăng nhập
           </Link>
@@ -185,21 +185,21 @@ export default function ProfilePostsPage() {
             alt="Cover"
             className="h-full w-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0B1120] to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[var(--app-bg-start)] to-transparent" />
         </div>
 
         <div className="relative -mt-16 flex flex-col items-start justify-between gap-6 px-6 pb-8 md:-mt-24 md:flex-row md:items-end md:px-10">
           <div className="flex w-full flex-col items-start gap-6 md:w-auto md:flex-row md:items-end">
-            <div className="relative h-32 w-32 shrink-0 overflow-hidden rounded-full border-4 border-[#0B1120] bg-blue-900 md:h-44 md:w-44">
+            <div className="theme-avatar-ring relative h-32 w-32 shrink-0 overflow-hidden rounded-full border-4 md:h-44 md:w-44">
               {avatarUrl ? (
                 <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" />
               ) : (
-                <div className="flex h-full w-full items-center justify-center text-5xl font-bold text-blue-200">
+                <div className="flex h-full w-full items-center justify-center text-5xl font-bold text-[var(--primary-foreground)]">
                   {displayName.charAt(0).toUpperCase()}
                 </div>
               )}
               {isOwnProfile && (
-                <div className="absolute bottom-2 right-2 flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-white/20 text-white backdrop-blur-md transition-colors hover:bg-white/30">
+                <div className="theme-surface-soft absolute bottom-2 right-2 flex h-10 w-10 items-center justify-center rounded-full border text-[var(--foreground)] backdrop-blur-md transition-colors hover:bg-[var(--surface-muted)]">
                   <Edit className="h-4 w-4" />
                 </div>
               )}
@@ -207,11 +207,11 @@ export default function ProfilePostsPage() {
 
             <div className="w-full pb-2">
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-white md:text-3xl">{displayName}</h1>
-                <BadgeCheck className="h-6 w-6 text-blue-500" />
+                <h1 className="text-2xl font-bold text-[var(--foreground)] md:text-3xl">{displayName}</h1>
+                <BadgeCheck className="h-6 w-6 text-[var(--accent)]" />
               </div>
-              <p className="mt-1 text-gray-400">@{username}</p>
-              <p className="mt-3 max-w-2xl text-sm text-gray-300">
+              <p className="mt-1 text-[var(--muted-foreground)]">@{username}</p>
+              <p className="mt-3 max-w-2xl text-sm text-[var(--secondary-foreground)]">
                 {isOwnProfile
                   ? `Danh sách bài đăng của ${displayName}, bao gồm cả các bài đang hiển thị, đã hoàn tất và bài bị khóa.`
                   : `Danh sách bài đăng bất động sản công khai của ${displayName}.`}
@@ -219,20 +219,20 @@ export default function ProfilePostsPage() {
 
               <div className="mt-5 flex items-center gap-6 md:gap-10">
                 <div>
-                  <div className="text-xl font-bold text-white">{myPosts.length}</div>
-                  <div className="mt-1 text-xs uppercase tracking-wider text-gray-400">Bài đăng</div>
+                  <div className="text-xl font-bold text-[var(--foreground)]">{myPosts.length}</div>
+                  <div className="mt-1 text-xs uppercase tracking-wider text-[var(--muted-foreground)]">Bài đăng</div>
                 </div>
                 <div>
-                  <div className="text-xl font-bold text-white">{bannedCount}</div>
-                  <div className="mt-1 text-xs uppercase tracking-wider text-gray-400">Bị khóa</div>
+                  <div className="text-xl font-bold text-[var(--foreground)]">{bannedCount}</div>
+                  <div className="mt-1 text-xs uppercase tracking-wider text-[var(--muted-foreground)]">Bị khóa</div>
                 </div>
                 <div>
-                  <div className="text-xl font-bold text-white">{saleCount}</div>
-                  <div className="mt-1 text-xs uppercase tracking-wider text-gray-400">Đang bán</div>
+                  <div className="text-xl font-bold text-[var(--foreground)]">{saleCount}</div>
+                  <div className="mt-1 text-xs uppercase tracking-wider text-[var(--muted-foreground)]">Đang bán</div>
                 </div>
                 <div>
-                  <div className="text-xl font-bold text-white">{rentCount}</div>
-                  <div className="mt-1 text-xs uppercase tracking-wider text-gray-400">Cho thuê</div>
+                  <div className="text-xl font-bold text-[var(--foreground)]">{rentCount}</div>
+                  <div className="mt-1 text-xs uppercase tracking-wider text-[var(--muted-foreground)]">Cho thuê</div>
                 </div>
               </div>
             </div>
@@ -242,7 +242,7 @@ export default function ProfilePostsPage() {
             {isOwnProfile ? (
               <Link
                 href="/profile"
-                className="w-full rounded-xl border border-blue-500/50 bg-blue-500/10 px-6 py-2.5 text-center font-medium text-blue-400 transition-colors hover:bg-blue-500/20 md:w-auto"
+                className="w-full rounded-xl border border-[var(--accent-border)] bg-[var(--accent-soft)] px-6 py-2.5 text-center font-medium text-[var(--accent)] transition-colors hover:brightness-95 md:w-auto"
               >
                 Chỉnh sửa hồ sơ
               </Link>
@@ -253,10 +253,10 @@ export default function ProfilePostsPage() {
 
       <div className="glass-panel mb-8 overflow-hidden rounded-2xl">
         <div className="flex overflow-x-auto hide-scrollbar">
-          <button className="whitespace-nowrap border-b-2 border-blue-500 bg-blue-500/5 px-6 py-4 font-medium text-blue-400">
+          <button className="whitespace-nowrap border-b-2 border-[var(--accent)] bg-[var(--accent-soft)] px-6 py-4 font-medium text-[var(--accent)]">
             {isOwnProfile ? "Bài đăng của tôi" : "Bài đăng"}
           </button>
-          <button className="whitespace-nowrap border-b-2 border-transparent px-6 py-4 font-medium text-gray-400 transition-colors hover:bg-white/5 hover:text-gray-200">
+          <button className="whitespace-nowrap border-b-2 border-transparent px-6 py-4 font-medium text-[var(--muted-foreground)] transition-colors hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]">
             Lịch sử xem
           </button>
         </div>
@@ -264,7 +264,7 @@ export default function ProfilePostsPage() {
 
       <div className="glass-card p-6 md:p-8">
         <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-          <h2 className="text-2xl font-bold text-white">{listTitle}</h2>
+          <h2 className="text-2xl font-bold text-[var(--foreground)]">{listTitle}</h2>
           {isOwnProfile ? (
             <Link href="/posts/create" className="btn-primary inline-flex items-center justify-center gap-2">
               <span>+</span> Đăng bài mới
@@ -287,8 +287,8 @@ export default function ProfilePostsPage() {
                 onClick={() => setActiveTab(tab.key)}
                 className={`whitespace-nowrap rounded-full border px-5 py-2 text-sm font-medium transition-colors ${
                   isActive
-                    ? "border-white/20 bg-white/10 text-white"
-                    : "border-white/10 bg-transparent text-gray-400 hover:bg-white/5 hover:text-white"
+                    ? "border-[var(--accent-border)] bg-[var(--accent-soft)] text-[var(--foreground)]"
+                    : "border-[var(--border)] bg-transparent text-[var(--muted-foreground)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
                 }`}
               >
                 {tab.label} ({tab.count})
@@ -298,20 +298,20 @@ export default function ProfilePostsPage() {
         </div>
 
         {error ? (
-          <div className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
+          <div className="theme-badge-danger mb-6 rounded-2xl p-4 text-sm">
             {error}
           </div>
         ) : null}
 
         {isLoading ? (
           <div className="flex min-h-[240px] items-center justify-center">
-            <div className="inline-flex items-center gap-3 text-gray-300">
-              <LoaderCircle className="h-5 w-5 animate-spin text-blue-300" />
+            <div className="inline-flex items-center gap-3 text-[var(--secondary-foreground)]">
+              <LoaderCircle className="h-5 w-5 animate-spin text-[var(--accent)]" />
               Đang tải bài đăng...
             </div>
           </div>
         ) : visiblePosts.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-white/10 p-12 text-center text-gray-400">
+          <div className="rounded-2xl border border-dashed border-[var(--border)] p-12 text-center text-[var(--muted-foreground)]">
             {emptyStateMessage}
           </div>
         ) : (
