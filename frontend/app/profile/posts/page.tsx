@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AxiosError } from "axios";
-import { BadgeCheck, Edit, LoaderCircle } from "lucide-react";
+import { BadgeCheck, LoaderCircle } from "lucide-react";
 
 import { ProfilePostCard } from "@/components/post/ProfilePostCard";
 import { buildPostQuery, defaultPostFilter, type Post, type PostListData } from "@/lib/posts";
@@ -196,11 +196,6 @@ export default function ProfilePostsPage() {
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-5xl font-bold text-[var(--primary-foreground)]">
                   {displayName.charAt(0).toUpperCase()}
-                </div>
-              )}
-              {isOwnProfile && (
-                <div className="theme-surface-soft absolute bottom-2 right-2 flex h-10 w-10 items-center justify-center rounded-full border text-[var(--foreground)] backdrop-blur-md transition-colors hover:bg-[var(--surface-muted)]">
-                  <Edit className="h-4 w-4" />
                 </div>
               )}
             </div>
