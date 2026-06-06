@@ -39,6 +39,7 @@ export const authenticate: RequestHandler = async (req, _res, next) => {
         phone: true,
         role: true,
         status: true,
+        avatarUrl: true,
       },
     });
 

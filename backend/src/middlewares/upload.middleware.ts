@@ -37,3 +37,4 @@ export const postImageUpload = multer({
 });
 
 export const postImagesField = postImageUpload.array("images", maxFiles);
+export const avatarImageUpload = postImageUpload.single("avatar");

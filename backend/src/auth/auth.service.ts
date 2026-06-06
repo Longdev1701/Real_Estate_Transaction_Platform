@@ -4,6 +4,11 @@ import { UserRole, UserStatus } from "@prisma/client";
 
 import { AppError } from "../middlewares/error.middleware.js";
 import { prisma } from "../prisma/prisma.service.js";
+import {
+  deleteImageByUrl,
+  isManagedImageUrl,
+  uploadAvatarImage,
+} from "../services/upload.service.js";
 import { compareValue, hashValue } from "../utils/hash.js";
 import { sha256 } from "../utils/sha256.js";
 import {
@@ -28,15 +33,41 @@ type RefreshTokenInput = {
   refreshToken: string;
 };
 
+type UpdateProfileInput = {
+  fullName: string;
+  email: string;
+  phone?: string;
+};
+
+type ChangePasswordInput = {
+  currentPassword: string;
+  newPassword: string;
+};
+
 type AuthTokens = {
   accessToken: string;
   refreshToken: string;
 };
 
 type AuthResponse = {
-  user: Pick<User, "id" | "email" | "fullName" | "phone" | "role" | "status">;
+  user: Pick<User, "id" | "email" | "fullName" | "phone" | "role" | "status" | "avatarUrl">;
   tokens: AuthTokens;
 };
+
+type PublicUser = Pick<
+  User,
+  "id" | "email" | "fullName" | "phone" | "role" | "status" | "avatarUrl"
+>;
+
+const buildPublicUser = (user: User): PublicUser => ({
+  id: user.id,
+  email: user.email,
+  fullName: user.fullName,
+  phone: user.phone,
+  role: user.role,
+  status: user.status,
+  avatarUrl: user.avatarUrl,
+});
 
 const buildUserPayload = (user: User) => ({
   sub: user.id,
@@ -59,14 +90,7 @@ const buildAuthResponse = async (user: User): Promise<AuthResponse> => {
   });
 
   return {
-    user: {
-      id: user.id,
-      email: user.email,
-      fullName: user.fullName,
-      phone: user.phone,
-      role: user.role,
-      status: user.status,
-    },
+    user: buildPublicUser(user),
     tokens: {
       accessToken,
       refreshToken,
@@ -211,4 +235,111 @@ export const logout = async ({ refreshToken }: RefreshTokenInput) => {
   return {
     userId: matchedToken.userId,
   };
+};
+
+export const updateAvatar = async (userId: string, file: Express.Multer.File) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user) {
+    throw new AppError("User not found.", 404);
+  }
+
+  const avatarUrl = await uploadAvatarImage(userId, file);
+
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: { avatarUrl },
+  });
+
+  if (user.avatarUrl && isManagedImageUrl(user.avatarUrl)) {
+    await deleteImageByUrl(user.avatarUrl).catch(() => null);
+  }
+
+  return buildPublicUser(updatedUser);
+};
+
+export const removeAvatar = async (userId: string) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user) {
+    throw new AppError("User not found.", 404);
+  }
+
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: { avatarUrl: null },
+  });
+
+  if (user.avatarUrl && isManagedImageUrl(user.avatarUrl)) {
+    await deleteImageByUrl(user.avatarUrl).catch(() => null);
+  }
+
+  return buildPublicUser(updatedUser);
+};
+
+export const updateProfile = async (userId: string, input: UpdateProfileInput) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user) {
+    throw new AppError("User not found.", 404);
+  }
+
+  const normalizedEmail = input.email.trim().toLowerCase();
+  const normalizedPhone = input.phone?.trim() ? input.phone.trim() : null;
+
+  if (normalizedEmail !== user.email) {
+    const existingUser = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    if (existingUser && existingUser.id !== userId) {
+      throw new AppError("Email is already in use.", 409);
+    }
+  }
+
+  const updatedUser = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      fullName: input.fullName.trim(),
+      email: normalizedEmail,
+      phone: normalizedPhone,
+    },
+  });
+
+  return buildPublicUser(updatedUser);
+};
+
+export const changePassword = async (userId: string, input: ChangePasswordInput) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user) {
+    throw new AppError("User not found.", 404);
+  }
+
+  const isPasswordValid = await compareValue(input.currentPassword, user.passwordHash);
+
+  if (!isPasswordValid) {
+    throw new AppError("Current password is incorrect.", 400);
+  }
+
+  const isSamePassword = await compareValue(input.newPassword, user.passwordHash);
+
+  if (isSamePassword) {
+    throw new AppError("New password must be different from the current password.", 400);
+  }
+
+  const passwordHash = await hashValue(input.newPassword);
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash },
+  });
 };
