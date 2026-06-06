@@ -73,7 +73,7 @@ import { ReportPostDialog } from "@/components/post/ReportPostDialog";
 const PostDetailMap = dynamic(() => import("@/components/map/PostDetailMap"), {
   ssr: false,
   loading: () => (
-    <div className="h-[360px] bg-slate-950/40 flex items-center justify-center text-xs text-gray-400 rounded-xl border border-white/10 mt-2">
+    <div className="mt-2 flex h-[360px] items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] text-xs text-[var(--muted-foreground)]">
       Đang tải bản đồ...
     </div>
   ),
@@ -174,7 +174,7 @@ export default function PostDetailPage() {
       } catch (err) {
         const axiosError = err as AxiosError<{ message?: string }>;
         if (isMounted) {
-          setError(axiosError.response?.data?.message ?? "Khong the tai chi tiet bai dang.");
+          setError(axiosError.response?.data?.message ?? "Không thể tải chi tiết bài đăng.");
         }
       } finally {
         if (isMounted) {
@@ -298,7 +298,7 @@ export default function PostDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!window.confirm("Xoa bai dang nay?")) {
+    if (!window.confirm("Xóa bài đăng này?")) {
       return;
     }
 
@@ -309,7 +309,7 @@ export default function PostDetailPage() {
       router.refresh();
     } catch (err) {
       const axiosError = err as AxiosError<{ message?: string }>;
-      setError(axiosError.response?.data?.message ?? "Khong the xoa bai dang.");
+      setError(axiosError.response?.data?.message ?? "Không thể xóa bài đăng.");
     } finally {
       setIsDeleting(false);
     }
@@ -362,9 +362,9 @@ export default function PostDetailPage() {
   if (isLoading) {
     return (
       <div className="container mx-auto flex min-h-[60vh] items-center justify-center px-4 py-10 lg:px-8">
-        <div className="inline-flex items-center gap-3 text-gray-300">
-          <LoaderCircle className="h-5 w-5 animate-spin text-blue-300" />
-          Dang tai chi tiet bai dang...
+        <div className="inline-flex items-center gap-3 text-[var(--secondary-foreground)]">
+          <LoaderCircle className="h-5 w-5 animate-spin text-[var(--accent)]" />
+          Đang tải chi tiết bài đăng...
         </div>
       </div>
     );
@@ -374,7 +374,7 @@ export default function PostDetailPage() {
     return (
       <div className="container mx-auto px-4 py-10 lg:px-8">
         <div className="glass-card p-8 text-center">
-          <p className="text-lg text-red-200">{error}</p>
+          <p className="text-lg text-[var(--danger-foreground)]">{error}</p>
           <button type="button" onClick={() => router.push("/posts")} className="btn-primary mt-6">
             Quay lai danh sach
           </button>
@@ -390,27 +390,27 @@ export default function PostDetailPage() {
   if (isBannedOwnerView) {
     return (
       <div className="container mx-auto space-y-6 px-4 pt-8 pb-20 lg:px-8 lg:py-10">
-        <div className="flex flex-wrap items-center gap-2 text-sm text-gray-400">
-          <Link href="/" className="transition hover:text-white">
+        <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--muted-foreground)]">
+          <Link href="/" className="transition hover:text-[var(--foreground)]">
             Trang chủ
           </Link>
           <span>/</span>
-          <Link href="/posts" className="transition hover:text-white">
+          <Link href="/posts" className="transition hover:text-[var(--foreground)]">
             Bài đăng
           </Link>
           <span>/</span>
-          <span className="text-white">Bài đăng bị khóa</span>
+          <span className="text-[var(--foreground)]">Bài đăng bị khóa</span>
         </div>
 
-        <div className="mx-auto max-w-4xl rounded-[32px] border border-red-400/20 bg-[linear-gradient(180deg,rgba(127,29,29,0.32),rgba(8,18,36,0.96))] p-6 shadow-[0_24px_80px_rgba(127,29,29,0.25)] md:p-8">
-          <div className="rounded-3xl border border-red-400/20 bg-slate-950/50 p-6 md:p-8">
+        <div className="mx-auto max-w-4xl rounded-[32px] border border-[var(--post-banned-shell-border)] bg-[image:var(--post-banned-shell)] p-6 shadow-[0_24px_80px_var(--shadow-glow)] md:p-8">
+          <div className="theme-surface-strong rounded-3xl border border-[var(--danger-border)] p-6 md:p-8">
             <div className="mx-auto max-w-2xl text-center">
-              <span className="inline-flex items-center gap-2 rounded-full border border-red-400/30 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-200">
+              <span className="inline-flex items-center gap-2 rounded-full border border-[var(--danger-border)] bg-[var(--danger-soft)] px-4 py-2 text-sm font-semibold text-[var(--danger-foreground)]">
                 <ShieldAlert className="h-4 w-4" />
                 Bài đăng đã bị khóa do vi phạm
               </span>
-              <h1 className="mt-5 text-3xl font-bold text-white md:text-4xl">Thông tin bài đăng đang bị ẩn để chờ xử lý</h1>
-              <p className="mt-4 text-sm leading-7 text-gray-300 md:text-base">
+              <h1 className="mt-5 text-3xl font-bold text-[var(--foreground)] md:text-4xl">Thông tin bài đăng đang bị ẩn để chờ xử lý</h1>
+              <p className="mt-4 text-sm leading-7 text-[var(--secondary-foreground)] md:text-base">
                 Để bảo vệ trải nghiệm chung của người dùng, chúng tôi tạm thời ẩn toàn bộ nội dung
                 của bài đăng này khỏi nền tảng. Nếu bạn cho rằng việc xử lý là chưa chính xác,
                 bạn có thể gửi khiếu nại kèm bằng chứng để đội ngũ quản trị xem xét lại.
@@ -418,22 +418,22 @@ export default function PostDetailPage() {
             </div>
 
             <div className="mt-8 grid gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border border-red-400/20 bg-red-500/10 p-5">
-                <p className="text-sm font-semibold uppercase tracking-wide text-red-200">Lý do bị khóa</p>
-                <p className="mt-3 text-lg font-semibold text-white">{post.banContext?.reason || "Nội dung vi phạm chính sách hiển thị."}</p>
-                <p className="mt-3 text-sm leading-6 text-red-100/85">
+              <div className="rounded-2xl border border-[var(--danger-border)] bg-[var(--danger-soft)] p-5">
+                <p className="text-sm font-semibold uppercase tracking-wide text-[var(--danger-foreground)]">Lý do bị khóa</p>
+                <p className="mt-3 text-lg font-semibold text-[var(--foreground)]">{post.banContext?.reason || "Nội dung vi phạm chính sách hiển thị."}</p>
+                <p className="mt-3 text-sm leading-6 text-[var(--secondary-foreground)]">
                   {post.banContext?.description || "Bài đăng bị đánh giá là có dấu hiệu vi phạm nội dung hoặc thông tin không phù hợp với chính sách của nền tảng."}
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-blue-400/20 bg-blue-500/10 p-5">
-                <p className="text-sm font-semibold uppercase tracking-wide text-blue-200">Trạng thái khiếu nại</p>
-                <p className="mt-3 text-lg font-semibold text-white">
+              <div className="rounded-2xl border border-[var(--info-border)] bg-[var(--info-soft)] p-5">
+                <p className="text-sm font-semibold uppercase tracking-wide text-[var(--info-foreground)]">Trạng thái khiếu nại</p>
+                <p className="mt-3 text-lg font-semibold text-[var(--foreground)]">
                   {post.banContext?.appealStatus === "PENDING"
                     ? "Đã gửi khiếu nại, chờ admin xem xét"
                     : "Chưa gửi khiếu nại"}
                 </p>
-                <p className="mt-3 text-sm leading-6 text-blue-100/85">
+                <p className="mt-3 text-sm leading-6 text-[var(--secondary-foreground)]">
                   {post.banContext?.appealStatus === "PENDING"
                     ? "Yêu cầu khiếu nại của bạn đã nằm trong hàng đợi báo cáo của admin."
                     : "Hãy chuẩn bị mô tả rõ ràng và bằng chứng cụ thể để tăng khả năng được xem xét lại."}
@@ -446,7 +446,7 @@ export default function PostDetailPage() {
                 type="button"
                 onClick={() => setIsAppealDialogOpen(true)}
                 disabled={post.banContext?.appealStatus === "PENDING"}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60"
+                className="theme-button-danger-solid inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <AlertTriangle className="h-4 w-4" />
                 {post.banContext?.appealStatus === "PENDING" ? "Đã gửi khiếu nại" : "Khiếu nại quyết định khóa bài"}
@@ -454,7 +454,7 @@ export default function PostDetailPage() {
               <button
                 type="button"
                 onClick={() => router.push("/profile/posts")}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-medium text-gray-200 transition hover:bg-white/10"
+                className="theme-surface-soft inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-medium text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)]"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Quay lại bài đăng của tôi
@@ -478,20 +478,20 @@ export default function PostDetailPage() {
 
   return (
     <div className="container mx-auto space-y-6 px-4 pt-8 pb-28 lg:px-8 lg:py-10">
-      <div className="flex flex-wrap items-center gap-2 text-sm text-gray-400">
-        <Link href="/" className="transition hover:text-white">
+      <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--muted-foreground)]">
+        <Link href="/" className="transition hover:text-[var(--foreground)]">
           Trang chủ
         </Link>
         <span>/</span>
-        <Link href="/posts" className="transition hover:text-white">
+        <Link href="/posts" className="transition hover:text-[var(--foreground)]">
           Bài đăng
         </Link>
         <span>/</span>
-        <span className="text-white">{post.title}</span>
+        <span className="text-[var(--foreground)]">{post.title}</span>
       </div>
 
       {error && (
-        <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
+        <div className="theme-badge-danger rounded-2xl p-4 text-sm">
           {error}
         </div>
       )}
@@ -516,14 +516,14 @@ export default function PostDetailPage() {
                   }}
                 />
 
-                <div className="absolute left-4 top-4 rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white pointer-events-none shadow-md">
+                <div className="pointer-events-none absolute left-4 top-4 rounded-full bg-[var(--accent)] px-3 py-1 text-xs font-semibold text-[var(--primary-foreground)] shadow-md">
                   {postTypeLabels[post.postType]}
                 </div>
 
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); setIsFullscreen(true); }}
-                  className="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-slate-950/50 text-white opacity-0 transition-all duration-300 group-hover:opacity-100 hover:bg-slate-950/80 hover:scale-110 backdrop-blur-sm"
+                  className="theme-surface-strong absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground)] opacity-0 transition-all duration-300 group-hover:opacity-100 hover:bg-[var(--surface-muted)] hover:scale-110 backdrop-blur-sm"
                   title="Phóng to ảnh"
                 >
                   <Expand className="h-5 w-5" />
@@ -533,7 +533,7 @@ export default function PostDetailPage() {
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); setIsFullscreen(true); }}
-                    className="rounded-xl border border-white/20 bg-slate-950/60 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-slate-950/80 backdrop-blur-sm"
+                    className="theme-surface-strong rounded-xl border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--foreground)] transition-all hover:bg-[var(--surface-muted)] backdrop-blur-sm"
                   >
                     Ảnh ({images.length})
                   </button>
@@ -544,14 +544,14 @@ export default function PostDetailPage() {
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); setSelectedImage((current) => (current === 0 ? images.length - 1 : current - 1)); }}
-                      className="absolute left-4 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-slate-950/50 text-white opacity-0 transition-all duration-300 group-hover:opacity-100 hover:bg-slate-950/80 hover:scale-110 backdrop-blur-sm"
+                      className="theme-surface-strong absolute left-4 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground)] opacity-0 transition-all duration-300 group-hover:opacity-100 hover:bg-[var(--surface-muted)] hover:scale-110 backdrop-blur-sm"
                     >
                       <ChevronLeft className="h-6 w-6" />
                     </button>
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); setSelectedImage((current) => (current === images.length - 1 ? 0 : current + 1)); }}
-                      className="absolute right-4 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-slate-950/50 text-white opacity-0 transition-all duration-300 group-hover:opacity-100 hover:bg-slate-950/80 hover:scale-110 backdrop-blur-sm"
+                      className="theme-surface-strong absolute right-4 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground)] opacity-0 transition-all duration-300 group-hover:opacity-100 hover:bg-[var(--surface-muted)] hover:scale-110 backdrop-blur-sm"
                     >
                       <ChevronRight className="h-6 w-6" />
                     </button>
@@ -571,7 +571,7 @@ export default function PostDetailPage() {
                         key={image.id}
                         type="button"
                         onClick={() => { setSelectedImage(actualIndex); setIsFullscreen(true); }}
-                        className="relative overflow-hidden w-full h-full group bg-slate-900"
+                        className="relative h-full w-full overflow-hidden bg-[var(--surface)] group"
                       >
                         <img
                           src={image.imageUrl}
@@ -582,10 +582,10 @@ export default function PostDetailPage() {
                             event.currentTarget.src = imageFallback;
                           }}
                         />
-                        <div className="absolute inset-0 bg-slate-950/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                        <div className="theme-overlay-dim absolute inset-0 pointer-events-none opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
                         {index === 3 && images.length > 5 && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-slate-950/60 text-3xl font-semibold text-white transition hover:bg-slate-950/80">
+                          <div className="theme-overlay-strong absolute inset-0 flex items-center justify-center text-3xl font-semibold text-[var(--foreground)] transition hover:bg-[var(--media-overlay-strong)]">
                             +{images.length - 5}
                           </div>
                         )}
@@ -602,17 +602,17 @@ export default function PostDetailPage() {
               <div>
                 <div className="mb-3 flex flex-wrap items-center gap-3">
                   <h1 className="text-4xl font-bold tracking-tight text-white break-words">{post.title}</h1>
-                  <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-sm font-medium text-emerald-300">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-[var(--success-border)] bg-[var(--success-soft)] px-3 py-1 text-sm font-medium text-[var(--success-foreground)]">
                     <BadgeCheck className="h-4 w-4" />
                     Đã xác thực
                   </span>
                 </div>
-                <div className="flex flex-wrap items-center gap-3 text-sm text-gray-400">
+                <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--muted-foreground)]">
                   <span className="inline-flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-blue-300" />
+                    <MapPin className="h-4 w-4 text-[var(--accent)]" />
                     {formatLocation(post)}
                   </span>
-                  <span className="text-blue-300">Xem trên bản đồ</span>
+                  <span className="text-[var(--accent)]">Xem trên bản đồ</span>
                 </div>
               </div>
 
@@ -621,17 +621,17 @@ export default function PostDetailPage() {
                   type="button"
                   onClick={handleSaveToggle}
                   disabled={isSaveSubmitting}
-                  className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-gray-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="theme-surface-soft inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <Bookmark className={`h-4 w-4 ${post.isSaved ? "fill-blue-400 text-blue-400" : "text-blue-300"}`} />
+                  <Bookmark className={`h-4 w-4 ${post.isSaved ? "fill-[var(--accent)] text-[var(--accent)]" : "text-[var(--accent)]"}`} />
                   {post.isSaved ? "Đã lưu" : "Lưu"}
                 </button>
-                <button type="button" className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-gray-200 transition hover:bg-white/10">
-                  <Building2 className="h-4 w-4 text-blue-300" />
+                <button type="button" className="theme-surface-soft inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)]">
+                  <Building2 className="h-4 w-4 text-[var(--accent)]" />
                   So sánh
                 </button>
-                <button type="button" className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-gray-200 transition hover:bg-white/10">
-                  <Share2 className="h-4 w-4 text-blue-300" />
+                <button type="button" className="theme-surface-soft inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)]">
+                  <Share2 className="h-4 w-4 text-[var(--accent)]" />
                   Chia sẻ
                 </button>
                 {!isOwnPost ? (
@@ -645,93 +645,93 @@ export default function PostDetailPage() {
                   </button>
                 ) : null}
                 {conversationError ? (
-                  <p className="rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+                  <p className="rounded-xl border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-2 text-sm text-[var(--danger-foreground)]">
                     {conversationError}
                   </p>
                 ) : null}
               </div>
             </div>
 
-            <div className="mt-6 flex flex-wrap items-start gap-x-8 gap-y-6 md:gap-x-12 border-b border-white/10 pb-6">
+            <div className="mt-6 flex flex-wrap items-start gap-x-8 gap-y-6 border-b border-[var(--border)] pb-6 md:gap-x-12">
               <div className="shrink-0">
-                <p className="text-3xl sm:text-4xl font-semibold text-blue-300 break-words">{formatPrice(post.price)}</p>
-                <p className="mt-1 text-sm text-gray-400">Giá đăng bài</p>
+                <p className="break-words text-3xl font-semibold text-[var(--accent)] sm:text-4xl">{formatPrice(post.price)}</p>
+                <p className="mt-1 text-sm text-[var(--muted-foreground)]">Giá đăng bài</p>
               </div>
               <div className="shrink-0">
                 <p className="inline-flex items-center gap-2 text-2xl font-semibold text-white break-words">
-                  <Expand className="h-5 w-5 text-blue-300 shrink-0" />
+                  <Expand className="h-5 w-5 shrink-0 text-[var(--accent)]" />
                   {formatArea(post.area)}
                 </p>
-                <p className="mt-1 text-sm text-gray-400">Diện tích</p>
+                <p className="mt-1 text-sm text-[var(--muted-foreground)]">Diện tích</p>
               </div>
               <div className="shrink-0">
                 <p className="text-2xl font-semibold text-white break-words">{propertyTypeLabels[post.propertyType]}</p>
-                <p className="mt-1 text-sm text-gray-400">Loại hình</p>
+                <p className="mt-1 text-sm text-[var(--muted-foreground)]">Loại hình</p>
               </div>
               <div className="shrink-0">
                 <p className="text-2xl font-semibold text-white break-words">{postTypeLabels[post.postType]}</p>
-                <p className="mt-1 text-sm text-gray-400">Loại tin</p>
+                <p className="mt-1 text-sm text-[var(--muted-foreground)]">Loại tin</p>
               </div>
               <div className="shrink-0">
                 <p className="text-2xl font-semibold text-white break-words">{post.city.replace(/^(Tỉnh|Thành phố)\s+/i, "")}</p>
-                <p className="mt-1 text-sm text-gray-400">Khu vực</p>
+                <p className="mt-1 text-sm text-[var(--muted-foreground)]">Khu vực</p>
               </div>
             </div>
 
             <div className="mt-6 grid gap-8 xl:grid-cols-[minmax(0,1fr)_420px]">
               <div>
-                <h2 className="text-2xl font-semibold text-white">Mô tả chi tiết</h2>
-                <p className="mt-4 whitespace-pre-line leading-8 text-gray-300 break-words">{post.description}</p>
+                <h2 className="text-2xl font-semibold text-[var(--foreground)]">Mô tả chi tiết</h2>
+                <p className="mt-4 whitespace-pre-line break-words leading-8 text-[var(--secondary-foreground)]">{post.description}</p>
               </div>
 
-              <div className="border-t border-white/10 pt-6 xl:border-l xl:border-t-0 xl:pl-8 xl:pt-0">
-                <h2 className="text-2xl font-semibold text-white">Thông tin chi tiết</h2>
+              <div className="border-t border-[var(--border)] pt-6 xl:border-l xl:border-t-0 xl:pl-8 xl:pt-0">
+                <h2 className="text-2xl font-semibold text-[var(--foreground)]">Thông tin chi tiết</h2>
                 <dl className="mt-5 grid gap-4 sm:grid-cols-2">
                   <div>
-                    <dt className="flex items-center gap-2 text-sm text-gray-400">
+                    <dt className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
                       <Hash className="h-4 w-4" /> Mã tin
                     </dt>
-                    <dd className="mt-1 flex items-center gap-2 font-medium text-white break-all">
+                    <dd className="mt-1 flex items-center gap-2 break-all font-medium text-[var(--foreground)]">
                       #{post.id.slice(-8).toUpperCase()}
                       <button
                         onClick={handleCopyId}
-                        className="inline-flex h-6 w-6 items-center justify-center rounded bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white transition-colors"
+                        className="theme-surface-soft inline-flex h-6 w-6 items-center justify-center rounded text-[var(--muted-foreground)] transition-colors hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
                         title="Copy mã tin"
                       >
-                        {isCopied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                        {isCopied ? <Check className="h-3.5 w-3.5 text-[var(--success-foreground)]" /> : <Copy className="h-3.5 w-3.5" />}
                       </button>
                     </dd>
                   </div>
                   <div>
-                    <dt className="flex items-center gap-2 text-sm text-gray-400">
+                    <dt className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
                       <User className="h-4 w-4" /> Người đăng
                     </dt>
-                    <dd className="mt-1 font-medium text-white break-words">{post.author.fullName}</dd>
+                    <dd className="mt-1 break-words font-medium text-[var(--foreground)]">{post.author.fullName}</dd>
                   </div>
                   <div>
-                    <dt className="flex items-center gap-2 text-sm text-gray-400">
+                    <dt className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
                       <MapPin className="h-4 w-4" /> Địa chỉ
                     </dt>
-                    <dd className="mt-1 font-medium text-white break-words">{post.address}</dd>
+                    <dd className="mt-1 break-words font-medium text-[var(--foreground)]">{post.address}</dd>
                   </div>
                   <div>
-                    <dt className="flex items-center gap-2 text-sm text-gray-400">
+                    <dt className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
                       <Map className="h-4 w-4" /> Quận / huyện
                     </dt>
-                    <dd className="mt-1 font-medium text-white break-words">{post.district}</dd>
+                    <dd className="mt-1 break-words font-medium text-[var(--foreground)]">{post.district}</dd>
                   </div>
                   <div>
-                    <dt className="flex items-center gap-2 text-sm text-gray-400">
+                    <dt className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
                       <Map className="h-4 w-4" /> Tỉnh / thành
                     </dt>
-                    <dd className="mt-1 font-medium text-white break-words">{post.city}</dd>
+                    <dd className="mt-1 break-words font-medium text-[var(--foreground)]">{post.city}</dd>
                   </div>
                   <div>
-                    <dt className="flex items-center gap-2 text-sm text-gray-400">
+                    <dt className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
                       <Activity className="h-4 w-4" /> Trạng thái
                     </dt>
                     <dd className="mt-1">
-                      <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusColors[post.status] || "bg-gray-500/10 text-gray-300 border-gray-500/20"}`}>
+                      <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusColors[post.status] || "border-[var(--border)] bg-[var(--surface-muted)] text-[var(--secondary-foreground)]"}`}>
                         {statusLabels[post.status] || post.status}
                       </span>
                     </dd>
@@ -743,14 +743,14 @@ export default function PostDetailPage() {
 
           {post.features && post.features.length > 0 && (
             <div className="glass-card p-6">
-              <h2 className="text-2xl font-semibold text-white">Tiện ích & Đặc trưng</h2>
+              <h2 className="text-2xl font-semibold text-[var(--foreground)]">Tiện ích & Đặc trưng</h2>
               <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {post.features.map((feature) => (
                   <div
                     key={feature.id}
-                    className="flex items-center gap-3 rounded-2xl border border-white/5 bg-slate-950/20 p-3.5 text-gray-200 transition-all duration-300 hover:bg-slate-900/40 hover:border-white/10"
+                    className="theme-surface-muted flex items-center gap-3 rounded-2xl p-3.5 text-[var(--secondary-foreground)] transition-all duration-300 hover:border-[var(--accent-border)] hover:bg-[var(--surface)]"
                   >
-                    <div className="rounded-xl bg-blue-500/10 p-2 text-blue-400">
+                    <div className="rounded-xl bg-[var(--accent-soft)] p-2 text-[var(--accent)]">
                       <FeatureIcon name={feature.icon || "help-circle"} className="h-5 w-5" />
                     </div>
                     <span className="text-sm font-medium">{feature.name}</span>
@@ -761,8 +761,8 @@ export default function PostDetailPage() {
           )}
 
           <div className="glass-card overflow-hidden p-0">
-            <div className="border-b border-white/10 px-6 py-4">
-              <h2 className="text-2xl font-semibold text-white">Vị trí trên bản đồ</h2>
+            <div className="border-b border-[var(--border)] px-6 py-4">
+              <h2 className="text-2xl font-semibold text-[var(--foreground)]">Vị trí trên bản đồ</h2>
             </div>
             <div className="h-[360px] w-full relative">
               <PostDetailMap
@@ -778,16 +778,16 @@ export default function PostDetailPage() {
         <aside className="space-y-5">
           <div className="lg:sticky lg:top-24 space-y-5">
             {canManagePost ? (
-              <div className="glass-card p-6 border-t-4 border-t-blue-500 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-blue-500/20 to-transparent pointer-events-none" />
-                <h2 className="text-xl font-semibold text-white relative">Quản lý bài đăng</h2>
-                <p className="text-sm text-gray-400 mt-2 relative">
+              <div className="glass-card relative overflow-hidden border-t-4 border-t-[var(--accent)] p-6">
+                <div className="pointer-events-none absolute left-0 top-0 h-24 w-full bg-gradient-to-b from-[var(--accent-soft)] to-transparent" />
+                <h2 className="relative text-xl font-semibold text-[var(--foreground)]">Quản lý bài đăng</h2>
+                <p className="relative mt-2 text-sm text-[var(--muted-foreground)]">
                   Bạn là người sở hữu bài đăng này. Bạn có quyền chỉnh sửa thông tin hoặc xoá bài viết.
                 </p>
                 <div className="mt-6 grid gap-3 sm:grid-cols-2 relative">
                   <Link
                     href={`/posts/${post.id}/edit`}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-medium text-gray-100 transition hover:bg-white/10"
+                    className="theme-surface-soft inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 font-medium text-[var(--foreground)] transition hover:bg-[var(--surface-muted)]"
                   >
                     <Pencil className="h-4 w-4" />
                     Chỉnh sửa
@@ -796,7 +796,7 @@ export default function PostDetailPage() {
                     type="button"
                     onClick={handleDelete}
                     disabled={isDeleting}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 font-medium text-red-200 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--danger-border)] bg-[var(--danger-soft)] px-4 py-3 font-medium text-[var(--danger-foreground)] transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <Trash2 className="h-4 w-4" />
                     {isDeleting ? "Đang xoá..." : "Xoá bài"}
@@ -804,25 +804,25 @@ export default function PostDetailPage() {
                 </div>
               </div>
             ) : (
-              <div className="glass-card p-6 border-t-4 border-t-blue-500 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-blue-500/20 to-transparent pointer-events-none" />
-                <h2 className="text-xl font-semibold text-white relative">Liên hệ người bán</h2>
+              <div className="glass-card relative overflow-hidden border-t-4 border-t-[var(--accent)] p-6">
+                <div className="pointer-events-none absolute left-0 top-0 h-24 w-full bg-gradient-to-b from-[var(--accent-soft)] to-transparent" />
+                <h2 className="relative text-xl font-semibold text-[var(--foreground)]">Liên hệ người bán</h2>
                 <div className="mt-5 flex items-center gap-4 relative">
                   <div className="relative shrink-0">
-                    <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border-2 border-blue-500 bg-blue-500/10 text-xl font-semibold text-blue-200">
+                    <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border-2 border-[var(--accent-border)] bg-[var(--accent-soft)] text-xl font-semibold text-[var(--accent)]">
                       {post.author.avatarUrl ? (
                         <img src={post.author.avatarUrl} alt={post.author.fullName} className="h-full w-full object-cover" />
                       ) : (
                         post.author.fullName.charAt(0).toUpperCase()
                       )}
                     </div>
-                    <div className="absolute -bottom-1 -right-1 rounded-full bg-slate-900 p-1">
-                      <BadgeCheck className="h-4 w-4 text-blue-500" />
+                    <div className="absolute -bottom-1 -right-1 rounded-full bg-[var(--surface)] p-1">
+                      <BadgeCheck className="h-4 w-4 text-[var(--accent)]" />
                     </div>
                   </div>
                   <div>
-                    <p className="text-lg font-bold text-white line-clamp-1">{post.author.fullName}</p>
-                    <p className="text-sm text-gray-400 mt-1">Hoạt động gần đây</p>
+                      <p className="line-clamp-1 text-lg font-bold text-[var(--foreground)]">{post.author.fullName}</p>
+                    <p className="mt-1 text-sm text-[var(--muted-foreground)]">Hoạt động gần đây</p>
                   </div>
                 </div>
 
@@ -831,40 +831,40 @@ export default function PostDetailPage() {
                     type="button"
                     onClick={handleMessageClick}
                     disabled={isStartingConversation}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 py-3 font-semibold text-white transition hover:bg-blue-500 disabled:opacity-60 shadow-[0_0_15px_rgba(37,99,235,0.25)]"
+                    className="theme-button-primary flex w-full items-center justify-center gap-2 rounded-xl py-3 font-semibold transition disabled:opacity-60"
                   >
-                    <MessageCircle className="h-4.5 w-4.5 text-blue-100" />
+                    <MessageCircle className="h-4.5 w-4.5 text-[var(--primary-foreground)]" />
                     {isStartingConversation ? "Đang kết nối..." : "Nhắn tin trao đổi"}
                   </button>
                   <div className="flex gap-2">
                     <a
                       href={post.author.phone ? `tel:${post.author.phone}` : `mailto:${post.author.email}`}
-                      className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-600/10 py-2.5 text-xs font-semibold text-emerald-400 transition hover:bg-emerald-600/25"
+                      className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[var(--success-border)] bg-[var(--success-soft)] py-2.5 text-xs font-semibold text-[var(--success-foreground)] transition hover:brightness-95"
                     >
                       <Phone className="h-4.5 w-4.5" />
                       Gọi điện
                     </a>
                     <a
                       href={`mailto:${post.author.email}`}
-                      className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2.5 text-xs font-medium text-gray-200 transition hover:bg-white/10"
+                      className="theme-surface-soft flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-medium text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)]"
                     >
-                      <Mail className="h-4.5 w-4.5 text-gray-400" />
+                      <Mail className="h-4.5 w-4.5 text-[var(--muted-foreground)]" />
                       Email
                     </a>
                   </div>
                   {conversationError && (
-                    <p className="mt-2 text-xs rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-red-200">
+                    <p className="mt-2 rounded-xl border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-2 text-xs text-[var(--danger-foreground)]">
                       {conversationError}
                     </p>
                   )}
                 </div>
 
-                <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4 relative">
-                  <div className="mb-3 flex items-center gap-2 text-white">
-                    <ShieldCheck className="h-5 w-5 text-emerald-400" />
+                <div className="theme-surface-soft relative mt-6 rounded-2xl p-4">
+                  <div className="mb-3 flex items-center gap-2 text-[var(--foreground)]">
+                    <ShieldCheck className="h-5 w-5 text-[var(--success-foreground)]" />
                     <h3 className="font-semibold text-sm">Giao dịch an toàn</h3>
                   </div>
-                  <ul className="space-y-1.5 text-xs text-gray-300">
+                  <ul className="space-y-1.5 text-xs text-[var(--secondary-foreground)]">
                     <li>• Không chuyển khoản trước khi xem nhà.</li>
                     <li>• Kiểm tra giấy tờ và thông tin người đăng.</li>
                     <li>• Liên hệ trực tiếp qua kênh chính thống.</li>
@@ -875,22 +875,22 @@ export default function PostDetailPage() {
 
             <div className="glass-card p-6">
               <div className="mb-5 flex items-center justify-between gap-3">
-                <h2 className="text-2xl font-semibold text-white">Bất động sản tương tự</h2>
-                <Link href="/posts" className="text-sm font-medium text-blue-300 transition hover:text-blue-200">
+                <h2 className="text-2xl font-semibold text-[var(--foreground)]">Bất động sản tương tự</h2>
+                <Link href="/posts" className="text-sm font-medium text-[var(--accent)] transition hover:brightness-110">
                   Xem tất cả
                 </Link>
               </div>
 
               <div className="space-y-4">
                 {relatedPosts.length === 0 ? (
-                  <div className="flex min-h-[200px] items-center justify-center rounded-2xl border border-dashed border-white/10">
-                    <p className="text-sm text-gray-400">Chưa có bài đăng tương tự.</p>
+                  <div className="flex min-h-[200px] items-center justify-center rounded-2xl border border-dashed border-[var(--border)]">
+                    <p className="text-sm text-[var(--muted-foreground)]">Chưa có bài đăng tương tự.</p>
                   </div>) : (
                   relatedPosts.map((item) => (
                     <Link
                       key={item.id}
                       href={`/posts/${item.id}`}
-                      className="flex gap-3 rounded-2xl border border-transparent p-1 transition hover:border-white/10 hover:bg-white/5"
+                      className="flex gap-3 rounded-2xl border border-transparent p-1 transition hover:border-[var(--accent-border)] hover:bg-[var(--surface-muted)]"
                     >
                       <img
                         src={item.images[0]?.imageUrl || imageFallback}
@@ -899,11 +899,11 @@ export default function PostDetailPage() {
                         className="h-24 w-28 rounded-2xl object-cover"
                       />
                       <div className="min-w-0 flex-1">
-                        <p className="line-clamp-2 font-medium text-white">{item.title}</p>
-                        <p className="mt-1 text-sm text-gray-400">{formatLocation(item)}</p>
+                        <p className="line-clamp-2 font-medium text-[var(--foreground)]">{item.title}</p>
+                        <p className="mt-1 text-sm text-[var(--muted-foreground)]">{formatLocation(item)}</p>
                         <div className="mt-2 flex items-center justify-between gap-3">
-                          <span className="font-semibold text-blue-300">{formatPrice(item.price)}</span>
-                          <span className="text-sm text-gray-400">{formatArea(item.area)}</span>
+                          <span className="font-semibold text-[var(--accent)]">{formatPrice(item.price)}</span>
+                          <span className="text-sm text-[var(--muted-foreground)]">{formatArea(item.area)}</span>
                         </div>
                       </div>
                     </Link>
@@ -915,7 +915,7 @@ export default function PostDetailPage() {
             <button
               type="button"
               onClick={() => router.push("/posts")}
-              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-gray-200 transition hover:bg-white/10"
+              className="theme-surface-soft inline-flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)]"
             >
               <ArrowLeft className="h-4 w-4" />
               Quay lại danh sách
@@ -925,10 +925,10 @@ export default function PostDetailPage() {
       </div>
 
       {isFullscreen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-sm">
+        <div className="theme-overlay-strong fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm">
           <button
             onClick={() => setIsFullscreen(false)}
-            className="absolute top-6 right-6 text-white/70 hover:text-white bg-white/10 p-2 rounded-full transition z-10"
+            className="theme-surface-soft absolute right-6 top-6 z-10 rounded-full p-2 text-[var(--secondary-foreground)] transition hover:text-[var(--foreground)]"
           >
             <X className="w-6 h-6" />
           </button>
@@ -936,7 +936,7 @@ export default function PostDetailPage() {
           {images.length > 1 && (
             <button
               onClick={() => setSelectedImage((current) => (current === 0 ? images.length - 1 : current - 1))}
-              className="absolute left-4 sm:left-8 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition z-10"
+              className="theme-surface-soft absolute left-4 top-1/2 z-10 rounded-full p-3 text-[var(--foreground)] transition hover:bg-[var(--surface-muted)] sm:left-8"
             >
               <ChevronLeft className="w-8 h-8" />
             </button>
@@ -951,13 +951,13 @@ export default function PostDetailPage() {
           {images.length > 1 && (
             <button
               onClick={() => setSelectedImage((current) => (current === images.length - 1 ? 0 : current + 1))}
-              className="absolute right-4 sm:right-8 top-1/2 -translate-y-1/2 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition z-10"
+              className="theme-surface-soft absolute right-4 top-1/2 z-10 rounded-full p-3 text-[var(--foreground)] transition hover:bg-[var(--surface-muted)] sm:right-8"
             >
               <ChevronRight className="w-8 h-8" />
             </button>
           )}
 
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-black/50 px-4 py-2 rounded-full text-white text-sm z-10">
+          <div className="theme-overlay-dim absolute bottom-6 left-1/2 z-10 -translate-x-1/2 rounded-full px-4 py-2 text-sm text-white">
             {selectedImage + 1} / {images.length}
           </div>
         </div>
@@ -974,14 +974,14 @@ export default function PostDetailPage() {
 
       {/* Mobile Bottom Action Bar */}
       {!isOwnPost && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center gap-3 border-t border-white/10 bg-slate-950/90 p-4 pb-6 backdrop-blur-xl lg:hidden shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+        <div className="theme-bottom-bar fixed bottom-0 left-0 right-0 z-40 flex items-center gap-3 p-4 pb-6 backdrop-blur-xl lg:hidden">
           <button
             type="button"
             onClick={handleSaveToggle}
             disabled={isSaveSubmitting}
-            className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-gray-200 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+            className="theme-surface-soft inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <Bookmark className={`h-5 w-5 ${post.isSaved ? "fill-blue-400 text-blue-400" : "text-blue-300"}`} />
+            <Bookmark className={`h-5 w-5 ${post.isSaved ? "fill-[var(--accent)] text-[var(--accent)]" : "text-[var(--accent)]"}`} />
           </button>
           <button
             type="button"
@@ -994,14 +994,14 @@ export default function PostDetailPage() {
             type="button"
             onClick={handleMessageClick}
             disabled={isStartingConversation}
-            className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 font-medium text-white transition hover:bg-white/10 disabled:opacity-60"
+            className="theme-surface-soft inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl font-medium text-[var(--foreground)] transition hover:bg-[var(--surface-muted)] disabled:opacity-60"
           >
             <MessageCircle className="h-5 w-5" />
             {isStartingConversation ? "Đang kết nối..." : "Nhắn tin"}
           </button>
           <a
             href={post.author.phone ? `tel:${post.author.phone}` : `mailto:${post.author.email}`}
-            className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 font-bold text-white shadow-[0_0_15px_rgba(5,150,105,0.3)] transition hover:bg-emerald-500"
+            className="theme-button-success inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl font-bold transition"
           >
             <Phone className="h-5 w-5" />
             Gọi điện

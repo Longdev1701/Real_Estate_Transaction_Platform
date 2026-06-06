@@ -149,7 +149,7 @@ import dynamic from "next/dynamic";
 const CreatePostMap = dynamic(() => import("@/components/map/CreatePostMap"), {
   ssr: false,
   loading: () => (
-    <div className="h-[220px] bg-slate-950/40 flex items-center justify-center text-xs text-gray-400 rounded-xl border border-white/10 mt-2">
+    <div className="theme-post-gallery mt-2 flex h-[220px] items-center justify-center rounded-xl text-xs text-[var(--muted-foreground)]">
       Đang tải bản đồ...
     </div>
   ),
@@ -701,8 +701,8 @@ export default function CreatePostPage() {
     <div className="container mx-auto px-4 py-4 lg:px-6 lg:py-6 lg:h-[calc(100vh-5.5rem)] lg:overflow-hidden flex flex-col">
       {/* Toast báo khôi phục bản nháp */}
       {showDraftToast && (
-        <div className="fixed right-6 top-20 z-50 flex items-center gap-2 rounded-2xl border border-blue-500/30 bg-slate-900/90 px-4 py-3 text-sm text-blue-300 shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-top-4 duration-300">
-          <Save className="h-4 w-4 text-blue-400" />
+        <div className="theme-badge-info fixed right-6 top-20 z-50 flex animate-in items-center gap-2 rounded-2xl px-4 py-3 text-sm shadow-[var(--shadow-glow)] backdrop-blur-md fade-in slide-in-from-top-4 duration-300">
+          <Save className="h-4 w-4" />
           <span>Đã tự động khôi phục thông tin bài đăng nháp của bạn!</span>
         </div>
       )}
@@ -711,17 +711,17 @@ export default function CreatePostPage() {
       <div className="mb-4 shrink-0 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white tracking-wide">Đăng bài mới</h1>
-          <p className="text-xs text-gray-400 mt-0.5">
+          <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
             Điền các thông tin mô tả chi tiết, vị trí và tải ảnh lên trực quan.
           </p>
         </div>
-        <span className="text-xs px-3 py-1 rounded-full border border-blue-500/20 bg-blue-500/10 text-blue-300 font-medium">
+        <span className="theme-badge-info rounded-full px-3 py-1 text-xs font-medium">
           Tài khoản: {user.fullName}
         </span>
       </div>
 
       {error && (
-        <div className="mb-4 shrink-0 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-200">
+        <div className="theme-badge-danger mb-4 shrink-0 rounded-xl p-3 text-xs">
           {error}
         </div>
       )}
@@ -730,26 +730,26 @@ export default function CreatePostPage() {
       <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6 lg:grid-cols-[1.3fr_1fr] min-h-0 flex-1 overflow-hidden">
 
         {/* CỘT TRÁI: Bảng nhập thông tin */}
-        <div className="glass-card flex flex-col min-h-0 p-5 lg:overflow-y-auto custom-scrollbar">
-          <h2 className="text-base font-semibold text-blue-300 border-b border-white/10 pb-2 mb-4 shrink-0">Thông tin chi tiết</h2>
+        <div className="theme-post-form-shell flex min-h-0 flex-col p-5 lg:overflow-y-auto custom-scrollbar">
+          <h2 className="mb-4 shrink-0 border-b border-[var(--border)] pb-2 text-base font-semibold text-[var(--accent)]">Thông tin chi tiết</h2>
 
           <div className="space-y-4 flex-1 pr-1">
             {/* Tiêu đề */}
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-300">Tiêu đề bài đăng <span className="text-red-400">*</span></label>
+              <label className="theme-post-label mb-1 block text-xs font-medium">Tiêu đề bài đăng <span className="text-[var(--danger)]">*</span></label>
               <input
                 type="text"
                 {...register("title")}
                 className="input-dark py-2 text-sm"
                 placeholder="Ví dụ: Căn hộ cao cấp 2PN view sông Quận 7"
               />
-              {errors.title && <p className="mt-1 text-xs text-red-400">{errors.title.message}</p>}
+              {errors.title && <p className="mt-1 text-xs text-[var(--danger-foreground)]">{errors.title.message}</p>}
             </div>
 
             {/* Loại & Nhu cầu */}
             <div className="grid gap-4 grid-cols-2">
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-300">Loại hình bất động sản</label>
+                <label className="theme-post-label mb-1 block text-xs font-medium">Loại hình bất động sản</label>
                 <select {...register("propertyType")} className="input-dark py-2 text-sm">
                   {PROPERTY_TYPES.map((type) => (
                     <option key={type} value={type}>
@@ -760,7 +760,7 @@ export default function CreatePostPage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-300">Nhu cầu đăng bài</label>
+                <label className="theme-post-label mb-1 block text-xs font-medium">Nhu cầu đăng bài</label>
                 <select {...register("postType")} className="input-dark py-2 text-sm">
                   <option value="SELL">Bán</option>
                   <option value="RENT">Cho thuê</option>
@@ -771,7 +771,7 @@ export default function CreatePostPage() {
             {/* Giá & Diện tích */}
             <div className="grid gap-4 grid-cols-2">
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-300">Giá bán / thuê (VND) <span className="text-red-400">*</span></label>
+                <label className="theme-post-label mb-1 block text-xs font-medium">Giá bán / thuê (VND) <span className="text-[var(--danger)]">*</span></label>
                 <div className="relative">
                   <input
                     type="text"
@@ -796,24 +796,24 @@ export default function CreatePostPage() {
                     <button 
                       type="button" 
                       onClick={() => setValue("price", (Number(watch("price")) || 0) + 1000000, { shouldValidate: true, shouldDirty: true })}
-                      className="text-gray-400 hover:text-white p-[2px] rounded hover:bg-gray-700/50 focus:outline-none"
+                      className="theme-step-button rounded p-[2px] focus:outline-none"
                     >
                       <ChevronUp size={14} />
                     </button>
                     <button 
                       type="button" 
                       onClick={() => setValue("price", Math.max(0, (Number(watch("price")) || 0) - 1000000), { shouldValidate: true, shouldDirty: true })}
-                      className="text-gray-400 hover:text-white p-[2px] rounded hover:bg-gray-700/50 focus:outline-none"
+                      className="theme-step-button rounded p-[2px] focus:outline-none"
                     >
                       <ChevronDown size={14} />
                     </button>
                   </div>
                 </div>
-                {errors.price && <p className="mt-1 text-xs text-red-400">{errors.price.message}</p>}
+                {errors.price && <p className="mt-1 text-xs text-[var(--danger-foreground)]">{errors.price.message}</p>}
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-300">Diện tích (m²) <span className="text-red-400">*</span></label>
+                <label className="theme-post-label mb-1 block text-xs font-medium">Diện tích (m²) <span className="text-[var(--danger)]">*</span></label>
                 <div className="relative">
                   <input
                     type="number"
@@ -835,27 +835,27 @@ export default function CreatePostPage() {
                     <button 
                       type="button" 
                       onClick={() => setValue("area", (Number(watch("area")) || 0) + 1, { shouldValidate: true, shouldDirty: true })}
-                      className="text-gray-400 hover:text-white p-[2px] rounded hover:bg-gray-700/50 focus:outline-none"
+                      className="theme-step-button rounded p-[2px] focus:outline-none"
                     >
                       <ChevronUp size={14} />
                     </button>
                     <button 
                       type="button" 
                       onClick={() => setValue("area", Math.max(0, (Number(watch("area")) || 0) - 1), { shouldValidate: true, shouldDirty: true })}
-                      className="text-gray-400 hover:text-white p-[2px] rounded hover:bg-gray-700/50 focus:outline-none"
+                      className="theme-step-button rounded p-[2px] focus:outline-none"
                     >
                       <ChevronDown size={14} />
                     </button>
                   </div>
                 </div>
-                {errors.area && <p className="mt-1 text-xs text-red-400">{errors.area.message}</p>}
+                {errors.area && <p className="mt-1 text-xs text-[var(--danger-foreground)]">{errors.area.message}</p>}
               </div>
             </div>
 
             {/* Khu vực chọn cấp bậc */}
             <div className="grid gap-3 grid-cols-2">
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-300">Tỉnh / Thành phố <span className="text-red-400">*</span></label>
+                <label className="theme-post-label mb-1 block text-xs font-medium">Tỉnh / Thành phố <span className="text-[var(--danger)]">*</span></label>
                 <select
                   value={selProvinceCode}
                   onChange={handleProvinceChange}
@@ -868,11 +868,11 @@ export default function CreatePostPage() {
                     </option>
                   ))}
                 </select>
-                {errors.city && <p className="mt-1 text-xs text-red-400">{errors.city.message}</p>}
+                {errors.city && <p className="mt-1 text-xs text-[var(--danger-foreground)]">{errors.city.message}</p>}
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-300">Phường / Xã (hoặc Quận / Huyện) <span className="text-red-400">*</span></label>
+                <label className="theme-post-label mb-1 block text-xs font-medium">Phường / Xã (hoặc Quận / Huyện) <span className="text-[var(--danger)]">*</span></label>
                 <select
                   value={selDistrictCode}
                   onChange={handleDistrictChange}
@@ -886,13 +886,13 @@ export default function CreatePostPage() {
                     </option>
                   ))}
                 </select>
-                {errors.district && <p className="mt-1 text-xs text-red-400">{errors.district.message}</p>}
+                {errors.district && <p className="mt-1 text-xs text-[var(--danger-foreground)]">{errors.district.message}</p>}
               </div>
             </div>
 
             {/* Địa chỉ cụ thể */}
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-300">Địa chỉ cụ thể <span className="text-red-400">*</span></label>
+              <label className="theme-post-label mb-1 block text-xs font-medium">Địa chỉ cụ thể <span className="text-[var(--danger)]">*</span></label>
               <input
                 type="text"
                 {...register("address")}
@@ -900,13 +900,13 @@ export default function CreatePostPage() {
                 className="input-dark py-2 text-sm"
                 placeholder="Ví dụ: Số 105 Đường Nguyễn Văn Linh"
               />
-              {errors.address && <p className="mt-1 text-xs text-red-400">{errors.address.message}</p>}
+              {errors.address && <p className="mt-1 text-xs text-[var(--danger-foreground)]">{errors.address.message}</p>}
             </div>
 
             {/* Tọa độ Map */}
             <div className="grid gap-4 grid-cols-[1fr_1fr_auto] items-end">
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-300">Vĩ độ (Lat)</label>
+                <label className="theme-post-label mb-1 block text-xs font-medium">Vĩ độ (Lat)</label>
                 <div className="relative">
                   <input
                     type="number"
@@ -921,30 +921,30 @@ export default function CreatePostPage() {
                         setValue("latitude", (Number(watch("latitude")) || 0) - 0.0001, { shouldValidate: true, shouldDirty: true });
                       }
                     }}
-                    className="input-dark py-2 text-sm pr-8 bg-slate-950/20 appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    className="input-dark theme-post-input py-2 text-sm pr-8 appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                   <div className="absolute right-1 top-0 bottom-0 flex flex-col justify-center gap-[2px]">
                     <button 
                       type="button" 
                       onClick={() => setValue("latitude", (Number(watch("latitude")) || 0) + 0.0001, { shouldValidate: true, shouldDirty: true })}
-                      className="text-gray-400 hover:text-white p-[2px] rounded hover:bg-gray-700/50 focus:outline-none"
+                      className="theme-step-button rounded p-[2px] focus:outline-none"
                     >
                       <ChevronUp size={14} />
                     </button>
                     <button 
                       type="button" 
                       onClick={() => setValue("latitude", (Number(watch("latitude")) || 0) - 0.0001, { shouldValidate: true, shouldDirty: true })}
-                      className="text-gray-400 hover:text-white p-[2px] rounded hover:bg-gray-700/50 focus:outline-none"
+                      className="theme-step-button rounded p-[2px] focus:outline-none"
                     >
                       <ChevronDown size={14} />
                     </button>
                   </div>
                 </div>
-                {errors.latitude && <p className="mt-1 text-xs text-red-400">{errors.latitude.message}</p>}
+                {errors.latitude && <p className="mt-1 text-xs text-[var(--danger-foreground)]">{errors.latitude.message}</p>}
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-300">Kinh độ (Lng)</label>
+                <label className="theme-post-label mb-1 block text-xs font-medium">Kinh độ (Lng)</label>
                 <div className="relative">
                   <input
                     type="number"
@@ -959,26 +959,26 @@ export default function CreatePostPage() {
                         setValue("longitude", (Number(watch("longitude")) || 0) - 0.0001, { shouldValidate: true, shouldDirty: true });
                       }
                     }}
-                    className="input-dark py-2 text-sm pr-8 bg-slate-950/20 appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    className="input-dark theme-post-input py-2 text-sm pr-8 appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                   <div className="absolute right-1 top-0 bottom-0 flex flex-col justify-center gap-[2px]">
                     <button 
                       type="button" 
                       onClick={() => setValue("longitude", (Number(watch("longitude")) || 0) + 0.0001, { shouldValidate: true, shouldDirty: true })}
-                      className="text-gray-400 hover:text-white p-[2px] rounded hover:bg-gray-700/50 focus:outline-none"
+                      className="theme-step-button rounded p-[2px] focus:outline-none"
                     >
                       <ChevronUp size={14} />
                     </button>
                     <button 
                       type="button" 
                       onClick={() => setValue("longitude", (Number(watch("longitude")) || 0) - 0.0001, { shouldValidate: true, shouldDirty: true })}
-                      className="text-gray-400 hover:text-white p-[2px] rounded hover:bg-gray-700/50 focus:outline-none"
+                      className="theme-step-button rounded p-[2px] focus:outline-none"
                     >
                       <ChevronDown size={14} />
                     </button>
                   </div>
                 </div>
-                {errors.longitude && <p className="mt-1 text-xs text-red-400">{errors.longitude.message}</p>}
+                {errors.longitude && <p className="mt-1 text-xs text-[var(--danger-foreground)]">{errors.longitude.message}</p>}
               </div>
 
               <button
@@ -998,12 +998,12 @@ export default function CreatePostPage() {
 
             {/* Trạng thái định vị */}
             {geocodeStatus === "success" && (
-              <p className="text-xs text-emerald-400 flex items-center gap-1 mt-[-8px]">
+              <p className="mt-[-8px] flex items-center gap-1 text-xs text-[var(--success-foreground)]">
                 <Check className="h-3.5 w-3.5" /> Đã lấy tọa độ bản đồ tự động dựa vào địa chỉ của bạn!
               </p>
             )}
             {geocodeStatus === "failed" && (
-              <p className="text-xs text-amber-400 mt-[-8px]">
+              <p className="mt-[-8px] text-xs text-[var(--warning-foreground)]">
                 Không tìm thấy tọa độ cụ thể. Hãy kiểm tra lại địa chỉ hoặc tự nhập tay.
               </p>
             )}
@@ -1011,7 +1011,7 @@ export default function CreatePostPage() {
             {/* Bản đồ xem trước */}
             {latitude && longitude && Number(latitude) !== 0 && Number(longitude) !== 0 ? (
               <>
-                <div className="rounded-xl overflow-hidden border border-white/10 h-[220px] w-full shrink-0 relative mt-2 shadow-lg">
+                <div className="theme-post-gallery relative mt-2 h-[220px] w-full shrink-0 overflow-hidden rounded-xl">
                   <CreatePostMap
                     latitude={Number(latitude)}
                     longitude={Number(longitude)}
@@ -1092,7 +1092,7 @@ export default function CreatePostPage() {
                     }}
                   />
                 </div>
-                <p className="text-[11px] text-amber-400/90 leading-relaxed bg-amber-500/10 border border-amber-500/20 rounded-lg p-2.5 mt-2">
+                <p className="theme-badge-warning mt-2 rounded-lg p-2.5 text-[11px] leading-relaxed">
                   ⚠️ <strong>Lưu ý:</strong> Bạn có thể kéo thả dấu mốc (Marker) hoặc click trực tiếp lên bản đồ trên để điều chỉnh vị trí mong muốn.
                 </p>
               </>
@@ -1100,25 +1100,25 @@ export default function CreatePostPage() {
 
             {/* Mô tả chi tiết */}
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-300">Mô tả bài đăng <span className="text-red-400">*</span></label>
+              <label className="theme-post-label mb-1 block text-xs font-medium">Mô tả bài đăng <span className="text-[var(--danger)]">*</span></label>
               <textarea
                 {...register("description")}
                 className="input-dark min-h-[90px] text-sm"
                 placeholder="Mô tả chi tiết về bất động sản (pháp lý, hướng nhà, tiện ích xung quanh, tình trạng nội thất...)"
               />
               {errors.description && (
-                <p className="mt-1 text-xs text-red-400">{errors.description.message}</p>
+                <p className="mt-1 text-xs text-[var(--danger-foreground)]">{errors.description.message}</p>
               )}
             </div>
 
             {/* Đặc trưng bất động sản */}
             {features.length > 0 && (
-              <div className="pt-2 border-t border-white/5 mt-4">
-                <label className="mb-2.5 block text-xs font-semibold text-blue-300 uppercase tracking-wider">Đặc trưng bất động sản</label>
+              <div className="mt-4 border-t border-[var(--border)] pt-2">
+                <label className="mb-2.5 block text-xs font-semibold uppercase tracking-wider text-[var(--accent)]">Đặc trưng bất động sản</label>
                 <div className="space-y-4">
                   {Object.entries(groupedFeatures).map(([category, list]) => (
                     <div key={category} className="space-y-2">
-                      <h4 className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">{category}</h4>
+                      <h4 className="text-[11px] font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">{category}</h4>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                         {list.map((feature) => {
                           const isSelected = selectedFeatureIds.includes(feature.id);
@@ -1127,20 +1127,20 @@ export default function CreatePostPage() {
                               key={feature.id}
                               onClick={() => toggleFeature(feature.id)}
                               className={`flex items-center justify-between p-2.5 rounded-xl border transition-all duration-300 cursor-pointer select-none text-xs font-medium group ${isSelected
-                                  ? "border-blue-500/40 bg-blue-500/10 text-blue-300 ring-1 ring-blue-500/25 shadow-lg shadow-blue-500/5"
-                                  : "border-white/5 bg-slate-950/25 text-gray-400 hover:border-white/15 hover:bg-slate-950/45 hover:text-gray-200"
+                                  ? "border-[var(--accent-border)] bg-[var(--accent-soft)] text-[var(--accent)] ring-1 ring-[color:var(--accent-border)] shadow-[var(--shadow-glow)]"
+                                  : "border-[var(--border)] bg-[var(--surface)] text-[var(--secondary-foreground)] hover:border-[var(--accent-border)] hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
                                 }`}
                             >
                               <div className="flex items-center gap-2 min-w-0">
                                 <FeatureIcon
                                   name={feature.icon || "help-circle"}
-                                  className={`h-4 w-4 shrink-0 transition-transform duration-300 group-hover:scale-110 ${isSelected ? "text-blue-400" : "text-gray-500"
+                                  className={`h-4 w-4 shrink-0 transition-transform duration-300 group-hover:scale-110 ${isSelected ? "text-[var(--accent)]" : "text-[var(--muted-foreground)]"
                                     }`}
                                 />
                                 <span className="truncate">{feature.name}</span>
                               </div>
                               {isSelected && (
-                                <div className="h-4 w-4 rounded-full bg-blue-600 flex items-center justify-center text-white shrink-0 shadow-md">
+                                <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--primary-foreground)] shadow-[var(--shadow-glow)]">
                                   <Check className="h-2.5 w-2.5 stroke-[3]" />
                                 </div>
                               )}
@@ -1157,25 +1157,25 @@ export default function CreatePostPage() {
         </div>
 
         {/* CỘT PHẢI: Upload ảnh nằm ngang và nút đăng bài */}
-        <div className="glass-card flex flex-col min-h-0 p-5 lg:overflow-y-auto custom-scrollbar">
-          <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-4 shrink-0">
-            <h2 className="text-base font-semibold text-blue-300">Hình ảnh bất động sản</h2>
-            <span className="text-xs font-medium text-blue-200 border border-blue-400/20 bg-blue-500/10 px-2 py-0.5 rounded-full">
+        <div className="theme-post-form-shell flex min-h-0 flex-col p-5 lg:overflow-y-auto custom-scrollbar">
+          <div className="mb-4 flex shrink-0 items-center justify-between border-b border-[var(--border)] pb-2">
+            <h2 className="text-base font-semibold text-[var(--accent)]">Hình ảnh bất động sản</h2>
+            <span className="theme-badge-info rounded-full px-2 py-0.5 text-xs font-medium">
               {imagePreviews.length}/{maxFiles} ảnh
             </span>
           </div>
 
           <div className="space-y-5 flex-1 flex flex-col min-h-0">
             {/* Dropzone upload */}
-            <div className="shrink-0 rounded-2xl border-2 border-dashed border-white/15 bg-slate-950/40 p-4 transition duration-300 hover:border-blue-500/40 hover:bg-slate-950/60">
+            <div className="theme-upload-zone shrink-0 rounded-2xl p-4 transition duration-300">
               <button
                 type="button"
                 onClick={openFilePicker}
-                className="flex flex-col items-center justify-center gap-2 w-full py-4 text-gray-300 hover:text-white"
+                className="flex w-full flex-col items-center justify-center gap-2 py-4 text-[var(--secondary-foreground)] hover:text-[var(--foreground)]"
               >
-                <Upload className="h-7 w-7 text-blue-400 animate-bounce" />
+                <Upload className="h-7 w-7 animate-bounce text-[var(--accent)]" />
                 <span className="text-sm font-semibold">Tải ảnh lên tại đây</span>
-                <span className="text-xs text-gray-500">Chấp nhận định dạng JPG, PNG, WEBP. Tối đa 5MB/ảnh</span>
+                <span className="text-xs text-[var(--muted-foreground)]">Chấp nhận định dạng JPG, PNG, WEBP. Tối đa 5MB/ảnh</span>
               </button>
               <input
                 key={fileInputKey}
@@ -1193,14 +1193,14 @@ export default function CreatePostPage() {
             </div>
 
             {imageError && (
-              <p className="shrink-0 text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg p-2.5">
+              <p className="theme-badge-warning shrink-0 rounded-lg p-2.5 text-xs">
                 {imageError}
               </p>
             )}
 
             {/* Vùng xem ảnh nằm ngang bên phải */}
             <div className="flex-1 min-h-0 flex flex-col justify-center">
-              <span className="text-xs font-medium text-gray-400 mb-2 block shrink-0">Danh sách ảnh đã tải lên (trượt ngang):</span>
+              <span className="theme-post-helper mb-2 block shrink-0 text-xs font-medium">Danh sách ảnh đã tải lên (trượt ngang):</span>
 
               {imagePreviews.length > 0 ? (
                 <div className="flex items-center gap-4 overflow-x-auto pb-4 pt-1 custom-scrollbar min-h-[160px] max-h-[220px]">
@@ -1209,7 +1209,7 @@ export default function CreatePostPage() {
                     return (
                       <div
                         key={image.id}
-                        className={`relative shrink-0 w-36 aspect-[4/3] rounded-xl overflow-hidden border transition duration-300 bg-slate-950/60 group shadow-lg ${isAvatar ? 'border-emerald-500 ring-2 ring-emerald-500/20 scale-[1.02]' : 'border-white/10'
+                        className={`theme-upload-preview group relative shrink-0 w-36 aspect-[4/3] overflow-hidden rounded-xl border transition duration-300 ${isAvatar ? 'border-[var(--success-border)] ring-2 ring-[color:var(--success-border)] scale-[1.02]' : ''
                           }`}
                       >
                         <img
@@ -1219,12 +1219,12 @@ export default function CreatePostPage() {
                         />
 
                         {/* Overlay đen bóng mờ khi hover */}
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-between p-2">
+                        <div className="absolute inset-0 flex flex-col justify-between bg-[var(--overlay)] p-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
                           <div className="flex justify-end">
                             <button
                               type="button"
                               onClick={() => handleRemoveImage(image.id)}
-                              className="h-7 w-7 rounded-full bg-red-600/95 text-white flex items-center justify-center hover:bg-red-600 transition shadow-md"
+                              className="theme-button-danger-solid flex h-7 w-7 items-center justify-center rounded-full transition"
                               title="Xóa ảnh"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -1235,7 +1235,7 @@ export default function CreatePostPage() {
                             <button
                               type="button"
                               onClick={() => setAvatarImageId(image.id)}
-                              className="w-full py-1 text-[10px] font-semibold bg-emerald-600/90 text-white rounded-lg hover:bg-emerald-500 transition shadow-md"
+                              className="theme-button-success w-full rounded-lg py-1 text-[10px] font-semibold transition"
                             >
                               Chọn làm đại diện
                             </button>
@@ -1243,11 +1243,11 @@ export default function CreatePostPage() {
                         </div>
 
                         {isAvatar ? (
-                          <div className="absolute left-2 bottom-2 rounded-md bg-emerald-600 px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-md">
+                          <div className="theme-badge-success absolute bottom-2 left-2 rounded-md px-1.5 py-0.5 text-[10px] font-semibold">
                             Ảnh đại diện
                           </div>
                         ) : (
-                          <div className="absolute left-2 bottom-2 rounded-md bg-black/75 px-1.5 py-0.5 text-[10px] font-medium text-blue-300 backdrop-blur-sm">
+                          <div className="absolute bottom-2 left-2 rounded-md bg-[var(--overlay-strong)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--accent)] backdrop-blur-sm">
                             Ảnh #{index + 1}
                           </div>
                         )}
@@ -1256,19 +1256,19 @@ export default function CreatePostPage() {
                   })}
                 </div>
               ) : (
-                <div className="flex-1 flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-950/20 p-6 text-center text-gray-400">
-                  <ImagePlus className="mb-2 h-7 w-7 text-blue-300" />
+                <div className="theme-upload-preview flex flex-1 flex-col items-center justify-center rounded-2xl p-6 text-center text-[var(--muted-foreground)]">
+                  <ImagePlus className="mb-2 h-7 w-7 text-[var(--accent)]" />
                   <p className="text-xs">Chưa có hình ảnh nào được tải lên.</p>
                 </div>
               )}
             </div>
 
             {/* Nút gửi bài viết cuối trang */}
-            <div className="pt-4 border-t border-white/10 shrink-0">
+            <div className="shrink-0 border-t border-[var(--border)] pt-4">
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="btn-primary inline-flex w-full items-center justify-center gap-2 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-75 shadow-lg shadow-blue-500/20"
+                className="btn-primary inline-flex w-full items-center justify-center gap-2 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-75"
               >
                 {isSubmitting ? (
                   <>
@@ -1296,15 +1296,15 @@ export default function CreatePostPage() {
           width: 5px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
-          background: rgba(255, 255, 255, 0.02);
+          background: color-mix(in srgb, var(--foreground) 2%, transparent);
           border-radius: 99px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.1);
+          background: color-mix(in srgb, var(--foreground) 10%, transparent);
           border-radius: 99px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(255, 255, 255, 0.2);
+          background: color-mix(in srgb, var(--foreground) 20%, transparent);
         }
       ` }} />
     </div>

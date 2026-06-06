@@ -177,13 +177,13 @@ export const statusLabels: Record<string, string> = {
 };
 
 export const statusColors: Record<string, string> = {
-  ACTIVE: "text-emerald-400 bg-emerald-400/10 border-emerald-400/20",
-  INACTIVE: "text-gray-400 bg-gray-400/10 border-gray-400/20",
-  BANNED: "text-red-300 bg-red-500/10 border-red-400/30",
-  PENDING: "text-amber-400 bg-amber-400/10 border-amber-400/20",
-  SOLD: "text-blue-400 bg-blue-400/10 border-blue-400/20",
-  DRAFT: "text-slate-400 bg-slate-400/10 border-slate-400/20",
-  REJECTED: "text-red-400 bg-red-400/10 border-red-400/20",
+  ACTIVE: "theme-badge-success",
+  INACTIVE: "theme-button-secondary",
+  BANNED: "theme-badge-danger",
+  PENDING: "theme-badge-warning",
+  SOLD: "theme-badge-info",
+  DRAFT: "theme-subtle-card text-[var(--muted-foreground)]",
+  REJECTED: "theme-badge-danger",
 };
 
 export const formatPrice = (price: number) => {
