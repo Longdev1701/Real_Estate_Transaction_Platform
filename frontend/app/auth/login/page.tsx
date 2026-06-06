@@ -56,17 +56,17 @@ export default function LoginPage() {
     <div className="flex items-center justify-center min-h-[calc(100vh-160px)] p-4">
       <div className="glass-card w-full max-w-md p-8">
         <h1 className="text-3xl font-bold text-center mb-2">Đăng nhập</h1>
-        <p className="text-gray-400 text-center mb-8">Chào mừng trở lại TrustEstate</p>
+        <p className="theme-text-muted mb-8 text-center">Chào mừng trở lại TrustEstate</p>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-3 rounded-xl mb-6 text-sm">
+          <div className="theme-button-danger-solid mb-6 rounded-xl p-3 text-sm">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label className="theme-input-label mb-1 block text-sm font-medium">
               Email
             </label>
             <input
@@ -76,12 +76,12 @@ export default function LoginPage() {
               placeholder="nhap@email.com"
             />
             {errors.email && (
-              <p className="text-red-400 text-sm mt-1">{errors.email.message}</p>
+              <p className="mt-1 text-sm text-[var(--danger-foreground)]">{errors.email.message}</p>
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
+            <label className="theme-input-label mb-1 block text-sm font-medium">
               Mật khẩu
             </label>
             <input
@@ -91,7 +91,7 @@ export default function LoginPage() {
               placeholder="••••••••"
             />
             {errors.password && (
-              <p className="text-red-400 text-sm mt-1">{errors.password.message}</p>
+              <p className="mt-1 text-sm text-[var(--danger-foreground)]">{errors.password.message}</p>
             )}
           </div>
 
@@ -104,9 +104,9 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="text-center text-gray-400 mt-6 text-sm">
+        <p className="theme-text-muted mt-6 text-center text-sm">
           Chưa có tài khoản?{" "}
-          <Link href="/auth/register" className="text-blue-400 hover:text-blue-300">
+          <Link href="/auth/register" className="theme-link transition-colors">
             Đăng ký ngay
           </Link>
         </p>

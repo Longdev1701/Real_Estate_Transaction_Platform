@@ -7,13 +7,9 @@ export default function ErrorPage({
   reset: () => void;
 }) {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-neutral-950 px-6 text-center text-white">
+    <main className="bg-background text-foreground flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
       <h1 className="text-2xl font-semibold">Co loi xay ra</h1>
-      <button
-        className="rounded bg-emerald-500 px-4 py-2 font-medium text-neutral-950"
-        onClick={() => reset()}
-        type="button"
-      >
+      <button className="btn-primary px-4 py-2 font-medium" onClick={() => reset()} type="button">
         Thu lai
       </button>
     </main>
