@@ -29,7 +29,16 @@ export const normalizeUser = (user: BackendUser): User => ({
 });
 
 export function AuthSessionProvider({ children }: { children: React.ReactNode }) {
-  const { accessToken, hasHydrated, user, setUser, setIsLoadingUser, logout } =
+  const {
+    accessToken,
+    refreshToken,
+    hasHydrated,
+    user,
+    setUser,
+    setTokens,
+    setIsLoadingUser,
+    logout,
+  } =
     useAuthStore();
   const [isSessionVerified, setIsSessionVerified] = useState(false);
 
@@ -38,9 +47,12 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
       return;
     }
 
-    if (!accessToken) {
+    if (!refreshToken) {
       setIsSessionVerified(false);
       setIsLoadingUser(false);
+      if (user) {
+        logout();
+      }
       return;
     }
 
@@ -49,11 +61,24 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
     const restoreSession = async () => {
       try {
         setIsLoadingUser(!user);
-        const response = await api.get("/auth/me");
-        if (isMounted) {
-          setUser(normalizeUser(response.data.data));
-          setIsSessionVerified(true);
+        if (!accessToken) {
+          const refreshResponse = await api.post("/auth/refresh-token", {
+            refreshToken,
+          });
+          const tokens = refreshResponse.data.data as {
+            accessToken: string;
+            refreshToken: string;
+          };
+          if (!isMounted) return;
+          setTokens(tokens.accessToken, tokens.refreshToken);
         }
+
+        const response = await api.get("/auth/me");
+        if (!isMounted) return;
+
+        const nextUser = normalizeUser(response.data.data);
+        setUser(nextUser);
+        setIsSessionVerified(true);
       } catch {
         if (isMounted) {
           setIsSessionVerified(false);
@@ -71,7 +96,7 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
     return () => {
       isMounted = false;
     };
-  }, [accessToken, hasHydrated, logout, setIsLoadingUser, setUser]);
+  }, [accessToken, hasHydrated, logout, refreshToken, setIsLoadingUser, setTokens, setUser, user]);
 
   useEffect(() => {
     if (!hasHydrated) {
