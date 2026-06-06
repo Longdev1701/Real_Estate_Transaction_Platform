@@ -678,7 +678,7 @@ export function PostCard({ post }: { post: Post }) {
                       type="button"
                       onClick={goToPreviousImage}
                       className="theme-media-control absolute left-3 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full backdrop-blur transition"
-                      aria-label="Ảnh trước"F
+                      aria-label="Anh truoc"
                     >
                       <ChevronLeft className="h-5 w-5" />
                     </button>

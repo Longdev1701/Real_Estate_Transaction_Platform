@@ -7,4 +7,5 @@ export type AuthenticatedUser = {
   phone: string | null;
   role: UserRole;
   status: UserStatus;
+  avatarUrl: string | null;
 };
