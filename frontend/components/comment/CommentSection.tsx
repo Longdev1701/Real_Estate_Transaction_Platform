@@ -330,15 +330,15 @@ export default function CommentSection({ postId, postAuthorId }: CommentSectionP
 
   return (
     <section className="glass-card space-y-6 p-6 md:p-7">
-      <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-4">
+      <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] pb-4">
         <div className="flex items-center gap-2">
-          <MessageSquare className="h-5 w-5 text-blue-400" />
-          <h2 className="text-2xl font-semibold text-white">Bình luận ({totalLabel})</h2>
+          <MessageSquare className="h-5 w-5 text-[var(--accent)]" />
+          <h2 className="text-2xl font-semibold text-[var(--foreground)]">Bình luận ({totalLabel})</h2>
         </div>
       </div>
 
       {error && (
-        <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-200">
+        <div className="theme-badge-danger rounded-xl p-3 text-sm">
           {error}
         </div>
       )}
@@ -353,7 +353,7 @@ export default function CommentSection({ postId, postAuthorId }: CommentSectionP
               placeholder="Chia sẻ ý kiến của bạn về bất động sản này..."
               rows={3}
               maxLength={1000}
-              className="input-dark w-full px-3 py-2 text-sm focus:ring-1 focus:ring-blue-500"
+              className="input-dark theme-post-input w-full px-3 py-2 text-sm"
             />
             <div className="flex justify-end">
               <button
@@ -368,8 +368,8 @@ export default function CommentSection({ postId, postAuthorId }: CommentSectionP
           </div>
         </form>
       ) : (
-        <div className="rounded-2xl border border-dashed border-white/10 bg-slate-950/20 p-6 text-center">
-          <p className="mb-3 text-sm text-gray-400">Vui lòng đăng nhập để để lại bình luận và thảo luận cùng mọi người.</p>
+        <div className="theme-subtle-card rounded-2xl border border-dashed p-6 text-center">
+          <p className="mb-3 text-sm text-[var(--muted-foreground)]">Vui lòng đăng nhập để để lại bình luận và thảo luận cùng mọi người.</p>
           <Link href="/auth/login" className="btn-primary inline-flex px-5 py-2 text-sm font-medium">
             Đăng nhập ngay
           </Link>
@@ -378,16 +378,16 @@ export default function CommentSection({ postId, postAuthorId }: CommentSectionP
 
       <div className="space-y-4">
         {isLoading ? (
-          <div className="flex min-h-28 items-center justify-center text-sm text-gray-300">
-            <LoaderCircle className="mr-2 h-4 w-4 animate-spin text-blue-300" />
+          <div className="flex min-h-28 items-center justify-center text-sm text-[var(--secondary-foreground)]">
+            <LoaderCircle className="mr-2 h-4 w-4 animate-spin text-[var(--accent)]" />
             Đang tải bình luận...
           </div>
         ) : comments.length === 0 ? (
-          <p className="py-6 text-center text-sm text-gray-500">
+          <p className="py-6 text-center text-sm text-[var(--muted-foreground)]">
             Chưa có bình luận nào cho bài viết này. Hãy là người đầu tiên để lại ý kiến.
           </p>
         ) : (
-          <div className="space-y-4 divide-y divide-white/5">
+          <div className="space-y-4 divide-y divide-[var(--border)]">
             {comments.map((comment, index) => (
               <CommentItem
                 key={comment.id}
@@ -435,7 +435,7 @@ export default function CommentSection({ postId, postAuthorId }: CommentSectionP
             <button
               type="button"
               onClick={() => fetchComments(page + 1, true)}
-              className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-gray-300 transition hover:bg-white/10"
+              className="theme-button-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-medium transition"
             >
               Xem thêm bình luận
             </button>
@@ -525,12 +525,12 @@ function CommentItem({
         ) : (
           <>
             <ReplyTargetLabel comment={comment} />
-            <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-gray-300">{comment.content}</p>
+            <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-[var(--secondary-foreground)]">{comment.content}</p>
           </>
         )}
 
         {currentUserId && editingCommentId !== comment.id && (
-          <button type="button" onClick={() => onReply(comment)} className="text-xs text-gray-400 transition hover:text-blue-400">
+          <button type="button" onClick={() => onReply(comment)} className="text-xs text-[var(--muted-foreground)] transition hover:text-[var(--accent)]">
             Trả lời
           </button>
         )}
@@ -548,7 +548,7 @@ function CommentItem({
         )}
 
         {hasReplies && (
-          <div className="mt-4 space-y-4 border-l-2 border-white/5 pl-6">
+          <div className="mt-4 space-y-4 border-l-2 border-[var(--border)] pl-6">
             {comment.replies!.map((reply) => {
               const canManageReply = currentUserId === reply.authorId || isAdmin;
               const isReplyPostAuthor = postAuthorId === reply.authorId;
@@ -579,11 +579,11 @@ function CommentItem({
                     ) : (
                       <>
                         <ReplyTargetLabel comment={reply} compact />
-                        <p className="whitespace-pre-wrap break-words text-xs leading-relaxed text-gray-300">{reply.content}</p>
+                        <p className="whitespace-pre-wrap break-words text-xs leading-relaxed text-[var(--secondary-foreground)]">{reply.content}</p>
                       </>
                     )}
                     {currentUserId && editingCommentId !== reply.id && (
-                      <button type="button" onClick={() => onReply(reply)} className="text-[10px] text-gray-400 transition hover:text-blue-400">
+                      <button type="button" onClick={() => onReply(reply)} className="text-[10px] text-[var(--muted-foreground)] transition hover:text-[var(--accent)]">
                         Trả lời
                       </button>
                     )}
@@ -620,29 +620,34 @@ function CommentHeader({
   return (
     <div className="flex items-center justify-between gap-2">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span className={`${compact ? "text-xs" : "text-sm"} font-semibold text-white`}>{getAuthorName(comment.author)}</span>
+        <span className={`${compact ? "text-xs" : "text-sm"} font-semibold text-[var(--foreground)]`}>{getAuthorName(comment.author)}</span>
         {isPostAuthor && (
-          <span className={`${compact ? "text-[9px]" : "text-[10px]"} rounded-md border border-blue-500/30 bg-blue-500/20 px-1.5 py-0.5 font-medium text-blue-300`}>
+          <span className={`theme-badge-info ${compact ? "text-[9px]" : "text-[10px]"} rounded-md px-1.5 py-0.5 font-medium`}>
             Chủ bài đăng
           </span>
         )}
-        <span className={`${compact ? "text-[10px]" : "text-xs"} text-gray-500`}>{formatCommentDate(comment.createdAt)}</span>
+        <span className={`${compact ? "text-[10px]" : "text-xs"} text-[var(--muted-foreground)]`}>{formatCommentDate(comment.createdAt)}</span>
       </div>
 
       {canManage && (
         <div className="flex items-center gap-1">
-          <button type="button" onClick={() => onEdit(comment)} className="p-1 text-gray-500 transition hover:text-blue-300" title="Sửa bình luận">
+          <button
+            type="button"
+            onClick={() => onEdit(comment)}
+            className="p-1 text-[var(--muted-foreground)] transition hover:text-[var(--accent)]"
+            title="Sửa bình luận"
+          >
             <Edit3 className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
           </button>
           <button
             type="button"
             onClick={() => onDelete(comment.id)}
             disabled={deletingId === comment.id}
-            className="p-1 text-gray-500 transition hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-60"
+            className="p-1 text-[var(--muted-foreground)] transition hover:text-[var(--danger)] disabled:cursor-not-allowed disabled:opacity-60"
             title="Xóa bình luận"
           >
             {deletingId === comment.id ? (
-              <LoaderCircle className={`${compact ? "h-3 w-3" : "h-3.5 w-3.5"} animate-spin text-red-400`} />
+              <LoaderCircle className={`${compact ? "h-3 w-3" : "h-3.5 w-3.5"} animate-spin text-[var(--danger)]`} />
             ) : (
               <Trash2 className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
             )}
@@ -659,8 +664,8 @@ function ReplyTargetLabel({ comment, compact = false }: { comment: Comment; comp
   }
 
   return (
-    <p className={`${compact ? "text-[10px]" : "text-xs"} text-gray-500`}>
-      Đang trả lời <span className="font-medium text-blue-300">{getAuthorName(comment.replyToUser)}</span>
+    <p className={`${compact ? "text-[10px]" : "text-xs"} text-[var(--muted-foreground)]`}>
+      Đang trả lời <span className="font-medium text-[var(--accent)]">{getAuthorName(comment.replyToUser)}</span>
     </p>
   );
 }
@@ -683,10 +688,10 @@ function ReplyForm({
   onCancel: () => void;
 }) {
   return (
-    <form onSubmit={onSubmit} className="mt-3 flex gap-3 border-l-2 border-blue-500/30 pl-4">
+    <form onSubmit={onSubmit} className="mt-3 flex gap-3 border-l-2 border-[var(--accent-border)] pl-4">
       <div className="flex-1 space-y-2">
-        <p className="text-xs text-gray-400">
-          Đang trả lời <span className="font-semibold text-blue-300">{targetName}</span>
+        <p className="text-xs text-[var(--muted-foreground)]">
+          Đang trả lời <span className="font-semibold text-[var(--accent)]">{targetName}</span>
         </p>
         <textarea
           value={value}
@@ -694,10 +699,10 @@ function ReplyForm({
           placeholder={placeholder}
           rows={2}
           maxLength={1000}
-          className="input-dark w-full px-3 py-1.5 text-xs focus:ring-1 focus:ring-blue-500"
+          className="input-dark theme-post-input w-full px-3 py-1.5 text-xs"
         />
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={onCancel} className="rounded-lg border border-white/5 px-3 py-1 text-xs text-gray-400 transition hover:text-white">
+          <button type="button" onClick={onCancel} className="rounded-lg border border-[var(--border)] px-3 py-1 text-xs text-[var(--muted-foreground)] transition hover:text-[var(--foreground)]">
             Hủy
           </button>
           <button type="submit" disabled={isSubmitting || !value.trim()} className="btn-primary inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium disabled:opacity-50">
@@ -732,10 +737,10 @@ function EditForm({
         onChange={(event) => onChange(event.target.value)}
         rows={compact ? 2 : 3}
         maxLength={1000}
-        className={`input-dark w-full px-3 py-2 ${compact ? "text-xs" : "text-sm"} focus:ring-1 focus:ring-blue-500`}
+        className={`input-dark theme-post-input w-full px-3 py-2 ${compact ? "text-xs" : "text-sm"}`}
       />
       <div className="flex justify-end gap-2">
-        <button type="button" onClick={onCancel} className="inline-flex items-center gap-1 rounded-lg border border-white/5 px-3 py-1.5 text-xs text-gray-400 transition hover:text-white">
+        <button type="button" onClick={onCancel} className="inline-flex items-center gap-1 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--muted-foreground)] transition hover:text-[var(--foreground)]">
           <X className="h-3 w-3" />
           Hủy
         </button>
@@ -753,7 +758,7 @@ function Avatar({ name, imageUrl, size }: { name?: string | null; imageUrl?: str
   const displayName = name || "Người dùng";
 
   return (
-    <div className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-white/5 font-semibold text-gray-300 ${sizeClass}`}>
+    <div className={`theme-icon-button flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold ${sizeClass}`}>
       {imageUrl ? (
         <img src={imageUrl} alt={displayName} className="h-full w-full object-cover" />
       ) : (

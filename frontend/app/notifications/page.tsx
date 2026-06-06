@@ -52,9 +52,9 @@ const navItems: Array<{ type: "all" | NotificationType; label: string; icon: Rea
 ];
 
 const summaryItems: Array<{ type: NotificationType; label: string; icon: React.ComponentType<{ className?: string }>; className: string }> = [
-  { type: "MESSAGE", label: "Tin nhắn", icon: MessageCircle, className: "bg-emerald-500" },
-  { type: "POST", label: "Bài đăng", icon: FileText, className: "bg-blue-600" },
-  { type: "REPORT", label: "Báo cáo", icon: MessageSquare, className: "bg-violet-600" },
+  { type: "MESSAGE", label: "Tin nhắn", icon: MessageCircle, className: "theme-admin-icon-green" },
+  { type: "POST", label: "Bài đăng", icon: FileText, className: "theme-admin-icon-blue" },
+  { type: "REPORT", label: "Báo cáo", icon: MessageSquare, className: "theme-admin-icon-violet" },
 ];
 
 const getTypeIcon = (type: NotificationType) => {
@@ -279,15 +279,15 @@ export default function NotificationsPage() {
                   onClick={() => setTypeFilter(item.type)}
                   className={`flex w-full items-center justify-between gap-3 rounded-xl border px-3.5 py-3 text-left transition ${
                     active
-                      ? "border-blue-400/40 bg-blue-600/20 text-white shadow-[0_0_30px_rgba(37,99,235,0.25)]"
-                      : "border-transparent text-gray-300 hover:border-white/10 hover:bg-white/5"
+                      ? "border-[var(--info-border)] bg-[var(--info-soft)] text-[var(--foreground)] shadow-[var(--shadow-glow)]"
+                      : "border-transparent text-[var(--secondary-foreground)] hover:border-[var(--border)] hover:bg-[var(--hover)]"
                   }`}
                 >
                   <span className="flex items-center gap-2.5">
                     <Icon className="h-4.5 w-4.5" />
                     <span className="text-sm font-medium">{item.label}</span>
                   </span>
-                  <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-semibold">
+                  <span className="theme-surface-soft rounded-full px-2 py-0.5 text-xs font-semibold">
                     {counts[item.type]}
                   </span>
                 </button>
@@ -295,24 +295,24 @@ export default function NotificationsPage() {
             })}
           </nav>
 
-          <div className="mt-4 hidden rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 lg:block">
+          <div className="theme-surface-soft mt-4 hidden rounded-2xl p-3.5 lg:block">
             <div className="mb-3.5 flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-[0_0_22px_rgba(37,99,235,0.35)]">
+              <span className="theme-button-primary flex h-10 w-10 items-center justify-center rounded-xl">
                 <Bookmark className="h-4.5 w-4.5" />
               </span>
               <div>
-                <h2 className="text-sm font-semibold text-white">Theo dõi nhanh</h2>
-                <p className="text-xs text-gray-400">Tình trạng hộp thông báo</p>
+                <h2 className="text-sm font-semibold text-[var(--foreground)]">Theo dõi nhanh</h2>
+                <p className="theme-text-muted text-xs">Tình trạng hộp thông báo</p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2.5">
-              <div className="rounded-xl border border-white/10 bg-slate-950/35 p-2.5">
-                <p className="text-xl font-bold text-white">{items.length}</p>
-                <p className="mt-0.5 text-[10px] text-gray-400">Tổng thông báo</p>
+              <div className="theme-surface-muted rounded-xl p-2.5">
+                <p className="text-xl font-bold text-[var(--foreground)]">{items.length}</p>
+                <p className="theme-text-muted mt-0.5 text-[10px]">Tổng thông báo</p>
               </div>
-              <div className="rounded-xl border border-blue-400/20 bg-blue-500/10 p-2.5">
-                <p className="text-xl font-bold text-blue-200">{unreadCount}</p>
-                <p className="mt-0.5 text-[10px] text-gray-400">Chưa đọc</p>
+              <div className="theme-button-info rounded-xl p-2.5">
+                <p className="text-xl font-bold">{unreadCount}</p>
+                <p className="theme-text-muted mt-0.5 text-[10px]">Chưa đọc</p>
               </div>
             </div>
           </div>
@@ -320,12 +320,12 @@ export default function NotificationsPage() {
 
         <main className="min-w-0 h-full flex flex-col min-h-0">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between shrink-0">
-            <h1 className="text-3xl font-bold text-white">Thông báo</h1>
+            <h1 className="text-3xl font-bold text-[var(--foreground)]">Thông báo</h1>
             <button
               type="button"
               onClick={markAllAsRead}
               disabled={unreadCount === 0}
-              className="inline-flex items-center gap-2 text-sm font-medium text-blue-300 transition hover:text-blue-200 disabled:cursor-not-allowed disabled:opacity-50"
+              className="theme-link inline-flex items-center gap-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Check className="h-4 w-4" />
               Đánh dấu tất cả đã đọc
@@ -333,21 +333,21 @@ export default function NotificationsPage() {
           </div>
 
           {error ? (
-            <div className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200 shrink-0">
+            <div className="theme-button-danger-solid mb-4 shrink-0 rounded-xl p-4 text-sm">
               {error}
             </div>
           ) : null}
 
           <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pr-1 pb-6">
             {isLoading ? (
-              <div className="flex min-h-[300px] h-full items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03]">
-                <div className="inline-flex items-center gap-3 text-gray-300">
-                  <LoaderCircle className="h-5 w-5 animate-spin text-blue-300" />
+              <div className="theme-surface-soft flex h-full min-h-[300px] items-center justify-center rounded-2xl">
+                <div className="theme-text-secondary inline-flex items-center gap-3">
+                  <LoaderCircle className="h-5 w-5 animate-spin text-[var(--primary)]" />
                   Đang tải thông báo...
                 </div>
               </div>
             ) : filteredItems.length === 0 ? (
-              <div className="flex min-h-[300px] h-full items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/[0.03] p-8 text-center text-gray-400">
+              <div className="theme-surface-soft theme-empty-state flex h-full min-h-[300px] items-center justify-center rounded-2xl border-dashed p-8 text-center">
                 Không có thông báo phù hợp.
               </div>
             ) : (
@@ -361,29 +361,29 @@ export default function NotificationsPage() {
                       key={notification.id}
                       className={`rounded-xl border p-4 transition ${
                         notification.isRead
-                          ? "border-white/10 bg-white/[0.03]"
-                          : "border-blue-400/45 bg-blue-500/10 shadow-[0_0_30px_rgba(37,99,235,0.18)]"
+                          ? "theme-surface-soft"
+                          : "border-[var(--info-border)] bg-[var(--info-soft)] shadow-[var(--shadow-glow)]"
                       }`}
                     >
                       <div className="grid gap-4 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center">
                         <div className="flex items-center gap-3">
-                          <span className={`h-3 w-3 rounded-full ${notification.isRead ? "bg-slate-600" : "bg-blue-500"}`} />
-                          <span className={`flex h-14 w-14 items-center justify-center rounded-full ${notification.isRead ? "bg-slate-700 text-gray-200" : "bg-blue-600 text-white"}`}>
+                          <span className={`h-3 w-3 rounded-full ${notification.isRead ? "theme-notification-dot-read" : "theme-notification-dot-unread"}`} />
+                          <span className={`flex h-14 w-14 items-center justify-center rounded-full ${notification.isRead ? "theme-surface-soft text-[var(--secondary-foreground)]" : "theme-button-primary"}`}>
                             <Icon className="h-6 w-6" />
                           </span>
                         </div>
 
                         <div className="min-w-0">
-                          <h2 className="line-clamp-1 font-semibold text-white">{notification.title}</h2>
-                          <p className="mt-1 line-clamp-2 text-sm leading-6 text-gray-300">{notification.content}</p>
-                          <p className="mt-1 text-sm text-gray-400">{formatNotificationTime(notification.createdAt)}</p>
+                          <h2 className="line-clamp-1 font-semibold text-[var(--foreground)]">{notification.title}</h2>
+                          <p className="theme-text-secondary mt-1 line-clamp-2 text-sm leading-6">{notification.content}</p>
+                          <p className="theme-text-muted mt-1 text-sm">{formatNotificationTime(notification.createdAt)}</p>
                         </div>
 
                         <div className="flex items-center gap-2 md:flex-col md:items-end">
                           <Link
                             href={href}
                             onClick={() => markOneAsRead(notification)}
-                            className="inline-flex min-w-32 justify-center rounded-lg border border-blue-400/25 bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500"
+                            className="theme-button-primary inline-flex min-w-32 justify-center rounded-lg px-4 py-2 text-sm font-semibold transition"
                           >
                             {getActionLabel(notification.type)}
                           </Link>
@@ -391,7 +391,7 @@ export default function NotificationsPage() {
                             type="button"
                             onClick={() => markOneAsRead(notification)}
                             disabled={notification.isRead}
-                            className="rounded-lg border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-200 transition hover:bg-blue-500/20 disabled:border-white/10 disabled:bg-white/5 disabled:text-gray-400"
+                            className="theme-button-info rounded-lg px-3 py-1 text-xs font-medium transition disabled:border-[var(--border)] disabled:bg-[var(--surface)] disabled:text-[var(--muted-foreground)]"
                           >
                             {notification.isRead ? "Đã đọc" : "Chưa đọc"}
                           </button>
@@ -408,13 +408,13 @@ export default function NotificationsPage() {
         <aside className="space-y-4 xl:max-h-full xl:overflow-y-auto no-scrollbar pb-6">
           <section className="glass-card p-4">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-white">Bộ lọc thông báo</h2>
-              <SlidersHorizontal className="h-4 w-4 text-blue-300" />
+              <h2 className="text-xl font-semibold text-[var(--foreground)]">Bộ lọc thông báo</h2>
+              <SlidersHorizontal className="h-4 w-4 text-[var(--primary)]" />
             </div>
 
             <div className="space-y-4">
               <label className="block">
-                <span className="mb-1.5 block text-xs font-medium text-gray-200">Loại thông báo</span>
+                <span className="theme-input-label mb-1.5 block text-xs font-medium">Loại thông báo</span>
                 <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as "all" | NotificationType)} className="input-dark py-2 text-sm">
                   {typeOptions.map((option) => (
                     <option key={option.value} value={option.value}>{option.label}</option>
@@ -423,8 +423,8 @@ export default function NotificationsPage() {
               </label>
 
               <div>
-                <span className="mb-1.5 block text-xs font-medium text-gray-200">Trạng thái</span>
-                <div className="grid grid-cols-3 overflow-hidden rounded-xl border border-white/10">
+                <span className="theme-input-label mb-1.5 block text-xs font-medium">Trạng thái</span>
+                <div className="theme-surface-soft grid grid-cols-3 overflow-hidden rounded-xl">
                   {[
                     ["all", "Tất cả"],
                     ["unread", "Chưa đọc"],
@@ -435,7 +435,7 @@ export default function NotificationsPage() {
                       type="button"
                       onClick={() => setStatusFilter(value as StatusFilter)}
                       className={`px-2 py-2 text-xs font-medium transition ${
-                        statusFilter === value ? "bg-blue-600 text-white" : "bg-white/[0.02] text-gray-300 hover:bg-white/5"
+                        statusFilter === value ? "theme-button-primary" : "text-[var(--secondary-foreground)] hover:bg-[var(--hover)]"
                       }`}
                     >
                       {label}
@@ -445,7 +445,7 @@ export default function NotificationsPage() {
               </div>
 
               <label className="block">
-                <span className="mb-1.5 block text-xs font-medium text-gray-200">Khoảng thời gian</span>
+                <span className="theme-input-label mb-1.5 block text-xs font-medium">Khoảng thời gian</span>
                 <select value={timeFilter} onChange={(event) => setTimeFilter(event.target.value as TimeFilter)} className="input-dark py-2 text-sm">
                   <option value="7d">7 ngày qua</option>
                   <option value="30d">30 ngày qua</option>
@@ -461,40 +461,40 @@ export default function NotificationsPage() {
           </section>
 
           <section className="glass-card p-4">
-            <h2 className="mb-4 text-xl font-semibold text-white">Tóm tắt</h2>
+            <h2 className="mb-4 text-xl font-semibold text-[var(--foreground)]">Tóm tắt</h2>
             <div className="space-y-2.5">
-              <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 p-2.5">
+              <div className="theme-surface-soft flex items-center justify-between rounded-xl p-2.5">
                 <span className="flex items-center gap-2.5">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600 text-white">
+                  <span className="theme-button-primary flex h-10 w-10 items-center justify-center rounded-lg">
                     <Bell className="h-5 w-5" />
                   </span>
                   <span>
-                    <span className="block text-sm font-medium text-white">Tổng chưa đọc</span>
-                    <span className="text-[11px] text-gray-400">Thông báo chưa đọc</span>
+                    <span className="block text-sm font-medium text-[var(--foreground)]">Tổng chưa đọc</span>
+                    <span className="theme-text-muted text-[11px]">Thông báo chưa đọc</span>
                   </span>
                 </span>
-                <span className="text-2xl font-bold text-white">{unreadCount}</span>
+                <span className="text-2xl font-bold text-[var(--foreground)]">{unreadCount}</span>
               </div>
 
               {summaryItems.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <div key={item.type} className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 p-2.5">
+                  <div key={item.type} className="theme-surface-soft flex items-center justify-between rounded-xl p-2.5">
                     <span className="flex items-center gap-2.5">
-                      <span className={`flex h-10 w-10 items-center justify-center rounded-lg text-white ${item.className}`}>
+                      <span className={`flex h-10 w-10 items-center justify-center rounded-lg ${item.className}`}>
                         <Icon className="h-5 w-5" />
                       </span>
                       <span>
-                        <span className="block text-sm font-medium text-white">{item.label}</span>
-                        <span className="text-[11px] text-gray-400">{notificationTypeLabels[item.type]} chưa đọc</span>
+                        <span className="block text-sm font-medium text-[var(--foreground)]">{item.label}</span>
+                        <span className="theme-text-muted text-[11px]">{notificationTypeLabels[item.type]} chưa đọc</span>
                       </span>
                     </span>
-                    <span className="text-2xl font-bold text-white">{unreadCounts[item.type]}</span>
+                    <span className="text-2xl font-bold text-[var(--foreground)]">{unreadCounts[item.type]}</span>
                   </div>
                 );
               })}
 
-              <button type="button" className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-xs font-medium text-blue-300 transition hover:bg-white/5">
+              <button type="button" className="theme-surface-soft theme-link flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-xs font-medium transition hover:bg-[var(--hover)]">
                 Xem tất cả thống kê
                 <ChevronRight className="h-4.5 w-4.5" />
               </button>

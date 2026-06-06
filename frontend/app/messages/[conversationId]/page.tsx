@@ -153,7 +153,7 @@ function FallbackMedia({
 
   if (!src || hasError) {
     return (
-      <div className={`flex items-center justify-center bg-slate-900 text-slate-500 ${wrapperClassName}`}>
+      <div className={`flex items-center justify-center bg-[var(--surface-muted)] text-[var(--muted-foreground)] ${wrapperClassName}`}>
         <ImageIcon className="h-8 w-8" />
       </div>
     );
@@ -879,12 +879,12 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
   if (!hasHydrated || !user || !conversation || !conversation.buyer || !conversation.seller || !conversation.post) {
     if (hasHydrated && user && loadError) {
       return (
-        <div className="flex h-full min-h-0 flex-1 items-center justify-center bg-[radial-gradient(circle_at_top,rgba(37,99,235,0.12),transparent_34%),linear-gradient(180deg,#071326_0%,#06101f_100%)] p-6">
-          <div className="max-w-md rounded-[28px] border border-red-500/20 bg-red-500/10 p-6 text-center">
-            <p className="text-base text-red-100">{loadError}</p>
+        <div className="theme-message-surface flex h-full min-h-0 flex-1 items-center justify-center p-6">
+          <div className="max-w-md rounded-[28px] border border-[var(--danger-border)] bg-[var(--danger-soft)] p-6 text-center">
+            <p className="text-base text-[var(--danger-foreground)]">{loadError}</p>
             <Link
               href="/messages"
-              className="mt-4 inline-flex items-center justify-center rounded-2xl border border-white/10 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10"
+              className="mt-4 inline-flex items-center justify-center rounded-2xl border border-[var(--border)] px-4 py-3 text-sm font-medium text-[var(--foreground)] transition hover:bg-[var(--surface-muted)]"
             >
               Quay lại danh sách chat
             </Link>
@@ -895,28 +895,28 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
 
     if (hasHydrated && user && (!conversation || !conversation.buyer || !conversation.seller || !conversation.post) && !loadError) {
       return (
-        <div className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-[26px] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(37,99,235,0.12),transparent_34%),linear-gradient(180deg,#071326_0%,#06101f_100%)]">
-          <header className="flex h-[78px] shrink-0 items-center border-b border-white/10 bg-white/[0.03] px-5 lg:px-6">
-            <div className="h-12 w-12 animate-pulse rounded-full bg-slate-800/50" />
+        <div className="theme-message-surface relative flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-[26px] border border-[var(--border)]">
+          <header className="flex h-[78px] shrink-0 items-center border-b border-[var(--border)] bg-[var(--surface-muted)] px-5 lg:px-6">
+            <div className="theme-skeleton h-12 w-12 rounded-full" />
             <div className="ml-3 flex flex-col gap-2">
-              <div className="h-4 w-32 animate-pulse rounded-md bg-slate-800/50" />
-              <div className="h-3 w-20 animate-pulse rounded-md bg-slate-800/50" />
+              <div className="theme-skeleton h-4 w-32 rounded-md" />
+              <div className="theme-skeleton h-3 w-20 rounded-md" />
             </div>
           </header>
           <div className="flex flex-1 flex-col justify-end gap-6 p-6">
             <div className="flex w-full justify-end">
-              <div className="h-12 w-[60%] animate-pulse rounded-[26px] rounded-br-lg bg-slate-800/40" />
+              <div className="theme-skeleton h-12 w-[60%] rounded-[26px] rounded-br-lg" />
             </div>
             <div className="flex w-full items-end justify-start gap-2">
-              <div className="h-8 w-8 animate-pulse rounded-full bg-slate-800/50" />
-              <div className="h-12 w-[50%] animate-pulse rounded-[26px] rounded-bl-lg bg-slate-800/30" />
+              <div className="theme-skeleton h-8 w-8 rounded-full" />
+              <div className="theme-skeleton h-12 w-[50%] rounded-[26px] rounded-bl-lg" />
             </div>
             <div className="flex w-full justify-end">
-              <div className="h-12 w-[40%] animate-pulse rounded-[26px] rounded-br-lg bg-slate-800/40" />
+              <div className="theme-skeleton h-12 w-[40%] rounded-[26px] rounded-br-lg" />
             </div>
           </div>
-          <div className="h-[84px] shrink-0 border-t border-white/10 p-4">
-            <div className="h-full w-full animate-pulse rounded-[24px] bg-slate-800/40" />
+          <div className="h-[84px] shrink-0 border-t border-[var(--border)] p-4">
+            <div className="theme-skeleton h-full w-full rounded-[24px]" />
           </div>
         </div>
       );
@@ -940,51 +940,51 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
     .reverse();
 
   return (
-    <div className="relative flex h-full min-h-0 flex-1 overflow-hidden overflow-x-hidden rounded-[26px] border border-white/10 bg-[radial-gradient(circle_at_top,rgba(37,99,235,0.12),transparent_34%),linear-gradient(180deg,#071326_0%,#06101f_100%)] shadow-[0_22px_60px_rgba(2,6,23,0.28)]">
+    <div className="theme-message-surface relative flex h-full min-h-0 flex-1 overflow-hidden overflow-x-hidden rounded-[26px] border border-[var(--border)] shadow-[0_22px_60px_var(--shadow-glow)]">
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-[78px] shrink-0 items-center justify-between border-b border-white/10 bg-white/[0.03] px-5 lg:px-6">
+        <header className="flex h-[78px] shrink-0 items-center justify-between border-b border-[var(--border)] bg-[var(--surface-muted)] px-5 lg:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <Link
               href="/messages"
-              className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03] text-slate-300 transition hover:bg-white/[0.08] hover:text-white lg:hidden"
+              className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] text-[var(--secondary-foreground)] transition hover:bg-[var(--surface)] hover:text-[var(--foreground)] lg:hidden"
             >
               <ArrowLeft className="h-5 w-5" />
             </Link>
 
-            <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-white/10 bg-slate-800">
+            <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-[var(--border)] bg-[var(--surface-muted)]">
               {otherUser.avatarUrl ? (
                 <img src={otherUser.avatarUrl} alt={otherUser.fullName} className="h-full w-full object-cover" />
               ) : (
-                <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-slate-300">
+                <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-[var(--secondary-foreground)]">
                   {otherUser.fullName.charAt(0)}
                 </div>
               )}
               <span
-                className={`absolute bottom-1 right-1 h-3.5 w-3.5 rounded-full border-2 border-[#09172d] ${isOtherUserOnline ? "bg-emerald-400" : "bg-slate-500"
+                className={`absolute bottom-1 right-1 h-3.5 w-3.5 rounded-full border-2 border-[var(--surface)] ${isOtherUserOnline ? "bg-[var(--success)]" : "bg-[var(--muted-foreground)]"
                   }`}
               />
             </div>
 
             <div className="min-w-0">
               <h2 className="truncate text-[1.55rem] font-semibold tracking-tight text-white">{otherUser.fullName}</h2>
-              <div className="mt-0.5 flex items-center gap-2 text-sm text-slate-400">
-                <span className={`h-2 w-2 rounded-full ${isOtherUserOnline ? "bg-emerald-400" : "bg-slate-500"}`} />
+              <div className="mt-0.5 flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
+                <span className={`h-2 w-2 rounded-full ${isOtherUserOnline ? "bg-[var(--success)]" : "bg-[var(--muted-foreground)]"}`} />
                 <span>{isOtherUserOnline ? "online" : "offline"}</span>
               </div>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <button className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-slate-300 transition hover:bg-white/[0.08] hover:text-white">
+            <button className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface-muted)] text-[var(--secondary-foreground)] transition hover:bg-[var(--surface)] hover:text-[var(--foreground)]">
               <Phone className="h-5 w-5" />
             </button>
-            <button className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-slate-300 transition hover:bg-white/[0.08] hover:text-white">
+            <button className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface-muted)] text-[var(--secondary-foreground)] transition hover:bg-[var(--surface)] hover:text-[var(--foreground)]">
               <Video className="h-5 w-5" />
             </button>
             <button
               type="button"
               onClick={() => setIsDetailsPanelOpen(true)}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-base font-semibold text-slate-300 transition hover:bg-white/[0.08] hover:text-white"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface-muted)] text-base font-semibold text-[var(--secondary-foreground)] transition hover:bg-[var(--surface)] hover:text-[var(--foreground)]"
             >
               !
             </button>
@@ -1013,15 +1013,15 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
               Scroller: VirtuosoScroller,
               Header: () => (
                 <div className="mx-auto w-full max-w-[62rem]">
-                  <div className="mb-6 flex items-center gap-4 text-xs font-medium text-slate-500">
-                    <span className="h-px flex-1 bg-white/10" />
+                  <div className="mb-6 flex items-center gap-4 text-xs font-medium text-[var(--muted-foreground)]">
+                    <span className="h-px flex-1 bg-[var(--border)]" />
                     <span>{formatMessageDayLabel(new Date().toISOString())}</span>
-                    <span className="h-px flex-1 bg-white/10" />
+                    <span className="h-px flex-1 bg-[var(--border)]" />
                   </div>
 
-                  <div className="mb-6 overflow-hidden rounded-[22px] border border-white/10 bg-white/[0.04] shadow-[0_20px_60px_rgba(2,6,23,0.25)]">
+                  <div className="mb-6 overflow-hidden rounded-[22px] border border-[var(--border)] bg-[var(--surface-muted)] shadow-[var(--shadow-strong)]">
                     <div className="flex flex-col gap-4 p-4 md:flex-row">
-                      <div className="h-36 w-full overflow-hidden rounded-[18px] bg-slate-900 md:h-40 md:w-[220px]">
+                      <div className="theme-post-gallery h-36 w-full overflow-hidden rounded-[18px] md:h-40 md:w-[220px]">
                         <FallbackMedia
                           src={conversation.post.images[0]?.imageUrl}
                           alt={conversation.post.title}
@@ -1032,29 +1032,29 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
 
                       <div className="flex min-w-0 flex-1 flex-col justify-between gap-4">
                         <div>
-                          <p className="text-sm font-medium text-blue-300">Bất động sản đang trao đổi</p>
-                          <h3 className="mt-1.5 text-[1.25rem] font-semibold leading-tight text-white">{conversation.post.title}</h3>
-                          <p className="mt-2 text-[1.5rem] font-semibold text-blue-400">{formatPrice(conversation.post.price)}</p>
+                          <p className="text-sm font-medium text-[var(--accent)]">Bất động sản đang trao đổi</p>
+                          <h3 className="mt-1.5 text-[1.25rem] font-semibold leading-tight text-[var(--foreground)]">{conversation.post.title}</h3>
+                          <p className="mt-2 text-[1.5rem] font-semibold text-[var(--accent)]">{formatPrice(conversation.post.price)}</p>
                         </div>
 
-                        <div className="grid gap-3 text-sm text-slate-300 sm:grid-cols-2">
-                          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3">
+                        <div className="grid gap-3 text-sm text-[var(--secondary-foreground)] sm:grid-cols-2">
+                          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
                             {conversation.post.propertyType}
                           </div>
-                          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-3">
+                          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
                             {conversation.post.area} m²
                           </div>
                         </div>
 
                         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                          <div className="flex items-center gap-2 text-sm text-slate-400">
+                          <div className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
                             <MapPin className="h-4 w-4" />
                             <span>{conversation.post.city}</span>
                           </div>
 
                           <Link
                             href={`/posts/${conversation.post.id}`}
-                            className="inline-flex items-center justify-center rounded-[18px] border border-blue-400/40 px-4 py-2.5 text-sm font-medium text-blue-300 transition hover:bg-blue-500/10 hover:text-white"
+                            className="inline-flex items-center justify-center rounded-[18px] border border-[var(--accent-border)] px-4 py-2.5 text-sm font-medium text-[var(--accent)] transition hover:bg-[var(--accent-soft)] hover:text-[var(--foreground)]"
                           >
                             Xem chi tiết
                           </Link>
@@ -1065,7 +1065,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
 
                   {isLoadingMoreMessages && (
                     <div className="flex justify-center py-4">
-                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-400 border-t-transparent" />
+                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
                     </div>
                   )}
                 </div>
@@ -1078,19 +1078,19 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                     aria-hidden={!otherUserTyping}
                   >
                     <div className="mb-3 flex items-end gap-3">
-                      <div className="h-10 w-10 overflow-hidden rounded-full border border-white/10 bg-slate-800">
+                      <div className="h-10 w-10 overflow-hidden rounded-full border border-[var(--border)] bg-[var(--surface-muted)]">
                         {otherUser.avatarUrl ? (
                           <img src={otherUser.avatarUrl} alt={otherUser.fullName} className="h-full w-full object-cover" />
                         ) : (
-                          <div className="flex h-full w-full items-center justify-center text-sm font-medium text-slate-300">
+                          <div className="flex h-full w-full items-center justify-center text-sm font-medium text-[var(--secondary-foreground)]">
                             {otherUser.fullName.charAt(0)}
                           </div>
                         )}
                       </div>
-                      <div className="flex items-center gap-1 rounded-[24px] rounded-bl-lg bg-white/[0.08] px-5 py-4">
-                        <span className="h-2 w-2 animate-bounce rounded-full bg-slate-300 [animation-delay:0ms]" />
-                        <span className="h-2 w-2 animate-bounce rounded-full bg-slate-300 [animation-delay:120ms]" />
-                        <span className="h-2 w-2 animate-bounce rounded-full bg-slate-300 [animation-delay:240ms]" />
+                      <div className="flex items-center gap-1 rounded-[24px] rounded-bl-lg bg-[var(--surface-muted)] px-5 py-4">
+                        <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--message-typing-dot)] [animation-delay:0ms]" />
+                        <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--message-typing-dot)] [animation-delay:120ms]" />
+                        <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--message-typing-dot)] [animation-delay:240ms]" />
                       </div>
                     </div>
                   </div>
@@ -1145,11 +1145,11 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                 exit={{ opacity: 0, y: 8, scale: 0.94 }}
                 type="button"
                 onClick={scrollToBottom}
-                className="absolute bottom-[7.25rem] right-5 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-[#12203a] text-slate-200 shadow-xl transition hover:text-white"
+                className="absolute bottom-[7.25rem] right-5 flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--secondary-foreground)] shadow-xl transition hover:text-[var(--foreground)]"
               >
                 <ChevronRight className="h-4 w-4 rotate-90" />
                 {unreadCount > 0 && (
-                  <span className="absolute -right-1 -top-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-blue-500 px-1 text-[10px] font-semibold text-white">
+                  <span className="absolute -right-1 -top-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-[var(--accent)] px-1 text-[10px] font-semibold text-[var(--primary-foreground)]">
                     {unreadCount > 9 ? "9+" : unreadCount}
                   </span>
                 )}
@@ -1159,7 +1159,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
 
           {openMenuId && menuPosition && (
             <div
-              className="fixed z-[90] w-40 -translate-y-full overflow-hidden rounded-2xl border border-white/10 bg-[#13213b] p-1 shadow-2xl"
+              className="theme-message-popover fixed z-[90] w-40 -translate-y-full overflow-hidden rounded-2xl p-1"
               style={{ top: menuPosition.top, right: menuPosition.right }}
             >
               {messages.find((message) => message.id === openMenuId)?.messageType === "TEXT" && (
@@ -1171,7 +1171,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                       handleEditMessage(targetMessage);
                     }
                   }}
-                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-slate-200 transition hover:bg-white/5"
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)]"
                 >
                   <Edit2 className="h-4 w-4" />
                   Chinh sua
@@ -1180,7 +1180,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
               <button
                 type="button"
                 onClick={() => handleDeleteMessage(openMenuId)}
-                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-red-300 transition hover:bg-red-500/10"
+                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-[var(--danger-foreground)] transition hover:bg-[var(--danger-soft)]"
               >
                 <Trash2 className="h-4 w-4" />
                 Thu hoi
@@ -1188,20 +1188,20 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
             </div>
           )}
 
-          <div className="shrink-0 border-t border-white/10 bg-white/[0.03] px-4 py-4 lg:px-5">
+          <div className="shrink-0 border-t border-[var(--border)] bg-[var(--surface-muted)] px-4 py-4 lg:px-5">
             <AnimatePresence>
               {imagePreviewUrls.length > 0 && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
-                  className="relative mb-3 overflow-hidden rounded-[22px] border border-white/10 bg-[#0b1931] p-3"
+                  className="theme-message-compose relative mb-3 overflow-hidden rounded-[22px] p-3"
                 >
                   {canScrollPreview && (
                     <button
                       type="button"
                       onClick={() => scrollPreview("left")}
-                      className="absolute left-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white"
+                      className="theme-surface-strong absolute left-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-[var(--foreground)]"
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </button>
@@ -1214,7 +1214,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                         <button
                           type="button"
                           onClick={() => removeSelectedImage(index)}
-                          className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white"
+                          className="theme-surface-strong absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full text-[var(--foreground)]"
                         >
                           <X className="h-4 w-4" />
                         </button>
@@ -1226,7 +1226,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                     <button
                       type="button"
                       onClick={() => scrollPreview("right")}
-                      className="absolute right-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white"
+                      className="theme-surface-strong absolute right-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-[var(--foreground)]"
                     >
                       <ChevronRight className="h-4 w-4" />
                     </button>
@@ -1235,11 +1235,11 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
               )}
             </AnimatePresence>
 
-            <form onSubmit={handleSendMessage} className="rounded-[24px] border border-white/10 bg-[#0b1931] px-4 py-3 shadow-[0_8px_18px_rgba(2,6,23,0.18)]">
+            <form onSubmit={handleSendMessage} className="theme-message-compose rounded-[24px] px-4 py-3">
               <div className="flex items-center gap-2.5">
                 <button
                   type="button"
-                  className="hidden h-10 w-10 items-center justify-center rounded-full text-slate-400 sm:flex"
+                  className="hidden h-10 w-10 items-center justify-center rounded-full text-[var(--muted-foreground)] sm:flex"
                 >
                   <Mic className="h-5 w-5" />
                 </button>
@@ -1257,7 +1257,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isUploading}
-                  className={`flex h-10 w-10 items-center justify-center rounded-full transition ${selectedImages.length > 0 ? "bg-blue-500/15 text-blue-300" : "bg-white/[0.04] text-slate-400 hover:text-white"
+                  className={`flex h-10 w-10 items-center justify-center rounded-full transition ${selectedImages.length > 0 ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "bg-[var(--surface-muted)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
                     }`}
                 >
                   <ImageIcon className="h-5 w-5" />
@@ -1267,7 +1267,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                   <button
                     type="button"
                     onClick={() => setShowEmojiPicker((prev) => !prev)}
-                    className={`flex h-10 w-10 items-center justify-center rounded-full transition ${showEmojiPicker ? "bg-blue-500/15 text-blue-300" : "bg-white/[0.04] text-slate-400 hover:text-white"
+                    className={`flex h-10 w-10 items-center justify-center rounded-full transition ${showEmojiPicker ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "bg-[var(--surface-muted)] text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
                       }`}
                   >
                     <Smile className="h-5 w-5" />
@@ -1295,17 +1295,17 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                     onChange={handleInputChange}
                     disabled={isUploading}
                     placeholder={isUploading ? "Đang tải ảnh lên..." : "Nhập tin nhắn..."}
-                    className="w-full border-none bg-transparent px-2 py-2.5 text-[14px] text-white outline-none placeholder:text-slate-500"
+                    className="w-full border-none bg-transparent px-2 py-2.5 text-[14px] text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={(!inputValue.trim() && selectedImages.length === 0 && !editingMessageId) || isUploading}
-                  className="flex h-12 w-12 items-center justify-center rounded-full bg-[linear-gradient(135deg,#5b7cff,#944dff)] text-white shadow-[0_16px_32px_rgba(79,70,229,0.35)] transition disabled:opacity-50"
+                  className="theme-button-primary flex h-12 w-12 items-center justify-center rounded-full transition disabled:opacity-50"
                 >
                   {isUploading ? (
-                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-[color:color-mix(in_srgb,var(--primary-foreground)_40%,transparent)] border-t-[var(--primary-foreground)]" />
                   ) : editingMessageId ? (
                     <Check className="h-5 w-5" />
                   ) : (
@@ -1327,21 +1327,21 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsDetailsPanelOpen(false)}
-              className="absolute inset-0 z-40 bg-black/45 backdrop-blur-[2px]"
+              className="absolute inset-0 z-40 bg-[color:color-mix(in_srgb,var(--background)_35%,transparent)] backdrop-blur-[2px]"
             />
 
             <motion.aside
               initial={{ opacity: 0, x: 32 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 32 }}
-              className="absolute right-0 top-0 z-50 flex h-full w-full max-w-[380px] flex-col overflow-hidden border-l border-white/10 bg-[linear-gradient(180deg,rgba(11,22,42,0.98),rgba(7,16,31,0.99))] p-5 shadow-[-24px_0_60px_rgba(2,6,23,0.45)]"
+              className="theme-message-sidebar absolute right-0 top-0 z-50 flex h-full w-full max-w-[380px] flex-col overflow-hidden border-l border-[var(--border)] p-5 shadow-[-24px_0_60px_var(--shadow-glow)]"
             >
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium uppercase tracking-[0.2em] text-slate-400">Thông tin chat</p>
+                <p className="text-sm font-medium uppercase tracking-[0.2em] text-[var(--muted-foreground)]">Thông tin chat</p>
                 <button
                   type="button"
                   onClick={() => setIsDetailsPanelOpen(false)}
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-slate-300 transition hover:bg-white/[0.08] hover:text-white"
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface-muted)] text-[var(--secondary-foreground)] transition hover:bg-[var(--surface)] hover:text-[var(--foreground)]"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -1349,44 +1349,44 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
 
               <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto pr-1">
                 <div className="space-y-4 pb-1">
-                  <div className="rounded-[30px] border border-white/10 bg-white/[0.04] p-6 text-center">
-                    <div className="relative mx-auto h-24 w-24 overflow-hidden rounded-full border border-white/10 bg-slate-800">
+                  <div className="rounded-[30px] border border-[var(--border)] bg-[var(--surface-muted)] p-6 text-center">
+                    <div className="relative mx-auto h-24 w-24 overflow-hidden rounded-full border border-[var(--border)] bg-[var(--surface)]">
                       {otherUser.avatarUrl ? (
                         <img src={otherUser.avatarUrl} alt={otherUser.fullName} className="h-full w-full object-cover" />
                       ) : (
-                        <div className="flex h-full w-full items-center justify-center text-3xl font-semibold text-slate-300">
+                        <div className="flex h-full w-full items-center justify-center text-3xl font-semibold text-[var(--secondary-foreground)]">
                           {otherUser.fullName.charAt(0)}
                         </div>
                       )}
                       <span
-                        className={`absolute bottom-2 right-2 h-4 w-4 rounded-full border-2 border-[#0b1931] ${isOtherUserOnline ? "bg-emerald-400" : "bg-slate-500"
+                        className={`absolute bottom-2 right-2 h-4 w-4 rounded-full border-2 border-[var(--surface)] ${isOtherUserOnline ? "bg-[var(--success)]" : "bg-[var(--muted-foreground)]"
                           }`}
                       />
                     </div>
 
-                    <h3 className="mt-5 text-3xl font-semibold text-white">{otherUser.fullName}</h3>
-                    <p className="mt-2 text-sm text-slate-400">Chủ tin đăng</p>
+                    <h3 className="mt-5 text-3xl font-semibold text-[var(--foreground)]">{otherUser.fullName}</h3>
+                    <p className="mt-2 text-sm text-[var(--muted-foreground)]">Chủ tin đăng</p>
 
                     <div className="mt-6 grid grid-cols-3 gap-3">
-                      <button className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-4 text-center text-xs text-slate-300 transition hover:bg-white/[0.06]">
+                      <button className="rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-4 text-center text-xs text-[var(--secondary-foreground)] transition hover:bg-[var(--surface)]">
                         <Phone className="mx-auto mb-2 h-5 w-5" />
                         Gọi thoại
                       </button>
-                      <button className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-4 text-center text-xs text-slate-300 transition hover:bg-white/[0.06]">
+                      <button className="rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-4 text-center text-xs text-[var(--secondary-foreground)] transition hover:bg-[var(--surface)]">
                         <Video className="mx-auto mb-2 h-5 w-5" />
                         Gọi video
                       </button>
-                      <button className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-4 text-center text-xs text-slate-300 transition hover:bg-white/[0.06]">
+                      <button className="rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-4 text-center text-xs text-[var(--secondary-foreground)] transition hover:bg-[var(--surface)]">
                         <Info className="mx-auto mb-2 h-5 w-5" />
                         Hồ sơ
                       </button>
                     </div>
                   </div>
 
-                  <div className="rounded-[30px] border border-white/10 bg-white/[0.04] p-5">
-                    <p className="text-lg font-semibold text-white">Bất động sản đang trao đổi</p>
+                  <div className="rounded-[30px] border border-[var(--border)] bg-[var(--surface-muted)] p-5">
+                    <p className="text-lg font-semibold text-[var(--foreground)]">Bất động sản đang trao đổi</p>
 
-                    <div className="mt-4 overflow-hidden rounded-[24px] border border-white/10 bg-[#0d1b33]">
+                    <div className="theme-message-compose mt-4 overflow-hidden rounded-[24px]">
                       <div className="h-40 overflow-hidden">
                         <FallbackMedia
                           src={conversation.post.images[0]?.imageUrl}
@@ -1397,18 +1397,18 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                       </div>
 
                       <div className="space-y-3 p-4">
-                        <h4 className="line-clamp-2 text-lg font-medium text-white">{conversation.post.title}</h4>
-                        <p className="text-2xl font-semibold text-blue-400">{formatPrice(conversation.post.price)}</p>
-                        <p className="text-sm text-slate-400">
+                        <h4 className="line-clamp-2 text-lg font-medium text-[var(--foreground)]">{conversation.post.title}</h4>
+                        <p className="text-2xl font-semibold text-[var(--accent)]">{formatPrice(conversation.post.price)}</p>
+                        <p className="text-sm text-[var(--muted-foreground)]">
                           {conversation.post.area} m² • {conversation.post.propertyType}
                         </p>
-                        <p className="flex items-center gap-2 text-sm text-slate-500">
+                        <p className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
                           <MapPin className="h-4 w-4" />
                           <span>{conversation.post.city}</span>
                         </p>
                         <Link
                           href={`/posts/${conversation.post.id}`}
-                          className="inline-flex w-full items-center justify-center rounded-2xl border border-white/10 px-4 py-3 text-sm font-medium text-blue-300 transition hover:bg-white/[0.06] hover:text-white"
+                          className="inline-flex w-full items-center justify-center rounded-2xl border border-[var(--border)] px-4 py-3 text-sm font-medium text-[var(--accent)] transition hover:bg-[var(--surface)] hover:text-[var(--foreground)]"
                         >
                           Xem chi tiết
                         </Link>
@@ -1416,20 +1416,20 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                     </div>
                   </div>
 
-                  <div className="rounded-[30px] border border-white/10 bg-white/[0.04] p-5">
+                  <div className="rounded-[30px] border border-[var(--border)] bg-[var(--surface-muted)] p-5">
                     <div className="mb-4 flex items-center justify-between">
                       <p className="text-lg font-semibold text-white">Tệp đã chia sẻ</p>
-                      <span className="text-sm text-slate-500">{sharedAssets.length}</span>
+                      <span className="text-sm text-[var(--muted-foreground)]">{sharedAssets.length}</span>
                     </div>
 
                     <div className="space-y-3">
                       {sharedAssets.length === 0 ? (
-                        <div className="rounded-[22px] border border-dashed border-white/10 bg-white/[0.02] p-4 text-sm leading-6 text-slate-500">
+                        <div className="rounded-[22px] border border-dashed border-[var(--border)] bg-[var(--surface)] p-4 text-sm leading-6 text-[var(--muted-foreground)]">
                           Chưa có tệp nào được chia sẻ trong hội thoại này.
                         </div>
                       ) : (
                         sharedAssets.map((asset, index) => (
-                          <div key={asset.id} className="flex items-center gap-3 rounded-[22px] border border-white/[0.08] bg-white/[0.03] p-3">
+                          <div key={asset.id} className="flex items-center gap-3 rounded-[22px] border border-[var(--border)] bg-[var(--surface)] p-3">
                             <div className="h-16 w-16 overflow-hidden rounded-2xl">
                               <FallbackMedia
                                 src={asset.url}
@@ -1440,13 +1440,13 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-sm font-medium text-white">{getFileLabel(index)}</p>
-                              <p className="mt-1 text-xs text-slate-500">{format(new Date(asset.createdAt), "dd/MM/yyyy HH:mm")}</p>
+                              <p className="mt-1 text-xs text-[var(--muted-foreground)]">{format(new Date(asset.createdAt), "dd/MM/yyyy HH:mm")}</p>
                             </div>
                             <a
                               href={asset.url}
                               target="_blank"
                               rel="noreferrer"
-                              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.05] text-slate-300 transition hover:bg-white/[0.08] hover:text-white"
+                              className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--surface)] text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
                             >
                               <Download className="h-4 w-4" />
                             </a>
@@ -1467,7 +1467,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setLightboxImage(null)}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
+            className="theme-media-backdrop fixed inset-0 z-[100] flex items-center justify-center p-4"
           >
             <motion.img
               initial={{ scale: 0.96 }}
@@ -1480,7 +1480,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
             <button
               type="button"
               onClick={() => setLightboxImage(null)}
-              className="absolute right-6 top-6 flex h-11 w-11 items-center justify-center rounded-full bg-black/40 text-white"
+              className="theme-media-control absolute right-6 top-6 flex h-11 w-11 items-center justify-center rounded-full"
             >
               <X className="h-5 w-5" />
             </button>
@@ -1512,10 +1512,10 @@ const MessageBubble = memo(({
   return (
     <div>
       {showDateDivider && index !== 0 && (
-        <div className="my-6 flex items-center gap-4 text-xs font-medium text-slate-500">
-          <span className="h-px flex-1 bg-white/10" />
+        <div className="my-6 flex items-center gap-4 text-xs font-medium text-[var(--muted-foreground)]">
+          <span className="h-px flex-1 bg-[var(--border)]" />
           <span>{formatMessageDayLabel(message.createdAt)}</span>
-          <span className="h-px flex-1 bg-white/10" />
+          <span className="h-px flex-1 bg-[var(--border)]" />
         </div>
       )}
 
@@ -1531,11 +1531,11 @@ const MessageBubble = memo(({
           {!isMine && (
             <div className="flex h-10 w-10 shrink-0 items-end justify-start">
               {!isGroupedWithNext && (
-                <div className="h-9 w-9 overflow-hidden rounded-full border border-white/10 bg-slate-800">
+                <div className="h-9 w-9 overflow-hidden rounded-full border border-[var(--border)] bg-[var(--surface)]">
                   {otherUser.avatarUrl ? (
                     <img src={otherUser.avatarUrl} alt={otherUser.fullName} className="h-full w-full object-cover" />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center text-sm font-medium text-slate-300">
+                    <div className="flex h-full w-full items-center justify-center text-sm font-medium text-[var(--secondary-foreground)]">
                       {otherUser.fullName.charAt(0)}
                     </div>
                   )}
@@ -1546,7 +1546,7 @@ const MessageBubble = memo(({
 
           <div className={`flex flex-col ${isMine ? "items-end" : "items-start"}`}>
             {message.isEdited && message.messageType === "TEXT" && (
-              <p className={`mb-1 px-1 text-[11px] ${isMine ? "text-blue-100/80" : "text-slate-400"}`}>
+              <p className={`mb-1 px-1 text-[11px] ${isMine ? "text-[var(--message-meta-own)]" : "text-[var(--message-meta-other)]"}`}>
                 Đã chỉnh sửa
               </p>
             )}
@@ -1556,8 +1556,8 @@ const MessageBubble = memo(({
                 className={`relative overflow-hidden ${message.messageType === "IMAGE"
                   ? ""
                   : `px-4 py-3.5 ${isMine
-                    ? "bg-[linear-gradient(135deg,#6366f1,#8b5cf6)] text-white"
-                    : "bg-white/[0.08] text-slate-100"
+                    ? "bg-[image:var(--message-own-bg)] text-[var(--message-own-foreground)]"
+                    : "bg-[var(--message-other-bg)] text-[var(--message-other-foreground)]"
                   }`
                   } ${isMine
                     ? isGroupedWithPrevious
@@ -1566,7 +1566,7 @@ const MessageBubble = memo(({
                     : isGroupedWithPrevious
                       ? "rounded-[26px] rounded-tl-lg"
                       : "rounded-[26px] rounded-bl-lg"
-                  } shadow-[0_16px_40px_rgba(2,6,23,0.15)]`}
+                  } shadow-[var(--shadow-soft)]`}
               >
                 {message.messageType === "IMAGE" ? (
                   <div
@@ -1580,7 +1580,7 @@ const MessageBubble = memo(({
                         src={imageUrls[0]}
                         alt="ảnh đã gửi"
                         onClick={() => setLightboxImage(imageUrls[0])}
-                        wrapperClassName="relative block w-full overflow-hidden rounded-[24px] bg-slate-900"
+                        wrapperClassName="relative block w-full overflow-hidden rounded-[24px] bg-[var(--surface)]"
                         className="h-full w-full object-cover transition hover:scale-[1.01]"
                       />
                     ) : (
@@ -1590,7 +1590,7 @@ const MessageBubble = memo(({
                             key={url + imageIndex}
                             type="button"
                             onClick={() => setLightboxImage(url)}
-                            className={`relative overflow-hidden bg-slate-900 ${imageUrls.length === 3 && imageIndex === 0 ? "col-span-2 aspect-[2.2/1]" : "aspect-[1/1]"
+                            className={`relative overflow-hidden bg-[var(--surface)] ${imageUrls.length === 3 && imageIndex === 0 ? "col-span-2 aspect-[2.2/1]" : "aspect-[1/1]"
                               }`}
                           >
                             <FallbackMedia
@@ -1600,7 +1600,7 @@ const MessageBubble = memo(({
                               wrapperClassName="h-full w-full"
                             />
                             {imageUrls.length > 4 && imageIndex === 3 && (
-                              <div className="absolute inset-0 flex items-center justify-center bg-black/55 text-lg font-semibold text-white">
+                              <div className="absolute inset-0 flex items-center justify-center bg-[var(--media-overlay-strong)] text-lg font-semibold text-[var(--foreground)]">
                                 +{imageUrls.length - 4}
                               </div>
                             )}
@@ -1610,8 +1610,8 @@ const MessageBubble = memo(({
                     )}
 
                     {message.isOptimistic && (
-                      <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/80 border-t-transparent" />
+                      <div className="absolute inset-0 z-10 flex items-center justify-center bg-[var(--media-overlay-soft)] backdrop-blur-sm">
+                        <div className="h-6 w-6 animate-spin rounded-full border-2 border-[color:color-mix(in_srgb,var(--foreground)_80%,transparent)] border-t-transparent" />
                       </div>
                     )}
                   </div>
@@ -1619,7 +1619,7 @@ const MessageBubble = memo(({
                   <div className="space-y-2">
                     <p className="whitespace-pre-wrap break-words text-[14px] leading-6">{message.content}</p>
                     {message.isOptimistic && (
-                      <p className={`text-[11px] ${isMine ? "text-blue-100/80" : "text-slate-400"}`}>
+                      <p className={`text-[11px] ${isMine ? "text-[var(--message-meta-own)]" : "text-[var(--message-meta-other)]"}`}>
                         Đang gửi...
                       </p>
                     )}
@@ -1632,7 +1632,7 @@ const MessageBubble = memo(({
                   <button
                     type="button"
                     onClick={(event) => handleToggleMessageMenu(message.id, event.currentTarget)}
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-slate-400 transition hover:text-white"
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface-muted)] text-[var(--muted-foreground)] transition hover:text-[var(--foreground)]"
                   >
                     <MoreVertical className="h-4 w-4" />
                   </button>
@@ -1640,9 +1640,9 @@ const MessageBubble = memo(({
               )}
             </div>
 
-            <div className={`mt-2 flex items-center gap-2 px-1 text-xs ${isMine ? "justify-end" : "justify-start"} text-slate-500`}>
+            <div className={`mt-2 flex items-center gap-2 px-1 text-xs ${isMine ? "justify-end" : "justify-start"} text-[var(--message-meta-other)]`}>
               <span>{formatMessageTime(message.createdAt)}</span>
-              {isLastRead && <span className="text-blue-300">Đã xem</span>}
+              {isLastRead && <span className="text-[var(--message-read)]">Đã xem</span>}
             </div>
           </div>
         </div>
