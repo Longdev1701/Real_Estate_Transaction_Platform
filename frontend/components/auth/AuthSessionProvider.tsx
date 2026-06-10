@@ -41,6 +41,7 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
   } =
     useAuthStore();
   const [isSessionVerified, setIsSessionVerified] = useState(false);
+  const userId = user?.id ?? null;
 
   useEffect(() => {
     if (!hasHydrated) {
@@ -96,7 +97,7 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
     return () => {
       isMounted = false;
     };
-  }, [accessToken, hasHydrated, logout, refreshToken, setIsLoadingUser, setTokens, setUser, user]);
+  }, [accessToken, hasHydrated, logout, refreshToken, setIsLoadingUser, setTokens, setUser, userId]);
 
   useEffect(() => {
     if (!hasHydrated) {

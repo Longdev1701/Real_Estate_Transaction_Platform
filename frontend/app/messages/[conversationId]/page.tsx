@@ -232,6 +232,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
   const { socket, isConnected } = useSocketStore();
   const { playPop, playDing } = useSound();
   const router = useRouter();
+  const userId = user?.id ?? null;
 
   const initialCachedConversation = typeof window !== "undefined" ? readCachedConversation(conversationId) : null;
   const [messages, setMessages] = useState<Message[]>(() => initialCachedConversation?.messages || []);
@@ -433,7 +434,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
     const fetchMessages = async () => {
       try {
         setLoadError(null);
-        const currentUserId = user?.id;
+        const currentUserId = userId;
 
         if (!currentUserId) {
           return;
@@ -467,10 +468,10 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
       }
     };
 
-    if (user) {
+    if (userId) {
       fetchMessages();
     }
-  }, [conversationId, isConnected, socket, user]);
+  }, [conversationId, userId]);
 
   const loadMoreMessages = async () => {
     if (!nextCursor || isLoadingMoreMessages || !hasMoreMessages) return;

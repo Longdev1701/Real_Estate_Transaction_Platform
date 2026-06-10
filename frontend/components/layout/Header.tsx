@@ -13,12 +13,13 @@ import { UserMenu } from "./UserMenu";
 
 export function Header() {
   const pathname = usePathname();
-  const { user, hasHydrated } = useAuthStore();
+  const { user, accessToken, hasHydrated, isLoadingUser } = useAuthStore();
   const socket = useSocketStore((state) => state.socket);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const userId = user?.id ?? null;
 
   useEffect(() => {
-    if (!hasHydrated || !user) {
+    if (!hasHydrated || isLoadingUser || !user || !accessToken) {
       setUnreadNotifications(0);
       return;
     }
@@ -43,7 +44,7 @@ export function Header() {
     return () => {
       isMounted = false;
     };
-  }, [hasHydrated, pathname, user]);
+  }, [accessToken, hasHydrated, isLoadingUser, userId]);
 
   useEffect(() => {
     const handleUnreadCountChanged = (event: Event) => {

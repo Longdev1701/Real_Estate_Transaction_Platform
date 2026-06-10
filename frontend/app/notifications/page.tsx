@@ -95,7 +95,7 @@ export default function NotificationsPage() {
   }, [accessToken, hasHydrated, router, user]);
 
   useEffect(() => {
-    if (!hasHydrated || !user) {
+    if (!hasHydrated || isLoadingUser || !user || !accessToken) {
       setIsLoading(false);
       return;
     }
@@ -138,7 +138,7 @@ export default function NotificationsPage() {
     return () => {
       isMounted = false;
     };
-  }, [cacheKey, hasHydrated, user]);
+  }, [accessToken, cacheKey, hasHydrated, isLoadingUser, user]);
 
   useEffect(() => {
     if (!socket || !user) return;
