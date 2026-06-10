@@ -457,7 +457,7 @@ export function PostList() {
             <>
               <div className="space-y-5">
                 {posts.map((post) => (
-                  <div key={post.id} className="[content-visibility:auto] [contain-intrinsic-size:550px]">
+                  <div key={post.id}>
                     <PostCard post={post} />
                   </div>
                 ))}
