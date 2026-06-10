@@ -214,7 +214,7 @@ export function PostCard({ post }: { post: Post }) {
     }
 
     if (!user) {
-      router.push("/auth/login");
+      router.push(`/auth/login?redirectTo=${encodeURIComponent(window.location.pathname + window.location.search)}`);
       return;
     }
 
@@ -247,7 +247,7 @@ export function PostCard({ post }: { post: Post }) {
 
   const handleReportClick = () => {
     if (!user) {
-      router.push("/auth/login");
+      router.push(`/auth/login?redirectTo=${encodeURIComponent(window.location.pathname + window.location.search)}`);
       return;
     }
 

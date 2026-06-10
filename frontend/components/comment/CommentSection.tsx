@@ -370,7 +370,10 @@ export default function CommentSection({ postId, postAuthorId }: CommentSectionP
       ) : (
         <div className="theme-subtle-card rounded-2xl border border-dashed p-6 text-center">
           <p className="mb-3 text-sm text-[var(--muted-foreground)]">Vui lòng đăng nhập để để lại bình luận và thảo luận cùng mọi người.</p>
-          <Link href="/auth/login" className="btn-primary inline-flex px-5 py-2 text-sm font-medium">
+          <Link
+            href={`/auth/login?redirectTo=${encodeURIComponent(typeof window !== "undefined" ? window.location.pathname + window.location.search : "")}`}
+            className="btn-primary inline-flex px-5 py-2 text-sm font-medium"
+          >
             Đăng nhập ngay
           </Link>
         </div>
