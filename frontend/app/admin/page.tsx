@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   BarChart3,
   CheckCircle2,
@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 
 import { AdminShell, NeonCard, StatCard } from "@/components/admin/AdminShell";
+import { useAdminQuery } from "@/hooks/useAdminQuery";
+import { adminQueryKeys } from "@/lib/admin-query-keys";
 import {
   getAdminDashboard,
   type AdminChartPoint,
@@ -30,47 +32,24 @@ const formatDelta = (value: number) => {
 };
 
 export default function AdminDashboardPage() {
-  const [dashboard, setDashboard] = useState<AdminDashboardData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    let ignore = false;
-
-    const loadDashboard = async () => {
-      try {
-        setIsLoading(true);
-        setError("");
-        const data = await getAdminDashboard();
-        if (!ignore) {
-          setDashboard(data);
-        }
-      } catch {
-        if (!ignore) {
-          setError("Không thể tải dữ liệu tổng quan admin.");
-        }
-      } finally {
-        if (!ignore) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    loadDashboard();
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
+  const { data: dashboard, isLoading, error } =
+    useAdminQuery<AdminDashboardData>({
+      queryKey: adminQueryKeys.dashboard(),
+      queryFn: getAdminDashboard,
+      errorMessage: "Không thể tải dữ liệu tổng quan admin.",
+      staleTime: 5_000,
+      refetchOnWindowFocus: true,
+      refetchInterval: 5_000,
+    });
 
   return (
     <AdminShell title="Tổng quan">
       <div className="space-y-6">
-        {error && (
+        {error ? (
           <NeonCard className="theme-badge-danger p-4 text-sm">
             {error}
           </NeonCard>
-        )}
+        ) : null}
 
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-5">
           <StatCard

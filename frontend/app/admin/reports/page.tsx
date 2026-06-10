@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -16,7 +17,10 @@ import {
   X,
 } from "lucide-react";
 
+import { AdminPagination } from "@/components/admin/AdminPagination";
 import { AdminShell, NeonCard, StatCard } from "@/components/admin/AdminShell";
+import { useAdminQuery } from "@/hooks/useAdminQuery";
+import { adminQueryKeys } from "@/lib/admin-query-keys";
 import {
   getAdminReports,
   getAdminReportsStats,
@@ -107,80 +111,61 @@ const getAppealState = (report: AdminReport) => {
 type ReportTab = "ALL" | AdminReportStatus;
 
 export default function AdminReportsPage() {
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState<AdminReportsFilter>({
     page: 1,
     limit: 8,
+    keyword: "",
     status: "",
   });
-  const [data, setData] = useState<AdminReportsData | null>(null);
-  const [stats, setStats] = useState<AdminReportsStats | null>(null);
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [keywordInput, setKeywordInput] = useState("");
   const [activeTab, setActiveTab] = useState<ReportTab>("ALL");
-  const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [error, setError] = useState("");
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [mutationError, setMutationError] = useState("");
 
   useEffect(() => {
-    let ignore = false;
+    const timer = window.setTimeout(() => {
+      setFilter((current) => ({
+        ...current,
+        page: 1,
+        keyword: keywordInput,
+      }));
+    }, 300);
 
-    const loadReports = async () => {
-      try {
-        setIsLoading(true);
-        setError("");
-        const [reportsResult, statsResult] = await Promise.all([
-          getAdminReports(filter),
-          getAdminReportsStats(),
-        ]);
+    return () => window.clearTimeout(timer);
+  }, [keywordInput]);
 
-        if (ignore) return;
-        setData(reportsResult);
-        setStats(statsResult);
-        setSelectedReportId((current) => current ?? reportsResult.items[0]?.id ?? null);
-      } catch {
-        if (!ignore) {
-          setError("Không thể tải danh sách báo cáo.");
-        }
-      } finally {
-        if (!ignore) {
-          setIsLoading(false);
-        }
-      }
-    };
+  const reportsQuery = useAdminQuery<AdminReportsData>({
+    queryKey: adminQueryKeys.reports.list(filter),
+    queryFn: () => getAdminReports(filter),
+    errorMessage: "Không thể tải danh sách báo cáo.",
+    staleTime: 10_000,
+    refetchOnWindowFocus: true,
+    refetchInterval: 7_500,
+  });
 
-    loadReports();
+  const reportStatsQuery = useAdminQuery<AdminReportsStats>({
+    queryKey: adminQueryKeys.reports.stats(filter.keyword),
+    queryFn: () => getAdminReportsStats({ keyword: filter.keyword }),
+    errorMessage: "Không thể tải thống kê báo cáo.",
+    staleTime: 10_000,
+    refetchOnWindowFocus: true,
+    refetchInterval: 7_500,
+  });
 
-    return () => {
-      ignore = true;
-    };
-  }, [filter, refreshKey]);
+  useEffect(() => {
+    setSelectedReportId((current) => current ?? reportsQuery.data?.items[0]?.id ?? null);
+  }, [reportsQuery.data]);
 
-  const filteredItems = useMemo(() => {
-    const keyword = keywordInput.trim().toLowerCase();
-    if (!keyword) return data?.items ?? [];
-
-    return (data?.items ?? []).filter((report) =>
-      [
-        makeReportCode(report.id),
-        report.post.title,
-        report.reporter.fullName,
-        report.reporter.email,
-        report.reason,
-        report.description ?? "",
-        report.appealMessage ?? "",
-        report.appealEvidence ?? "",
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(keyword),
-    );
-  }, [data?.items, keywordInput]);
-
+  const data = reportsQuery.data;
+  const stats = reportStatsQuery.data;
+  const isLoading = reportsQuery.isLoading || reportStatsQuery.isLoading;
+  const error = mutationError || reportsQuery.error || reportStatsQuery.error;
   const selectedReport =
-    filteredItems.find((report) => report.id === selectedReportId) ??
-    filteredItems[0] ??
+    (data?.items ?? []).find((report) => report.id === selectedReportId) ??
+    data?.items[0] ??
     null;
 
   const tabs = [
@@ -190,21 +175,10 @@ export default function AdminReportsPage() {
     { key: "REJECTED" as const, label: "Từ chối", count: stats?.rejected ?? 0 },
   ];
 
-  const pageButtons = useMemo(() => {
-    const totalPages = data?.meta.totalPages ?? 1;
-    const currentPage = data?.meta.page ?? filter.page;
-    const pages = new Set<number>([
-      1,
-      totalPages,
-      currentPage,
-      Math.max(1, currentPage - 1),
-      Math.min(totalPages, currentPage + 1),
-    ]);
-    return Array.from(pages).sort((a, b) => a - b);
-  }, [data?.meta.page, data?.meta.totalPages, filter.page]);
-
   const startIndex = data?.meta.total ? (data.meta.page - 1) * data.meta.limit + 1 : 0;
   const endIndex = data ? Math.min(data.meta.page * data.meta.limit, data.meta.total) : 0;
+  const currentPage = data?.meta.page ?? filter.page;
+  const totalPages = data?.meta.totalPages ?? 1;
 
   const applyTab = (tab: ReportTab) => {
     setActiveTab(tab);
@@ -223,10 +197,10 @@ export default function AdminReportsPage() {
   const handleResolve = async (reportId: string, status: "RESOLVED" | "REJECTED") => {
     try {
       setIsUpdating(true);
-      setError("");
+      setMutationError("");
       const updatedReport = await resolveAdminReport(reportId, status);
 
-      setData((current) =>
+      reportsQuery.setData((current) =>
         current
           ? {
               ...current,
@@ -236,19 +210,16 @@ export default function AdminReportsPage() {
             }
           : current,
       );
-      setStats((current) =>
-        current
-          ? {
-              total: current.total,
-              pending: Math.max(0, current.pending - 1),
-              resolved: current.resolved + (status === "RESOLVED" ? 1 : 0),
-              rejected: current.rejected + (status === "REJECTED" ? 1 : 0),
-            }
-          : current,
-      );
-      setRefreshKey((current) => current + 1);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["admin", "reports"] }),
+        queryClient.invalidateQueries({
+          queryKey: adminQueryKeys.reports.stats(filter.keyword),
+        }),
+        queryClient.invalidateQueries({ queryKey: adminQueryKeys.dashboard() }),
+        queryClient.invalidateQueries({ queryKey: ["admin", "posts"] }),
+      ]);
     } catch {
-      setError("Không thể cập nhật trạng thái báo cáo.");
+      setMutationError("Không thể cập nhật trạng thái báo cáo.");
     } finally {
       setIsUpdating(false);
     }
@@ -260,10 +231,10 @@ export default function AdminReportsPage() {
   ) => {
     try {
       setIsUpdating(true);
-      setError("");
+      setMutationError("");
       const updatedReport = await reviewAdminReportAppeal(reportId, decision);
 
-      setData((current) =>
+      reportsQuery.setData((current) =>
         current
           ? {
               ...current,
@@ -273,8 +244,16 @@ export default function AdminReportsPage() {
             }
           : current,
       );
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["admin", "reports"] }),
+        queryClient.invalidateQueries({
+          queryKey: adminQueryKeys.reports.stats(filter.keyword),
+        }),
+        queryClient.invalidateQueries({ queryKey: adminQueryKeys.dashboard() }),
+        queryClient.invalidateQueries({ queryKey: ["admin", "posts"] }),
+      ]);
     } catch {
-      setError("Không thể xử lý khiếu nại của người đăng.");
+      setMutationError("Không thể xử lý khiếu nại của người đăng.");
     } finally {
       setIsUpdating(false);
     }
@@ -380,7 +359,10 @@ export default function AdminReportsPage() {
             <button
               className="theme-admin-toolbar-button inline-flex h-10 items-center justify-center gap-2 rounded-xl px-3 text-sm font-medium transition disabled:opacity-60"
               disabled={isLoading}
-              onClick={() => setRefreshKey((current) => current + 1)}
+              onClick={() => {
+                reportsQuery.reload();
+                reportStatsQuery.reload();
+              }}
             >
               <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
               Làm mới
@@ -406,14 +388,14 @@ export default function AdminReportsPage() {
               </div>
             ) : null}
 
-            {!isLoading && !filteredItems.length ? (
+            {!isLoading && !data?.items.length ? (
               <div className="px-5 py-10 text-center text-sm text-[var(--muted-foreground)]">
                 Không tìm thấy báo cáo phù hợp.
               </div>
             ) : null}
 
             {!isLoading
-              ? filteredItems.map((report) => (
+              ? data?.items.map((report) => (
                   <ReportRow
                     key={report.id}
                     report={report}
@@ -430,22 +412,14 @@ export default function AdminReportsPage() {
             <span>
               Hiển thị {startIndex} - {endIndex} của {formatNumber(data?.meta.total ?? 0)} báo cáo
             </span>
-            <div className="flex items-center gap-2">
-              {pageButtons.map((page) => (
-                <button
-                  key={page}
-                  className={`min-w-10 rounded-lg border px-3 py-2 ${
-                    page === data?.meta.page
-                      ? "theme-admin-tab-active"
-                      : "theme-admin-tab"
-                  }`}
-                  disabled={isLoading}
-                  onClick={() => setFilter((current) => ({ ...current, page }))}
-                >
-                  {page}
-                </button>
-              ))}
-            </div>
+            <AdminPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              isLoading={isLoading}
+              onPageChange={(page) =>
+                setFilter((current) => ({ ...current, page }))
+              }
+            />
           </div>
         </NeonCard>
       </div>
