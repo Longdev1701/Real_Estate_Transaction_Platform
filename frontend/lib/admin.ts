@@ -42,6 +42,7 @@ export type AdminUserRole = "USER" | "ADMIN";
 export type AdminUserStatus = "ACTIVE" | "BANNED";
 export type AdminPostStatus = "ACTIVE" | "HIDDEN" | "BANNED";
 export type AdminReportStatus = "PENDING" | "RESOLVED" | "REJECTED";
+export type AdminLogCategory = "ALL" | "AUTH" | "USER" | "POST" | "ADMIN" | "ERROR";
 export type AdminSystemLogModule =
   | "AUTH"
   | "USER"
@@ -244,6 +245,7 @@ export type AdminReport = {
 export type AdminReportsFilter = {
   page: number;
   limit: number;
+  keyword: string;
   status: "" | AdminReportStatus;
 };
 
@@ -325,8 +327,10 @@ export type AdminSystemLogsFilter = {
   page: number;
   limit: number;
   keyword: string;
+  category: AdminLogCategory;
   module: string;
   severity: string;
+  status: string;
   dateFrom: string;
   dateTo: string;
 };
@@ -340,6 +344,15 @@ export type AdminSystemLogsData = {
     totalPages: number;
     hasMore: boolean;
   };
+};
+
+export type AdminSystemLogsStats = {
+  total: number;
+  security: number;
+  errors: number;
+  admin: number;
+  categoryCounts: Record<AdminLogCategory, number>;
+  modules: AdminSystemLogModule[];
 };
 
 export const getAdminUserDetail = async (userId: string) => {
@@ -388,35 +401,39 @@ export const getAdminReports = async (filter: AdminReportsFilter) => {
   params.set("page", String(filter.page));
   params.set("limit", String(filter.limit));
 
+  if (filter.keyword.trim()) {
+    params.set("keyword", filter.keyword.trim());
+  }
+
   if (filter.status) {
     params.set("status", filter.status);
   }
 
-  const response = await api.get<{ data: AdminReportsData }>(`/reports?${params.toString()}`);
+  const response = await api.get<{ data: AdminReportsData }>(`/admin/reports?${params.toString()}`);
   return response.data.data;
 };
 
-export const getAdminReportsStats = async (): Promise<AdminReportsStats> => {
-  const [totalResult, pendingResult, resolvedResult, rejectedResult] = await Promise.all([
-    getAdminReports({ page: 1, limit: 1, status: "" }),
-    getAdminReports({ page: 1, limit: 1, status: "PENDING" }),
-    getAdminReports({ page: 1, limit: 1, status: "RESOLVED" }),
-    getAdminReports({ page: 1, limit: 1, status: "REJECTED" }),
-  ]);
+export const getAdminReportsStats = async (filter: {
+  keyword: string;
+}): Promise<AdminReportsStats> => {
+  const params = new URLSearchParams();
 
-  return {
-    total: totalResult.meta.total,
-    pending: pendingResult.meta.total,
-    resolved: resolvedResult.meta.total,
-    rejected: rejectedResult.meta.total,
-  };
+  if (filter.keyword.trim()) {
+    params.set("keyword", filter.keyword.trim());
+  }
+
+  const query = params.toString();
+  const response = await api.get<{ data: AdminReportsStats }>(
+    `/admin/reports/stats${query ? `?${query}` : ""}`,
+  );
+  return response.data.data;
 };
 
 export const resolveAdminReport = async (
   reportId: string,
   status: Extract<AdminReportStatus, "RESOLVED" | "REJECTED">,
 ) => {
-  const response = await api.patch<{ data: { report: AdminReport } }>(`/reports/${reportId}`, {
+  const response = await api.patch<{ data: { report: AdminReport } }>(`/admin/reports/${reportId}`, {
     status,
   });
   return response.data.data.report;
@@ -427,7 +444,7 @@ export const reviewAdminReportAppeal = async (
   decision: AdminAppealDecision,
 ) => {
   const response = await api.patch<{ data: { report: AdminReport } }>(
-    `/reports/${reportId}/appeal`,
+    `/admin/reports/${reportId}/appeal`,
     {
       decision,
     },
@@ -449,12 +466,20 @@ export const getAdminSystemLogs = async (filter: AdminSystemLogsFilter) => {
     params.set("keyword", filter.keyword.trim());
   }
 
+  if (filter.category && filter.category !== "ALL") {
+    params.set("category", filter.category);
+  }
+
   if (filter.module.trim()) {
     params.set("module", filter.module.trim());
   }
 
   if (filter.severity.trim()) {
     params.set("severity", filter.severity.trim());
+  }
+
+  if (filter.status.trim()) {
+    params.set("status", filter.status.trim());
   }
 
   if (filter.dateFrom) {
@@ -465,8 +490,41 @@ export const getAdminSystemLogs = async (filter: AdminSystemLogsFilter) => {
     params.set("dateTo", filter.dateTo);
   }
 
-  const response = await api.get<{ data: AdminSystemLogsData }>(
-    `/admin/logs?${params.toString()}`,
+  const response = await api.get<{ data: AdminSystemLogsData }>(`/admin/logs?${params.toString()}`);
+  return response.data.data;
+};
+
+export const getAdminSystemLogsStats = async (
+  filter: Omit<AdminSystemLogsFilter, "page" | "limit" | "category">,
+) => {
+  const params = new URLSearchParams();
+
+  if (filter.keyword.trim()) {
+    params.set("keyword", filter.keyword.trim());
+  }
+
+  if (filter.module.trim()) {
+    params.set("module", filter.module.trim());
+  }
+
+  if (filter.severity.trim()) {
+    params.set("severity", filter.severity.trim());
+  }
+
+  if (filter.status.trim()) {
+    params.set("status", filter.status.trim());
+  }
+
+  if (filter.dateFrom) {
+    params.set("dateFrom", filter.dateFrom);
+  }
+
+  if (filter.dateTo) {
+    params.set("dateTo", filter.dateTo);
+  }
+
+  const response = await api.get<{ data: AdminSystemLogsStats }>(
+    `/admin/logs/stats?${params.toString()}`,
   );
   return response.data.data;
 };
