@@ -10,7 +10,14 @@ export function FloatingCreateButton() {
   const pathname = usePathname();
   const { user } = useAuthStore();
 
-  if (pathname === "/posts" || pathname?.startsWith("/messages") || pathname?.startsWith("/admin")) {
+  if (
+    pathname === "/posts" ||
+    pathname === "/posts/create" ||
+    pathname?.startsWith("/messages") ||
+    pathname?.startsWith("/admin") ||
+    pathname?.startsWith("/auth") ||
+    pathname?.startsWith("/profile")
+  ) {
     return null;
   }
 
