@@ -156,10 +156,10 @@ export const postTypeLabels: Record<PostType, string> = {
 };
 
 export const propertyTypeLabels: Record<PropertyType, string> = {
-  APARTMENT: "Căn hộ / Chung cư",
+  APARTMENT: "Căn hộ",
   HOUSE: "Nhà riêng",
   LAND: "Đất",
-  ROOM: "Phòng trọ / Cho thuê phòng",
+  ROOM: "Phòng trọ",
   VILLA: "Biệt thự",
   OFFICE: "Văn phòng",
   SHOPHOUSE: "Shophouse / Mặt bằng kinh doanh",
