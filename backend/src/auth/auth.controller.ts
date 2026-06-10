@@ -1,12 +1,17 @@
 import type { RequestHandler } from "express";
 
+import { AppError } from "../middlewares/error.middleware.js";
 import { sendSuccess } from "../utils/response.js";
 import { createSystemLog } from "../utils/system-log.helper.js";
 import {
+  changePassword,
   login,
   logout,
+  removeAvatar,
   refreshAuthToken,
   register,
+  updateProfile,
+  updateAvatar,
 } from "./auth.service.js";
 
 export const registerController: RequestHandler = async (req, res, next) => {
@@ -100,6 +105,114 @@ export const logoutController: RequestHandler = async (req, res, next) => {
     });
 
     sendSuccess(res, null, "Logout successful.");
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateAvatarController: RequestHandler = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      throw new AppError("Authentication required.", 401);
+    }
+
+    if (!req.file) {
+      throw new AppError("Avatar image is required.", 400);
+    }
+
+    const user = await updateAvatar(req.user.id, req.file);
+
+    await createSystemLog({
+      module: "AUTH",
+      actorId: user.id,
+      action: "UPDATE_AVATAR",
+      targetType: "User",
+      targetId: user.id,
+      description: `Người dùng ${user.email} đã cập nhật ảnh đại diện.`,
+      severity: "INFO",
+      status: "SUCCESS",
+      request: req,
+    });
+
+    sendSuccess(res, user, "Avatar updated successfully.");
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const removeAvatarController: RequestHandler = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      throw new AppError("Authentication required.", 401);
+    }
+
+    const user = await removeAvatar(req.user.id);
+
+    await createSystemLog({
+      module: "AUTH",
+      actorId: user.id,
+      action: "REMOVE_AVATAR",
+      targetType: "User",
+      targetId: user.id,
+      description: `Người dùng ${user.email} đã xóa ảnh đại diện.`,
+      severity: "INFO",
+      status: "SUCCESS",
+      request: req,
+    });
+
+    sendSuccess(res, user, "Avatar removed successfully.");
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateProfileController: RequestHandler = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      throw new AppError("Authentication required.", 401);
+    }
+
+    const user = await updateProfile(req.user.id, req.body);
+
+    await createSystemLog({
+      module: "USER",
+      actorId: user.id,
+      action: "UPDATE_PROFILE",
+      targetType: "User",
+      targetId: user.id,
+      description: `Người dùng ${user.email} đã cập nhật thông tin cá nhân.`,
+      severity: "INFO",
+      status: "SUCCESS",
+      request: req,
+    });
+
+    sendSuccess(res, user, "Profile updated successfully.");
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const changePasswordController: RequestHandler = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      throw new AppError("Authentication required.", 401);
+    }
+
+    await changePassword(req.user.id, req.body);
+
+    await createSystemLog({
+      module: "USER",
+      actorId: req.user.id,
+      action: "CHANGE_PASSWORD",
+      targetType: "User",
+      targetId: req.user.id,
+      description: `Người dùng ${req.user.email} đã thay đổi mật khẩu.`,
+      severity: "SECURITY",
+      status: "SUCCESS",
+      request: req,
+    });
+
+    sendSuccess(res, null, "Password updated successfully.");
   } catch (error) {
     next(error);
   }

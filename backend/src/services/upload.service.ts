@@ -49,6 +49,9 @@ const getStoragePathFromPublicUrl = (imageUrl: string) => {
   return imageUrl.slice(markerIndex + marker.length);
 };
 
+export const isManagedImageUrl = (imageUrl: string) =>
+  imageUrl.includes(`/storage/v1/object/public/${propertyImagesBucket}/`);
+
 export const uploadPostImages = async (
   postId: string,
   files: Express.Multer.File[],
@@ -109,6 +112,30 @@ export const uploadChatImage = async (
 
   if (error) {
     throw new AppError("Failed to upload image to Supabase Storage.", 500, {
+      cause: error.message,
+    });
+  }
+
+  return getPublicUrl(storagePath);
+};
+
+const buildAvatarStoragePath = (userId: string, file: Express.Multer.File) =>
+  `avatars/${userId}/${Date.now()}-${randomUUID()}${getFileExtension(file)}`;
+
+export const uploadAvatarImage = async (
+  userId: string,
+  file: Express.Multer.File,
+) => {
+  const storagePath = buildAvatarStoragePath(userId, file);
+  const { error } = await getSupabaseClient().storage
+    .from(propertyImagesBucket)
+    .upload(storagePath, file.buffer, {
+      contentType: file.mimetype,
+      upsert: false,
+    });
+
+  if (error) {
+    throw new AppError("Failed to upload avatar image to Supabase Storage.", 500, {
       cause: error.message,
     });
   }

@@ -17,3 +17,20 @@ export const refreshTokenSchema = z.object({
 });
 
 export const logoutSchema = refreshTokenSchema;
+
+export const updateProfileSchema = z.object({
+  fullName: z.string().trim().min(2, "Full name must be at least 2 characters long."),
+  email: z.email(),
+  phone: z.string().trim().min(8).max(20).or(z.literal("")).optional(),
+});
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Current password is required."),
+    newPassword: z.string().min(8, "New password must be at least 8 characters long."),
+    confirmPassword: z.string().min(1, "Password confirmation is required."),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Password confirmation does not match.",
+  });
