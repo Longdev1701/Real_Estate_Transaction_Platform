@@ -34,7 +34,7 @@ import {
 import { PostCard } from "./PostCard";
 import { PostFilter } from "./PostFilter";
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 15;
 const POST_LIST_CACHE_TTL_MS = 2 * 60 * 1000;
 
 const leftNavItems = [
@@ -280,7 +280,7 @@ export function PostList() {
         }
       },
       {
-        rootMargin: "320px 0px",
+        rootMargin: "1000px 0px",
       },
     );
 
