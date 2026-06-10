@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Bell, Bookmark, MessageSquare } from "lucide-react";
+import { Bell, Bookmark, MessageCircle } from "lucide-react";
 
 import { api } from "@/lib/api";
 import type { NotificationItem, NotificationListData } from "@/lib/notifications";
@@ -127,7 +127,7 @@ export function Header() {
             className="relative rounded-xl p-2 text-[var(--muted-foreground)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--foreground)]"
             aria-label="Tin nhắn"
           >
-            <MessageSquare size={20} />
+            <MessageCircle size={20} />
           </Link>
 
           <Link

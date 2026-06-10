@@ -5,7 +5,6 @@ import {
   ChevronDown,
   ChevronUp,
   Filter,
-  Search,
   SlidersHorizontal,
 } from "lucide-react";
  
@@ -142,6 +141,8 @@ export function PostFilter({
           if (matchedProvince) {
             setSelectedProvinceCode(String(matchedProvince.code));
           }
+        } else {
+          setSelectedProvinceCode("");
         }
       } catch (err) {
         console.error("Lỗi tải danh sách tỉnh/thành:", err);
@@ -181,6 +182,27 @@ export function PostFilter({
  
     fetchDistricts();
   }, [selectedProvinceCode, value.district]);
+
+  useEffect(() => {
+    if (!value.city) {
+      setSelectedProvinceCode("");
+      setSelectedDistrictCode("");
+      return;
+    }
+
+    const matchedProvince = provinces.find((province) => province.name === value.city);
+    setSelectedProvinceCode(matchedProvince ? String(matchedProvince.code) : "");
+  }, [provinces, value.city]);
+
+  useEffect(() => {
+    if (!value.district) {
+      setSelectedDistrictCode("");
+      return;
+    }
+
+    const matchedDistrict = districts.find((district) => district.name === value.district);
+    setSelectedDistrictCode(matchedDistrict ? String(matchedDistrict.code) : "");
+  }, [districts, value.district]);
  
   const selectedIds = value.featureIds ? value.featureIds.split(",").filter(Boolean) : [];
  
@@ -237,21 +259,6 @@ export function PostFilter({
  
       <div className="space-y-3.5">
         
-        {/* Từ khóa */}
-        <div>
-          <label className="mb-1 block text-xs font-semibold text-[var(--secondary-foreground)]">Từ khóa</label>
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--accent)]" />
-            <input
-              type="text"
-              value={value.keyword}
-              onChange={(event) => updateField("keyword", event.target.value)}
-              className="theme-input-surface w-full rounded-xl py-2 pl-9 pr-3 text-xs placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:outline-none"
-              placeholder="Tên bài đăng, địa chỉ..."
-            />
-          </div>
-        </div>
- 
         {/* Vị trí (Tỉnh/Thành & Quận/Huyện song song) */}
         <div>
           <label className="mb-1 block text-xs font-semibold text-[var(--secondary-foreground)]">Khu vực</label>

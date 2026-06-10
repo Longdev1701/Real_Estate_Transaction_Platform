@@ -627,24 +627,24 @@ export default function PostDetailPage() {
 
             <div className="mt-6 border-b border-[var(--border)] pb-6">
               <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-[1.45fr_1fr_1fr_1fr] xl:gap-x-12">
-                <div className="min-w-0 grid grid-rows-[minmax(3.4rem,auto)_auto] content-start">
+                <div className="min-w-0 grid content-start gap-1">
                   <p className="text-3xl font-semibold leading-tight text-[var(--accent)] sm:text-4xl xl:whitespace-nowrap">{formatPrice(post.price)}</p>
-                  <p className="mt-2 text-sm text-[var(--muted-foreground)]">Giá đăng bài</p>
+                  <p className="text-sm text-[var(--muted-foreground)]">{post.postType === "SELL" ? "Giá bán" : "Giá thuê"}</p>
                 </div>
-                <div className="min-w-0 grid grid-rows-[minmax(3.4rem,auto)_auto] content-start">
+                <div className="min-w-0 grid content-start gap-1">
                   <p className="inline-flex items-start gap-2 text-2xl font-semibold leading-tight text-white break-words">
                     <Expand className="mt-1 h-5 w-5 shrink-0 text-[var(--accent)]" />
                     {formatArea(post.area)}
                   </p>
-                  <p className="mt-2 text-sm text-[var(--muted-foreground)]">Diện tích</p>
+                  <p className="text-sm text-[var(--muted-foreground)]">Diện tích</p>
                 </div>
-                <div className="min-w-0 grid grid-rows-[minmax(3.4rem,auto)_auto] content-start">
+                <div className="min-w-0 grid content-start gap-1">
                   <p className="text-2xl font-semibold leading-tight text-white break-words">{propertyTypeLabels[post.propertyType]}</p>
-                  <p className="mt-2 text-sm text-[var(--muted-foreground)]">Loại hình</p>
+                  <p className="text-sm text-[var(--muted-foreground)]">Loại hình</p>
                 </div>
-                <div className="min-w-0 grid grid-rows-[minmax(3.4rem,auto)_auto] content-start">
+                <div className="min-w-0 grid content-start gap-1">
                   <p className="text-2xl font-semibold leading-tight text-white break-words">{post.city.replace(/^(Tỉnh|Thành phố)\s+/i, "")}</p>
-                  <p className="mt-2 text-sm text-[var(--muted-foreground)]">Khu vực</p>
+                  <p className="text-sm text-[var(--muted-foreground)]">Khu vực</p>
                 </div>
               </div>
             </div>
