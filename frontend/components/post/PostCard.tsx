@@ -278,7 +278,7 @@ export function PostCard({ post }: { post: Post }) {
           <div className="flex min-w-0 items-center gap-3">
 
             <Link
-              href={`/profile/posts?authorId=${post.author.id}&name=${encodeURIComponent(post.author.fullName)}&avatar=${encodeURIComponent(post.author.avatarUrl || "")}`}
+              href={`/profile/posts?authorId=${post.author.id}`}
               className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--accent-border)] bg-[var(--accent-soft)] text-sm font-semibold text-[var(--accent)] transition hover:border-[var(--accent)] hover:ring-2 hover:ring-blue-500/30"
               aria-label={`Xem bài đăng của ${post.author.fullName}`}
             >
@@ -291,7 +291,7 @@ export function PostCard({ post }: { post: Post }) {
             <div className="min-w-0">
               <div className="flex min-w-0 items-center gap-2">
                 <Link
-                  href={`/profile/posts?authorId=${post.author.id}&name=${encodeURIComponent(post.author.fullName)}&avatar=${encodeURIComponent(post.author.avatarUrl || "")}`}
+                  href={`/profile/posts?authorId=${post.author.id}`}
                   className="truncate font-semibold text-[var(--foreground)] transition-colors hover:text-[var(--accent)]"
                 >
                   {post.author.fullName}
