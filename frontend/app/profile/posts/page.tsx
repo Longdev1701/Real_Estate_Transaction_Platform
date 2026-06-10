@@ -26,8 +26,7 @@ export default function ProfilePostsPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!hasHydrated) {
-      setIsLoading(false);
+    if (!hasHydrated || isLoadingUser) {
       return;
     }
 
@@ -92,7 +91,7 @@ export default function ProfilePostsPage() {
     return () => {
       isMounted = false;
     };
-  }, [accessToken, authorId, hasHydrated, user?.id]);
+  }, [accessToken, authorId, hasHydrated, isLoadingUser, user?.id]);
 
   const targetAuthorId = authorId ?? user?.id ?? "";
   const myPosts = useMemo(() => (targetAuthorId ? posts : []), [posts, targetAuthorId]);
@@ -152,7 +151,49 @@ export default function ProfilePostsPage() {
   }, [activeTab, isOwnProfile]);
 
   if (!hasHydrated || isLoadingUser) {
-    return null;
+    return (
+      <div className="container mx-auto max-w-7xl px-4 py-8 lg:px-8">
+        {/* Cover & Profile Header Skeleton */}
+        <div className="relative mb-6 overflow-hidden rounded-2xl glass-panel animate-pulse">
+          <div className="relative h-48 w-full md:h-72 bg-[var(--surface-muted)]" />
+          <div className="relative -mt-16 flex flex-col items-start justify-between gap-6 px-6 pb-8 md:-mt-24 md:flex-row md:items-end md:px-10">
+            <div className="flex w-full flex-col items-start gap-6 md:w-auto md:flex-row md:items-end">
+              <div className="relative h-32 w-32 shrink-0 overflow-hidden rounded-full border-4 border-[var(--border)] bg-[var(--surface-muted)] md:h-44 md:w-44" />
+              <div className="w-full pb-2 space-y-3">
+                <div className="h-8 w-48 rounded-lg bg-[var(--surface-muted)]" />
+                <div className="h-4 w-32 rounded-lg bg-[var(--surface-muted)]" />
+                <div className="h-4 w-64 rounded-lg bg-[var(--surface-muted)]" />
+                <div className="flex gap-6 mt-4">
+                  <div className="h-8 w-16 rounded-lg bg-[var(--surface-muted)]" />
+                  <div className="h-8 w-16 rounded-lg bg-[var(--surface-muted)]" />
+                  <div className="h-8 w-16 rounded-lg bg-[var(--surface-muted)]" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tab Selector Skeleton */}
+        <div className="glass-panel mb-8 overflow-hidden rounded-2xl h-14 bg-[var(--surface-muted)] animate-pulse" />
+
+        {/* Posts Container Skeleton */}
+        <div className="glass-card p-6 md:p-8 space-y-6">
+          <div className="h-8 w-48 rounded-lg bg-[var(--surface-muted)] animate-pulse" />
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div key={index} className="glass-card overflow-hidden p-0 animate-pulse">
+                <div className="aspect-[16/10] bg-[var(--surface-muted)]" />
+                <div className="space-y-4 p-5">
+                  <div className="h-6 w-3/4 rounded bg-[var(--surface-muted)]" />
+                  <div className="h-4 w-1/2 rounded bg-[var(--surface-muted)]" />
+                  <div className="h-4 w-2/3 rounded bg-[var(--surface-muted)]" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!user && !authorId) {

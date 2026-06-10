@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, Search, X } from "lucide-react";
+import { ChevronDown, MapPin, Search, X } from "lucide-react";
 
 interface Province {
   code: number;
@@ -138,11 +138,17 @@ export function CitySelect() {
             setIsOpen((current) => !current);
           }
         }}
-        className="mt-1 flex w-full cursor-pointer select-none items-center justify-between bg-transparent text-sm font-medium text-[var(--foreground)] outline-none"
+        className="flex min-h-16 items-center gap-3 rounded-xl border border-white/10 bg-slate-950/45 px-4 transition hover:bg-white/10 cursor-pointer select-none text-left w-full outline-none focus-within:border-blue-400/40"
       >
-        <span className="truncate">{selectedCityName ? cleanName(selectedCityName) : "Tất cả vị trí"}</span>
+        <MapPin className="h-5 w-5 shrink-0 text-gray-300" />
+        <span className="min-w-0 flex-1">
+          <span className="block text-xs text-gray-400">Vị trí</span>
+          <span className="mt-1 block text-sm font-medium text-white truncate">
+            {selectedCityName ? cleanName(selectedCityName) : "Tất cả vị trí"}
+          </span>
+        </span>
 
-        <span className="flex items-center gap-1">
+        <span className="flex items-center gap-1 shrink-0 ml-1">
           {selectedCityName ? (
             <button
               type="button"

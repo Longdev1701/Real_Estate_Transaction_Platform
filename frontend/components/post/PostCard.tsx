@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -34,7 +34,7 @@ import { api } from "@/lib/api";
 import { writeSessionCache } from "@/lib/client-cache";
 import { useAuthStore } from "@/stores/auth.store";
 
-const CommentSection = dynamic(() => import("@/components/comment/CommentSection"));
+import CommentSection from "@/components/comment/CommentSection";
 const ReportPostDialog = dynamic(async () => {
   const module = await import("@/components/post/ReportPostDialog");
   return module.ReportPostDialog;
@@ -98,6 +98,7 @@ const getGalleryGridClassName = (imageCount: number) => {
 
 export function PostCard({ post }: { post: Post }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuthStore();
   const { playDetail, playLikeBegin, playLikeEnd, playComment, playSave } = useSound();
   const [imageError, setImageError] = useState(false);
@@ -119,6 +120,22 @@ export function PostCard({ post }: { post: Post }) {
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  useEffect(() => {
+    if (!isClient) return;
+    const commentPostId = searchParams?.get("commentPostId");
+    if (commentPostId === post.id) {
+      setIsCommentOpen(true);
+      window.requestAnimationFrame(() => {
+        cardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+      const params = new URLSearchParams(window.location.search);
+      params.delete("commentPostId");
+      const newSearch = params.toString();
+      const newPath = window.location.pathname + (newSearch ? `?${newSearch}` : "");
+      router.replace(newPath, { scroll: false });
+    }
+  }, [searchParams, post.id, isClient, router]);
 
   useEffect(() => {
     const handleCompareUpdate = () => {
@@ -214,7 +231,7 @@ export function PostCard({ post }: { post: Post }) {
     }
 
     if (!user) {
-      router.push("/auth/login");
+      router.push(`/auth/login?redirectTo=${encodeURIComponent(window.location.pathname + window.location.search)}`);
       return;
     }
 
@@ -247,7 +264,7 @@ export function PostCard({ post }: { post: Post }) {
 
   const handleReportClick = () => {
     if (!user) {
-      router.push("/auth/login");
+      router.push(`/auth/login?redirectTo=${encodeURIComponent(window.location.pathname + window.location.search)}`);
       return;
     }
 
@@ -260,7 +277,11 @@ export function PostCard({ post }: { post: Post }) {
     setIsCommentOpen(true);
   };
 
-  const closeComments = () => {
+  const closeComments = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     setIsCommentOpen(false);
     window.requestAnimationFrame(() => {
       cardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -549,7 +570,11 @@ export function PostCard({ post }: { post: Post }) {
         createPortal(
         <div
           className="theme-media-backdrop fixed inset-0 z-[9999] flex flex-col items-center justify-center p-4 backdrop-blur-md"
-          onClick={() => setIsImageViewerOpen(false)}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsImageViewerOpen(false);
+          }}
         >
           <button
             type="button"
@@ -591,18 +616,18 @@ export function PostCard({ post }: { post: Post }) {
           )}
 
           <div
-            className="flex max-h-[96vh] w-full max-w-[min(96vw,1800px)] flex-col items-center gap-4 px-6 md:px-12"
+            className="flex h-full w-full max-w-6xl flex-col items-center justify-center gap-4 py-8"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="relative flex flex-1 items-center justify-center overflow-hidden">
+            <div className="flex flex-1 items-center justify-center overflow-hidden w-full">
               <img
                 key={activeImageIndex}
                 src={activeImage}
                 alt={`${post.title} ${activeImageIndex + 1}`}
-                className="max-h-[76vh] md:max-h-[84vh] max-w-full rounded-xl object-contain shadow-2xl animate-in fade-in zoom-in-95 duration-300"
+                className="max-h-[70vh] md:max-h-[76vh] max-w-full rounded-xl object-contain shadow-2xl animate-in fade-in zoom-in-95 duration-300"
               />
             </div>
-            <div className="theme-count-pill rounded-full px-4 py-1.5 text-sm font-medium">
+            <div className="theme-count-pill rounded-full px-3 py-1 text-xs font-medium">
               {activeImageIndex + 1} / {images.length}
             </div>
             {images.length > 1 && (
@@ -615,7 +640,7 @@ export function PostCard({ post }: { post: Post }) {
                       e.stopPropagation();
                       setActiveImageIndex(index);
                     }}
-                    className={`h-12 w-20 shrink-0 overflow-hidden rounded-lg border transition ${
+                    className={`h-9 w-14 shrink-0 overflow-hidden rounded-md border transition ${
                       activeImageIndex === index ? "border-[var(--info-border)] scale-105 opacity-100" : "border-[var(--border)] opacity-60 hover:opacity-100"
                     }`}
                   >
@@ -632,7 +657,7 @@ export function PostCard({ post }: { post: Post }) {
         createPortal(
         <div
           className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/75 p-3 backdrop-blur-md md:p-6"
-          onClick={closeComments}
+          onClick={(e) => closeComments(e)}
         >
           <div
             className="theme-modal-surface relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl"

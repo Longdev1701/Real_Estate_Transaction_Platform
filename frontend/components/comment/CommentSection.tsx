@@ -370,7 +370,18 @@ export default function CommentSection({ postId, postAuthorId }: CommentSectionP
       ) : (
         <div className="theme-subtle-card rounded-2xl border border-dashed p-6 text-center">
           <p className="mb-3 text-sm text-[var(--muted-foreground)]">Vui lòng đăng nhập để để lại bình luận và thảo luận cùng mọi người.</p>
-          <Link href="/auth/login" className="btn-primary inline-flex px-5 py-2 text-sm font-medium">
+          <Link
+            href={`/auth/login?redirectTo=${encodeURIComponent(
+              typeof window !== "undefined"
+                ? (() => {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set("commentPostId", postId);
+                    return url.pathname + url.search;
+                  })()
+                : ""
+            )}`}
+            className="btn-primary inline-flex px-5 py-2 text-sm font-medium"
+          >
             Đăng nhập ngay
           </Link>
         </div>
@@ -502,7 +513,7 @@ function CommentItem({
 
   return (
     <div className={`flex gap-4 pt-4 ${index === 0 ? "border-t-0 pt-0" : ""}`}>
-      <Avatar name={getAuthorName(comment.author)} imageUrl={comment.author.avatarUrl} size="md" />
+      <Avatar name={getAuthorName(comment.author)} imageUrl={comment.author?.avatarUrl} size="md" />
       <div className="min-w-0 flex-1 space-y-2">
         <CommentHeader
           comment={comment}
@@ -555,7 +566,7 @@ function CommentItem({
 
               return (
                 <div key={reply.id} className="flex gap-3 pt-2">
-                  <Avatar name={getAuthorName(reply.author)} imageUrl={reply.author.avatarUrl} size="sm" />
+                  <Avatar name={getAuthorName(reply.author)} imageUrl={reply.author?.avatarUrl} size="sm" />
                   <div className="min-w-0 flex-1 space-y-1">
                     <CommentHeader
                       comment={reply}

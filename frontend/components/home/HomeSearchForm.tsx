@@ -9,7 +9,7 @@ import {
   SlidersHorizontal,
   type LucideIcon,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import {
   PROPERTY_TYPES,
@@ -18,6 +18,7 @@ import {
 } from "@/lib/posts";
 
 import { CitySelect } from "@/components/home/CitySelect";
+import { HomeSearchSelect } from "@/components/home/HomeSearchSelect";
 
 type PopularLocation = {
   city: string;
@@ -144,38 +145,6 @@ const propertyAreaOptions: Record<PropertyType, Option[]> = {
   ],
 };
 
-function SelectField({
-  icon: Icon,
-  label,
-  name,
-  value,
-  onChange,
-  children,
-}: {
-  icon: LucideIcon;
-  label: string;
-  name: string;
-  value?: string;
-  onChange?: (value: string) => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="flex min-h-16 items-center gap-3 rounded-xl border border-white/10 bg-slate-950/45 px-4 transition hover:bg-white/10 focus-within:border-blue-400/40">
-      <Icon className="h-5 w-5 shrink-0 text-gray-300" />
-      <span className="min-w-0 flex-1">
-        <span className="block text-xs text-gray-400">{label}</span>
-        <select
-          name={name}
-          value={value}
-          onChange={(event) => onChange?.(event.target.value)}
-          className="hero-select mt-1 w-full bg-transparent text-sm font-medium text-white outline-none"
-        >
-          {children}
-        </select>
-      </span>
-    </label>
-  );
-}
 
 export function HomeSearchForm({
   popularLocations,
@@ -185,6 +154,15 @@ export function HomeSearchForm({
   const [propertyType, setPropertyType] = useState<"" | PropertyType>("");
   const [maxPrice, setMaxPrice] = useState("");
   const [minArea, setMinArea] = useState("");
+
+  const propertyTypeOptions = useMemo(
+    () =>
+      PROPERTY_TYPES.map((type) => ({
+        value: type,
+        label: propertyTypeLabels[type],
+      })),
+    [],
+  );
 
   const priceOptions = useMemo(
     () => (propertyType ? propertyPriceOptions[propertyType] : defaultPriceOptions),
@@ -204,63 +182,45 @@ export function HomeSearchForm({
   return (
     <form
       action="/posts"
+      onSubmit={() => {
+        try {
+          sessionStorage.removeItem("posts_page_state");
+        } catch (e) {}
+      }}
       className="mt-7 w-full max-w-[1360px] rounded-2xl border border-white/10 bg-slate-950/75 p-4 shadow-2xl shadow-blue-950/30 backdrop-blur-xl"
     >
       <div className="grid gap-3 lg:grid-cols-[1.15fr_1fr_1fr_1fr_auto]">
-        <div className="flex min-h-16 items-center gap-3 rounded-xl border border-white/10 bg-slate-950/45 px-4 transition hover:bg-white/10">
-          <MapPin className="h-5 w-5 shrink-0 text-gray-300" />
-          <span className="min-w-0 flex-1">
-            <span className="block text-xs text-gray-400">Vị trí</span>
-            <CitySelect />
-          </span>
-        </div>
+        <CitySelect />
 
-        <SelectField
+        <HomeSearchSelect
           icon={Home}
           label="Loại bất động sản"
           name="propertyType"
           value={propertyType}
           onChange={handlePropertyTypeChange}
-        >
-          <option value="">Chọn loại</option>
-          {PROPERTY_TYPES.map((type) => (
-            <option key={type} value={type}>
-              {propertyTypeLabels[type]}
-            </option>
-          ))}
-        </SelectField>
+          options={propertyTypeOptions}
+          placeholder="Chọn loại"
+        />
 
-        <SelectField
+        <HomeSearchSelect
           icon={SlidersHorizontal}
           label={propertyType === "ROOM" ? "Khoảng giá thuê" : "Khoảng giá"}
           name="maxPrice"
           value={maxPrice}
           onChange={setMaxPrice}
-        >
-          <option value="">
-            {propertyType === "ROOM" ? "Chọn khoảng giá thuê" : "Chọn khoảng giá"}
-          </option>
-          {priceOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </SelectField>
+          options={priceOptions}
+          placeholder={propertyType === "ROOM" ? "Chọn khoảng giá thuê" : "Chọn khoảng giá"}
+        />
 
-        <SelectField
+        <HomeSearchSelect
           icon={Ruler}
           label="Diện tích"
           name="minArea"
           value={minArea}
           onChange={setMinArea}
-        >
-          <option value="">Chọn diện tích</option>
-          {areaOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </SelectField>
+          options={areaOptions}
+          placeholder="Chọn diện tích"
+        />
 
         <button
           type="submit"

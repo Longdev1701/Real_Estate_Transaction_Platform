@@ -54,8 +54,7 @@ export default function SavedPostsPage() {
   }, [accessToken, hasHydrated, router, user]);
 
   useEffect(() => {
-    if (!hasHydrated || !user) {
-      setIsLoading(false);
+    if (!hasHydrated || isLoadingUser || !user) {
       return;
     }
 
@@ -94,7 +93,7 @@ export default function SavedPostsPage() {
     return () => {
       isMounted = false;
     };
-  }, [hasHydrated, user]);
+  }, [hasHydrated, isLoadingUser, user]);
 
   const cities = useMemo(
     () =>
@@ -217,7 +216,35 @@ export default function SavedPostsPage() {
   };
 
   if (!hasHydrated || isLoadingUser || (accessToken && !user)) {
-    return null;
+    return (
+      <div className="container mx-auto px-4 py-8 lg:px-8 animate-pulse">
+        <div className="mx-auto max-w-7xl space-y-6">
+          {/* Header Card Skeleton */}
+          <div className="glass-card overflow-hidden p-0">
+            <div className="px-6 py-8 md:px-8 md:py-10 space-y-4">
+              <div className="h-8 w-48 rounded bg-[var(--surface-muted)]" />
+              <div className="h-6 w-32 rounded bg-[var(--surface-muted)]" />
+              <div className="h-4 w-96 rounded bg-[var(--surface-muted)]" />
+            </div>
+          </div>
+          {/* Filter Bar Skeleton */}
+          <div className="glass-card p-5 md:p-6 h-20 bg-[var(--surface-muted)]" />
+          {/* Grid Skeleton */}
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div key={index} className="glass-card overflow-hidden p-0">
+                <div className="aspect-[16/10] bg-[var(--surface-muted)]" />
+                <div className="space-y-4 p-5">
+                  <div className="h-6 w-3/4 rounded bg-[var(--surface-muted)]" />
+                  <div className="h-4 w-1/2 rounded bg-[var(--surface-muted)]" />
+                  <div className="h-4 w-2/3 rounded bg-[var(--surface-muted)]" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!user) {

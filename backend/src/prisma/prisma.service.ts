@@ -25,7 +25,7 @@ const warmUpAndKeepAlive = async () => {
     console.error("Database connection warm-up failed:", error);
   }
 
-  // Ping every 5 minutes (300,000 ms) to prevent Supabase from going to sleep
+  // Ping every 30 seconds (30,000 ms) to keep the connection pool hot and prevent Supabase from going to sleep
   setInterval(async () => {
     try {
       await prisma.$queryRaw`SELECT 1`;
@@ -33,7 +33,7 @@ const warmUpAndKeepAlive = async () => {
     } catch (error) {
       console.error("Database keep-alive ping failed:", error);
     }
-  }, 300_000);
+  }, 30_000);
 };
 
 // Start warming up immediately (asynchronous, doesn't block server startup)

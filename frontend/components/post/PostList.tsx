@@ -34,7 +34,7 @@ import {
 import { PostCard } from "./PostCard";
 import { PostFilter } from "./PostFilter";
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 15;
 const POST_LIST_CACHE_TTL_MS = 2 * 60 * 1000;
 
 const leftNavItems = [
@@ -183,7 +183,11 @@ export function PostList() {
       const saved = sessionStorage.getItem("posts_page_state");
       if (saved) {
         const state = JSON.parse(saved);
-        if (state.searchParamString === searchParamString && state.posts && Array.isArray(state.posts)) {
+        const stateSearchParams = new URLSearchParams(state.searchParamString);
+        const currentSearchParams = new URLSearchParams(searchParamString);
+        stateSearchParams.delete("commentPostId");
+        currentSearchParams.delete("commentPostId");
+        if (stateSearchParams.toString() === currentSearchParams.toString() && state.posts && Array.isArray(state.posts)) {
           setPosts(state.posts);
           setPage(state.page || 1);
           setHasMore(state.hasMore !== false);
@@ -280,7 +284,7 @@ export function PostList() {
         }
       },
       {
-        rootMargin: "320px 0px",
+        rootMargin: "1000px 0px",
       },
     );
 
@@ -457,7 +461,7 @@ export function PostList() {
             <>
               <div className="space-y-5">
                 {posts.map((post) => (
-                  <div key={post.id} className="[content-visibility:auto] [contain-intrinsic-size:380px]">
+                  <div key={post.id}>
                     <PostCard post={post} />
                   </div>
                 ))}

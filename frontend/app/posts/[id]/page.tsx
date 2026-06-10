@@ -238,7 +238,7 @@ export default function PostDetailPage() {
 
   const handleOpenReportDialog = () => {
     if (!user) {
-      router.push("/auth/login");
+      router.push(`/auth/login?redirectTo=${encodeURIComponent(window.location.pathname + window.location.search)}`);
       return;
     }
 
@@ -292,7 +292,7 @@ export default function PostDetailPage() {
 
   const handleMessageClick = async () => {
     if (!user) {
-      router.push("/auth/login");
+      router.push(`/auth/login?redirectTo=${encodeURIComponent(window.location.pathname + window.location.search)}`);
       return;
     }
 

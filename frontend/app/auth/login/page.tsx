@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import Link from "next/link";
 import { useAuthStore } from "@/stores/auth.store";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { AxiosError } from "axios";
 import { normalizeUser } from "@/components/auth/AuthSessionProvider";
@@ -20,14 +20,16 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirectTo") || "/";
   const { setAuth, user, hasHydrated } = useAuthStore();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (hasHydrated && user) {
-      router.push("/");
+      router.push(redirectTo);
     }
-  }, [hasHydrated, user, router]);
+  }, [hasHydrated, user, router, redirectTo]);
 
   const {
     register,
@@ -45,7 +47,7 @@ export default function LoginPage() {
       const accessToken = loginResponse.data.data.tokens.accessToken;
       const refreshToken = loginResponse.data.data.tokens.refreshToken;
       setAuth(normalizeUser(user), accessToken, refreshToken);
-      router.push("/");
+      router.push(redirectTo);
     } catch (err) {
       const error = err as AxiosError<{ message?: string }>;
       setError(error.response?.data?.message || "Đăng nhập thất bại");
