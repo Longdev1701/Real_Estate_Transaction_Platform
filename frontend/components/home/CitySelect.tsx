@@ -38,13 +38,13 @@ export function CitySelect() {
   useEffect(() => {
     const fetchProvinces = async () => {
       try {
-        const response = await fetch("https://production.cas.so/address-kit/2025-07-01/provinces");
+        const response = await fetch("https://esgoo.net/api-tinhthanh/1/0.htm");
         const payload = await response.json();
 
-        if (payload && Array.isArray(payload.provinces)) {
-          const list = payload.provinces.map((province: Province) => ({
-            code: province.code,
-            name: String(province.name).replace(/\n/g, "").trim(),
+        if (payload && Array.isArray(payload.data)) {
+          const list = payload.data.map((province: any) => ({
+            code: Number(province.id),
+            name: String(province.full_name).replace(/\n/g, "").trim(),
           }));
 
           list.sort((a: Province, b: Province) => a.name.localeCompare(b.name, "vi"));
@@ -168,55 +168,54 @@ export function CitySelect() {
 
       {isOpen && dropdownStyle
         ? createPortal(
-            <div
-              ref={dropdownRef}
-              className="theme-popover fixed z-[1200] min-w-[200px] overflow-hidden rounded-xl p-2"
-              style={{
-                top: dropdownStyle.top,
-                left: dropdownStyle.left,
-                width: dropdownStyle.width,
-              }}
-            >
-              <div className="relative mb-2">
-                <Search className="theme-text-muted absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="Tìm tỉnh/thành..."
-                  className="input-dark w-full rounded-lg py-1.5 pl-8 pr-3 text-xs"
-                  onClick={(event) => event.stopPropagation()}
-                />
-              </div>
+          <div
+            ref={dropdownRef}
+            className="theme-popover fixed z-[1200] min-w-[200px] overflow-hidden rounded-xl p-2"
+            style={{
+              top: dropdownStyle.top,
+              left: dropdownStyle.left,
+              width: dropdownStyle.width,
+            }}
+          >
+            <div className="relative mb-2">
+              <Search className="theme-text-muted absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Tìm tỉnh/thành..."
+                className="input-dark w-full rounded-lg py-1.5 pl-8 pr-3 text-xs"
+                onClick={(event) => event.stopPropagation()}
+              />
+            </div>
 
-              <div className="custom-scrollbar max-h-40 space-y-0.5 overflow-y-auto pr-1">
-                {filteredProvinces.length === 0 ? (
-                  <p className="theme-empty-state p-2 text-center text-xs">Không tìm thấy vị trí</p>
-                ) : (
-                  filteredProvinces.map((province) => {
-                    const isSelected = selectedCityCode === province.code;
+            <div className="custom-scrollbar max-h-40 space-y-0.5 overflow-y-auto pr-1">
+              {filteredProvinces.length === 0 ? (
+                <p className="theme-empty-state p-2 text-center text-xs">Không tìm thấy vị trí</p>
+              ) : (
+                filteredProvinces.map((province) => {
+                  const isSelected = selectedCityCode === province.code;
 
-                    return (
-                      <button
-                        key={province.code}
-                        type="button"
-                        onMouseDown={(event) => event.preventDefault()}
-                        onClick={() => handleSelect(province)}
-                        className={`w-full rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors ${
-                          isSelected
-                            ? "theme-button-info font-semibold"
-                            : "theme-text-secondary hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
+                  return (
+                    <button
+                      key={province.code}
+                      type="button"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => handleSelect(province)}
+                      className={`w-full rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors ${isSelected
+                          ? "theme-button-info font-semibold"
+                          : "theme-text-secondary hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
                         }`}
-                      >
-                        {cleanName(province.name)}
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-            </div>,
-            document.body,
-          )
+                    >
+                      {cleanName(province.name)}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>,
+          document.body,
+        )
         : null}
 
       <style

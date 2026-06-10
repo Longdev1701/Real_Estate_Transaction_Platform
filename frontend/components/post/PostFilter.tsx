@@ -1,5 +1,5 @@
 "use client";
- 
+
 import { useEffect, useState } from "react";
 import {
   ChevronDown,
@@ -7,7 +7,7 @@ import {
   Filter,
   SlidersHorizontal,
 } from "lucide-react";
- 
+
 import { api } from "@/lib/api";
 import { FeatureIcon } from "@/lib/feature-icons";
 import {
@@ -15,29 +15,29 @@ import {
   propertyTypeLabels,
   type PostFilterValue,
 } from "@/lib/posts";
- 
+
 interface Feature {
   id: string;
   name: string;
   icon: string | null;
   category: string | null;
 }
- 
+
 interface Province {
   code: number;
   name: string;
 }
- 
+
 interface District {
   code: number;
   name: string;
 }
- 
+
 const clampNumericText = (value: string) => value.replace(/\D/g, "");
 const parseNumericText = (value: string) => Number(clampNumericText(value)) || 0;
 const formatNumericText = (value: string) =>
   value ? new Intl.NumberFormat("vi-VN").format(parseNumericText(value)) : "";
- 
+
 function StepperInput({
   value,
   onChange,
@@ -56,7 +56,7 @@ function StepperInput({
     const nextValue = Math.max(0, currentValue + step * direction);
     onChange(nextValue > 0 ? String(nextValue) : "");
   };
- 
+
   return (
     <div className="relative flex-1 min-w-0">
       <input
@@ -82,14 +82,14 @@ function StepperInput({
           disabled={!Number(value)}
           className="flex h-3.5 w-4 items-center justify-center border-t border-[var(--border)] text-[var(--muted)] hover:text-[var(--foreground)] disabled:opacity-20"
           aria-label={`Giảm ${label}`}
-       >
+        >
           <ChevronDown className="h-3 w-3" />
         </button>
       </div>
     </div>
   );
 }
- 
+
 type PostFilterProps = {
   value: PostFilterValue;
   isLoading: boolean;
@@ -97,7 +97,7 @@ type PostFilterProps = {
   onSubmit: () => void;
   onReset: () => void;
 };
- 
+
 export function PostFilter({
   value,
   isLoading,
@@ -111,7 +111,7 @@ export function PostFilter({
   const [selectedProvinceCode, setSelectedProvinceCode] = useState("");
   const [selectedDistrictCode, setSelectedDistrictCode] = useState("");
   const [showFeatures, setShowFeatures] = useState(false);
- 
+
   useEffect(() => {
     const fetchFeatures = async () => {
       try {
@@ -124,18 +124,18 @@ export function PostFilter({
     };
     fetchFeatures();
   }, [value.propertyType]);
- 
+
   useEffect(() => {
     const fetchProvinces = async () => {
       try {
-        const response = await fetch("https://production.cas.so/address-kit/2025-07-01/provinces");
+        const response = await fetch("https://esgoo.net/api-tinhthanh/1/0.htm");
         const payload = await response.json();
-        const nextProvinces: Province[] = (payload.provinces || []).map((province: any) => ({
-          code: province.code,
-          name: province.name,
+        const nextProvinces: Province[] = (payload.data || []).map((province: any) => ({
+          code: Number(province.id),
+          name: province.full_name,
         }));
         setProvinces(nextProvinces);
- 
+
         if (value.city) {
           const matchedProvince = nextProvinces.find((province) => province.name === value.city);
           if (matchedProvince) {
@@ -148,10 +148,10 @@ export function PostFilter({
         console.error("Lỗi tải danh sách tỉnh/thành:", err);
       }
     };
- 
+
     fetchProvinces();
   }, []);
- 
+
   useEffect(() => {
     const fetchDistricts = async () => {
       if (!selectedProvinceCode) {
@@ -159,18 +159,18 @@ export function PostFilter({
         setSelectedDistrictCode("");
         return;
       }
- 
+
       try {
-        const response = await fetch(`https://production.cas.so/address-kit/2025-07-01/provinces/${selectedProvinceCode}/communes`);
+        const response = await fetch(`https://esgoo.net/api-tinhthanh/2/${selectedProvinceCode}.htm`);
         const payload = await response.json();
-        const nextDistricts: District[] = (payload.communes || [])
+        const nextDistricts: District[] = (payload.data || [])
           .map((district: any) => ({
-            code: district.code,
-            name: String(district.name).replace(/\n/g, "").trim(),
+            code: Number(district.id),
+            name: String(district.full_name).replace(/\n/g, "").trim(),
           }))
           .sort((left: District, right: District) => left.name.localeCompare(right.name, "vi"));
         setDistricts(nextDistricts);
- 
+
         if (value.district) {
           const matchedDistrict = nextDistricts.find((district) => district.name === value.district);
           setSelectedDistrictCode(matchedDistrict ? String(matchedDistrict.code) : "");
@@ -179,7 +179,7 @@ export function PostFilter({
         console.error("Lỗi tải danh sách quận/huyện:", err);
       }
     };
- 
+
     fetchDistricts();
   }, [selectedProvinceCode, value.district]);
 
@@ -203,23 +203,23 @@ export function PostFilter({
     const matchedDistrict = districts.find((district) => district.name === value.district);
     setSelectedDistrictCode(matchedDistrict ? String(matchedDistrict.code) : "");
   }, [districts, value.district]);
- 
+
   const selectedIds = value.featureIds ? value.featureIds.split(",").filter(Boolean) : [];
- 
+
   const updateField = <K extends keyof PostFilterValue>(key: K, fieldValue: PostFilterValue[K]) => {
     onChange({
       ...value,
       [key]: fieldValue,
     });
   };
- 
+
   const toggleFeatureId = (id: string) => {
     const nextIds = selectedIds.includes(id)
       ? selectedIds.filter((item) => item !== id)
       : [...selectedIds, id];
     updateField("featureIds", nextIds.join(","));
   };
- 
+
   const handleProvinceChange = (provinceCode: string) => {
     setSelectedProvinceCode(provinceCode);
     setSelectedDistrictCode("");
@@ -230,13 +230,13 @@ export function PostFilter({
       district: "",
     });
   };
- 
+
   const handleDistrictChange = (districtCode: string) => {
     setSelectedDistrictCode(districtCode);
     const district = districts.find((item) => String(item.code) === districtCode)?.name ?? "";
     updateField("district", district);
   };
- 
+
   return (
     <form
       onSubmit={(e) => {
@@ -256,9 +256,9 @@ export function PostFilter({
           Đặt lại
         </button>
       </div>
- 
+
       <div className="space-y-3.5">
-        
+
         {/* Vị trí (Tỉnh/Thành & Quận/Huyện song song) */}
         <div>
           <label className="mb-1 block text-xs font-semibold text-[var(--secondary-foreground)]">Khu vực</label>
@@ -296,7 +296,7 @@ export function PostFilter({
             </div>
           </div>
         </div>
- 
+
         {/* Loại BĐS */}
         <div>
           <label className="mb-1 block text-xs font-semibold text-[var(--secondary-foreground)]">Loại BĐS</label>
@@ -318,7 +318,7 @@ export function PostFilter({
             <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--muted)]" />
           </div>
         </div>
- 
+
         {/* Khoảng giá */}
         <div>
           <label className="mb-1 block text-xs font-semibold text-[var(--secondary-foreground)]">Giá bán (VNĐ)</label>
@@ -340,7 +340,7 @@ export function PostFilter({
             />
           </div>
         </div>
- 
+
         {/* Diện tích */}
         <div>
           <label className="mb-1 block text-xs font-semibold text-[var(--secondary-foreground)]">Diện tích (m²)</label>
@@ -362,7 +362,7 @@ export function PostFilter({
             />
           </div>
         </div>
- 
+
         {/* Tiện ích mở rộng (Collapsible) */}
         <div className="border-t border-[var(--border)] pt-2">
           <button
@@ -380,19 +380,17 @@ export function PostFilter({
               </span>
 
               <ChevronDown
-                className={`h-3.5 w-3.5 transition-transform duration-300 ${
-                  showFeatures ? "rotate-180" : ""
-                }`}
+                className={`h-3.5 w-3.5 transition-transform duration-300 ${showFeatures ? "rotate-180" : ""
+                  }`}
               />
             </span>
           </button>
 
           <div
-            className={`grid overflow-hidden transition-all duration-300 ease-out ${
-              showFeatures
+            className={`grid overflow-hidden transition-all duration-300 ease-out ${showFeatures
                 ? "mt-2.5 border-t border-[var(--border)] pt-2.5 grid-rows-[1fr] opacity-100"
                 : "grid-rows-[0fr] opacity-0"
-            }`}
+              }`}
           >
             <div className="overflow-hidden">
               {features.length === 0 ? (
@@ -408,11 +406,10 @@ export function PostFilter({
                         key={feature.id}
                         type="button"
                         onClick={() => toggleFeatureId(feature.id)}
-                        className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-medium transition-all duration-200 text-left truncate ${
-                          isSelected
+                        className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-medium transition-all duration-200 text-left truncate ${isSelected
                             ? "border-[var(--accent-border)] bg-[var(--accent-soft)] text-[var(--accent)]"
                             : "border-[var(--border)] bg-[var(--surface)] text-[var(--secondary-foreground)] hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
-                        }`}
+                          }`}
                       >
                         <FeatureIcon name={feature.icon || "help-circle"} className="h-2.5 w-2.5 shrink-0" />
                         <span className="truncate">{feature.name}</span>
@@ -424,9 +421,9 @@ export function PostFilter({
             </div>
           </div>
         </div>
- 
+
       </div>
- 
+
       <div className="mt-4">
         <button
           type="submit"
@@ -436,8 +433,9 @@ export function PostFilter({
           {isLoading ? "Đang tải..." : "Áp dụng bộ lọc"}
         </button>
       </div>
- 
-      <style dangerouslySetInnerHTML={{ __html: `
+
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .custom-scrollbar::-webkit-scrollbar {
           width: 3px;
         }

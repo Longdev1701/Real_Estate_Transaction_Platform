@@ -242,10 +242,10 @@ export default function EditPostPage() {
   useEffect(() => {
     const initializeAdminData = async () => {
       try {
-        const pRes = await fetch("https://production.cas.so/address-kit/2025-07-01/provinces");
+        const pRes = await fetch("https://esgoo.net/api-tinhthanh/1/0.htm");
         const pDataObj = await pRes.json();
-        
-        const pData: Province[] = (pDataObj.provinces || []).map((p: any) => ({ code: p.code, name: p.name }));
+
+        const pData: Province[] = (pDataObj.data || []).map((p: any) => ({ code: Number(p.id), name: p.full_name }));
         setProvinces(pData);
 
         if (post?.city) {
@@ -254,10 +254,10 @@ export default function EditPostPage() {
             setSelProvinceCode(String(matchProv.code));
 
             try {
-              const cRes = await fetch(`https://production.cas.so/address-kit/2025-07-01/provinces/${matchProv.code}/communes`);
+              const cRes = await fetch(`https://esgoo.net/api-tinhthanh/2/${matchProv.code}.htm`);
               const cDataObj = await cRes.json();
-              const distList: District[] = (cDataObj.communes || [])
-                .map((c: any) => ({ code: c.code, name: c.name.replace(/\n/g, "").trim() }))
+              const distList: District[] = (cDataObj.data || [])
+                .map((c: any) => ({ code: Number(c.id), name: c.full_name.replace(/\n/g, "").trim() }))
                 .sort((a: District, b: District) => a.name.localeCompare(b.name, 'vi'));
               setDistricts(distList);
 
@@ -277,7 +277,7 @@ export default function EditPostPage() {
         console.error("Lỗi tải danh sách tỉnh thành:", err);
       }
     };
-    
+
     if (post) {
       initializeAdminData();
     }
@@ -448,15 +448,15 @@ export default function EditPostPage() {
     setDistricts([]);
     setSelDistrictCode("");
     setWards([]);
-    
+
     if (code) {
       const name = provinces.find((p) => String(p.code) === code)?.name || "";
       setValue("city", name, { shouldValidate: true });
       try {
-        const res = await fetch(`https://production.cas.so/address-kit/2025-07-01/provinces/${code}/communes`);
+        const res = await fetch(`https://esgoo.net/api-tinhthanh/2/${code}.htm`);
         const data = await res.json();
-        const dataList: District[] = (data.communes || [])
-          .map((c: any) => ({ code: c.code, name: c.name.replace(/\n/g, "").trim() }))
+        const dataList: District[] = (data.data || [])
+          .map((c: any) => ({ code: Number(c.id), name: c.full_name.replace(/\n/g, "").trim() }))
           .sort((a: District, b: District) => a.name.localeCompare(b.name, 'vi'));
         setDistricts(dataList);
       } catch (err) {
@@ -467,7 +467,7 @@ export default function EditPostPage() {
     }
     setValue("district", "", { shouldValidate: true });
     setValue("ward", "");
-    
+
     setValue("latitude", 0);
     setValue("longitude", 0);
     setGeocodeStatus("idle");
@@ -477,7 +477,7 @@ export default function EditPostPage() {
     const code = e.target.value;
     setSelDistrictCode(code);
     setWards([]);
-    
+
     if (code) {
       const name = districts.find((d) => String(d.code) === code)?.name || "";
       setValue("district", name, { shouldValidate: true });
@@ -487,7 +487,7 @@ export default function EditPostPage() {
       setValue("district", "", { shouldValidate: true });
     }
     setValue("ward", "");
-    
+
     setValue("latitude", 0);
     setValue("longitude", 0);
   };
@@ -524,7 +524,7 @@ export default function EditPostPage() {
         if (data && data.length > 0) {
           setValue("latitude", parseFloat(data[0].lat), { shouldDirty: true, shouldValidate: true });
           setValue("longitude", parseFloat(data[0].lon), { shouldDirty: true, shouldValidate: true });
-          
+
           const addr = data[0].address;
           if (addr) {
             const addressParts = [addr.house_number, addr.road].filter(Boolean);
@@ -533,20 +533,20 @@ export default function EditPostPage() {
               setValue("address", detailedAddress, { shouldValidate: true });
             }
           }
-          
+
           const displayName = data[0].display_name;
           if (displayName) {
             const nameParts = displayName.split(',').map((s: string) => s.trim());
-            
+
             const matchProv = provinces.find(p => {
               const baseProv = p.name.replace(/^(Thành phố|Tỉnh)\s+/i, "");
               return nameParts.some((part: string) => part === p.name || part === baseProv || part.includes(p.name) || (baseProv.length > 2 && part.includes(baseProv)));
             });
-            
+
             if (matchProv) {
               const provCodeStr = String(matchProv.code);
               let currentDistricts = districts;
-              
+
               if (selProvinceCode !== provCodeStr) {
                 setSelProvinceCode(provCodeStr);
                 setValue("city", matchProv.name, { shouldValidate: true });
@@ -554,12 +554,12 @@ export default function EditPostPage() {
                 setValue("district", "", { shouldValidate: true });
                 setValue("ward", "", { shouldValidate: true });
                 setWards([]);
-                
+
                 try {
-                  const res = await fetch(`https://production.cas.so/address-kit/2025-07-01/provinces/${provCodeStr}/communes`);
+                  const res = await fetch(`https://esgoo.net/api-tinhthanh/2/${provCodeStr}.htm`);
                   const data = await res.json();
-                  const distList: District[] = (data.communes || [])
-                    .map((c: any) => ({ code: c.code, name: c.name.replace(/\n/g, "").trim() }))
+                  const distList: District[] = (data.data || [])
+                    .map((c: any) => ({ code: Number(c.id), name: c.full_name.replace(/\n/g, "").trim() }))
                     .sort((a: District, b: District) => a.name.localeCompare(b.name, 'vi'));
                   setDistricts(distList);
                   currentDistricts = distList;
@@ -567,15 +567,15 @@ export default function EditPostPage() {
                   console.error("Lỗi fetch communes:", e);
                 }
               }
-              
+
               const matchDist = currentDistricts.find(d => {
                 const baseDist = d.name.replace(/^(Quận|Huyện|Thị xã|Thành phố)\s+/i, "");
                 return nameParts.some((part: string) => part === d.name || part === baseDist || part.includes(d.name) || (baseDist.length > 2 && part.includes(baseDist)));
               });
-              
+
               if (matchDist) {
                 const distCodeStr = String(matchDist.code);
-                
+
                 if (selDistrictCode !== distCodeStr || selProvinceCode !== provCodeStr) {
                   setSelDistrictCode(distCodeStr);
                   setValue("district", matchDist.name, { shouldValidate: true });
@@ -585,7 +585,7 @@ export default function EditPostPage() {
               }
             }
           }
-          
+
           setGeocodeStatus("success");
           found = true;
           break;
@@ -870,7 +870,7 @@ export default function EditPostPage() {
                                 }
                                 if (!displayName) return;
                                 const nameParts = displayName.split(',').map((s: string) => s.trim());
-                                
+
                                 let matchProv;
                                 for (let i = nameParts.length - 1; i >= 0; i--) {
                                   const part = nameParts[i];
@@ -883,11 +883,11 @@ export default function EditPostPage() {
                                     break;
                                   }
                                 }
-                                
+
                                 if (matchProv) {
                                   const provCodeStr = String(matchProv.code);
                                   let currentDistricts = districts;
-                                  
+
                                   if (selProvinceCode !== provCodeStr) {
                                     setSelProvinceCode(provCodeStr);
                                     setValue("city", matchProv.name, { shouldValidate: true });
@@ -895,12 +895,12 @@ export default function EditPostPage() {
                                     setValue("district", "", { shouldValidate: true });
                                     setValue("ward", "", { shouldValidate: true });
                                     setWards([]);
-                                    
+
                                     try {
-                                      const res = await fetch(`https://production.cas.so/address-kit/2025-07-01/provinces/${provCodeStr}/communes`);
+                                      const res = await fetch(`https://esgoo.net/api-tinhthanh/2/${provCodeStr}.htm`);
                                       const data = await res.json();
-                                      const distList: District[] = (data.communes || [])
-                                        .map((c: any) => ({ code: c.code, name: c.name.replace(/\n/g, "").trim() }))
+                                      const distList: District[] = (data.data || [])
+                                        .map((c: any) => ({ code: Number(c.id), name: c.full_name.replace(/\n/g, "").trim() }))
                                         .sort((a: District, b: District) => a.name.localeCompare(b.name, 'vi'));
                                       setDistricts(distList);
                                       currentDistricts = distList;
@@ -920,10 +920,10 @@ export default function EditPostPage() {
                                       break;
                                     }
                                   }
-                                  
+
                                   if (matchDist) {
                                     const distCodeStr = String(matchDist.code);
-                                    
+
                                     if (selDistrictCode !== distCodeStr || selProvinceCode !== provCodeStr) {
                                       setSelDistrictCode(distCodeStr);
                                       setValue("district", matchDist.name, { shouldValidate: true });
@@ -979,18 +979,16 @@ export default function EditPostPage() {
                                 <div
                                   key={feature.id}
                                   onClick={() => toggleFeature(feature.id)}
-                                  className={`flex items-center justify-between p-2.5 rounded-xl border transition-all duration-300 cursor-pointer select-none text-xs font-medium group ${
-                                    isSelected
+                                  className={`flex items-center justify-between p-2.5 rounded-xl border transition-all duration-300 cursor-pointer select-none text-xs font-medium group ${isSelected
                                       ? "border-[var(--accent-border)] bg-[var(--accent-soft)] text-[var(--accent)] ring-1 ring-[color:var(--accent-border)] shadow-[var(--shadow-glow)]"
                                       : "border-[var(--border)] bg-[var(--surface)] text-[var(--secondary-foreground)] hover:border-[var(--accent-border)] hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
-                                  }`}
+                                    }`}
                                 >
                                   <div className="flex items-center gap-2 min-w-0">
                                     <FeatureIcon
                                       name={feature.icon || "help-circle"}
-                                      className={`h-4 w-4 shrink-0 transition-transform duration-300 group-hover:scale-110 ${
-                                        isSelected ? "text-[var(--accent)]" : "text-[var(--muted-foreground)]"
-                                      }`}
+                                      className={`h-4 w-4 shrink-0 transition-transform duration-300 group-hover:scale-110 ${isSelected ? "text-[var(--accent)]" : "text-[var(--muted-foreground)]"
+                                        }`}
                                     />
                                     <span className="truncate">{feature.name}</span>
                                   </div>
@@ -1023,7 +1021,7 @@ export default function EditPostPage() {
                   </label>
                   <span className="text-xs text-[var(--muted-foreground)]">{totalImageCount}/{maxImages}</span>
                 </div>
-                    <div className="theme-upload-preview group relative overflow-hidden rounded-lg">
+                <div className="theme-upload-preview group relative overflow-hidden rounded-lg">
                   <img src={primaryImage} alt={post.title} className="aspect-[16/9] w-full object-cover" />
                   <button
                     type="button"
