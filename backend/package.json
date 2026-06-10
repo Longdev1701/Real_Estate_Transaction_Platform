@@ -10,6 +10,8 @@
     "start": "node dist/server.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:normalize-features": "tsx prisma/normalize-property-features.ts",
+    "prisma:sync-features": "tsx prisma/sync-property-features.ts",
     "prisma:studio": "prisma studio",
     "test": "vitest run"
   },

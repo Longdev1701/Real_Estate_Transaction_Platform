@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { AxiosError } from "axios";
 import {
   AlertTriangle,
+  ArrowDown,
   ArrowLeft,
   BadgeCheck,
   Bookmark,
@@ -14,13 +15,11 @@ import {
   ChevronRight,
   Expand,
   LoaderCircle,
-  Mail,
   MapPin,
   MessageCircle,
   Pencil,
   Phone,
   Save,
-  Share2,
   ShieldAlert,
   ShieldCheck,
   TriangleAlert,
@@ -41,7 +40,6 @@ import {
   formatArea,
   formatLocation,
   formatPrice,
-  postTypeLabels,
   propertyTypeLabels,
   statusLabels,
   statusColors,
@@ -96,6 +94,21 @@ export default function PostDetailPage() {
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const mapSectionRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("post_image_viewer_state", { detail: { open: isFullscreen } }),
+    );
+  }, [isFullscreen]);
+
+  useEffect(() => {
+    return () => {
+      window.dispatchEvent(
+        new CustomEvent("post_image_viewer_state", { detail: { open: false } }),
+      );
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -167,6 +180,10 @@ export default function PostDetailPage() {
   const activeImage = images[selectedImage]?.imageUrl ?? imageFallback;
   const isOwnPost = !!user && !!post && user.id === post.author.id;
   const isBannedOwnerView = Boolean(post && isOwnPost && post.status === "BANNED");
+
+  const handleScrollToMap = () => {
+    mapSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const handleSaveToggle = async () => {
     const rawValue = window.localStorage.getItem(savedKey);
@@ -474,10 +491,6 @@ export default function PostDetailPage() {
                   }}
                 />
 
-                <div className="pointer-events-none absolute left-4 top-4 rounded-full bg-[var(--accent)] px-3 py-1 text-xs font-semibold text-[var(--primary-foreground)] shadow-md">
-                  {postTypeLabels[post.postType]}
-                </div>
-
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); setIsFullscreen(true); }}
@@ -555,26 +568,32 @@ export default function PostDetailPage() {
             </div>
           </div>
 
-          <div className="glass-card p-6 md:p-7">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
+          <div className="glass-card relative p-6 md:p-7">
+            <div className="flex items-start justify-between gap-6">
+              <div className="min-w-0 flex-1 lg:pr-[23rem]">
                 <div className="mb-3 flex flex-wrap items-center gap-3">
                   <h1 className="text-4xl font-bold tracking-tight text-white break-words">{post.title}</h1>
-                  <span className="inline-flex items-center gap-2 rounded-full border border-[var(--success-border)] bg-[var(--success-soft)] px-3 py-1 text-sm font-medium text-[var(--success-foreground)]">
-                    <BadgeCheck className="h-4 w-4" />
-                    Đã xác thực
-                  </span>
                 </div>
                 <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--muted-foreground)]">
                   <span className="inline-flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-[var(--accent)]" />
                     {formatLocation(post)}
                   </span>
-                  <span className="text-[var(--accent)]">Xem trên bản đồ</span>
+                  <button
+                    type="button"
+                    onClick={handleScrollToMap}
+                    className="group inline-flex items-center gap-1.5 text-[var(--accent)] transition hover:brightness-110 hover:translate-x-0.5"
+                  >
+                    <span className="relative">
+                      <span className="relative z-10">Xem trên bản đồ</span>
+                      <span className="absolute bottom-0 left-0 z-0 h-px w-full origin-left scale-x-0 bg-[var(--accent)] transition-transform duration-300 group-hover:scale-x-100" />
+                    </span>
+                    <ArrowDown className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-y-0.5" />
+                  </button>
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-3">
+              <div className="flex shrink-0 flex-wrap gap-3 self-start lg:absolute lg:right-7 lg:top-7 lg:justify-end">
                 <button
                   type="button"
                   onClick={handleSaveToggle}
@@ -587,10 +606,6 @@ export default function PostDetailPage() {
                 <button type="button" className="theme-surface-soft inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)]">
                   <Building2 className="h-4 w-4 text-[var(--accent)]" />
                   So sánh
-                </button>
-                <button type="button" className="theme-surface-soft inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)]">
-                  <Share2 className="h-4 w-4 text-[var(--accent)]" />
-                  Chia sẻ
                 </button>
                 {!isOwnPost ? (
                   <button
@@ -610,29 +625,27 @@ export default function PostDetailPage() {
               </div>
             </div>
 
-            <div className="mt-6 flex flex-wrap items-start gap-x-8 gap-y-6 border-b border-[var(--border)] pb-6 md:gap-x-12">
-              <div className="shrink-0">
-                <p className="break-words text-3xl font-semibold text-[var(--accent)] sm:text-4xl">{formatPrice(post.price)}</p>
-                <p className="mt-1 text-sm text-[var(--muted-foreground)]">Giá đăng bài</p>
-              </div>
-              <div className="shrink-0">
-                <p className="inline-flex items-center gap-2 text-2xl font-semibold text-white break-words">
-                  <Expand className="h-5 w-5 shrink-0 text-[var(--accent)]" />
-                  {formatArea(post.area)}
-                </p>
-                <p className="mt-1 text-sm text-[var(--muted-foreground)]">Diện tích</p>
-              </div>
-              <div className="shrink-0">
-                <p className="text-2xl font-semibold text-white break-words">{propertyTypeLabels[post.propertyType]}</p>
-                <p className="mt-1 text-sm text-[var(--muted-foreground)]">Loại hình</p>
-              </div>
-              <div className="shrink-0">
-                <p className="text-2xl font-semibold text-white break-words">{postTypeLabels[post.postType]}</p>
-                <p className="mt-1 text-sm text-[var(--muted-foreground)]">Loại tin</p>
-              </div>
-              <div className="shrink-0">
-                <p className="text-2xl font-semibold text-white break-words">{post.city.replace(/^(Tỉnh|Thành phố)\s+/i, "")}</p>
-                <p className="mt-1 text-sm text-[var(--muted-foreground)]">Khu vực</p>
+            <div className="mt-6 border-b border-[var(--border)] pb-6">
+              <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-[1.45fr_1fr_1fr_1fr] xl:gap-x-12">
+                <div className="min-w-0 grid grid-rows-[minmax(3.4rem,auto)_auto] content-start">
+                  <p className="text-3xl font-semibold leading-tight text-[var(--accent)] sm:text-4xl xl:whitespace-nowrap">{formatPrice(post.price)}</p>
+                  <p className="mt-2 text-sm text-[var(--muted-foreground)]">Giá đăng bài</p>
+                </div>
+                <div className="min-w-0 grid grid-rows-[minmax(3.4rem,auto)_auto] content-start">
+                  <p className="inline-flex items-start gap-2 text-2xl font-semibold leading-tight text-white break-words">
+                    <Expand className="mt-1 h-5 w-5 shrink-0 text-[var(--accent)]" />
+                    {formatArea(post.area)}
+                  </p>
+                  <p className="mt-2 text-sm text-[var(--muted-foreground)]">Diện tích</p>
+                </div>
+                <div className="min-w-0 grid grid-rows-[minmax(3.4rem,auto)_auto] content-start">
+                  <p className="text-2xl font-semibold leading-tight text-white break-words">{propertyTypeLabels[post.propertyType]}</p>
+                  <p className="mt-2 text-sm text-[var(--muted-foreground)]">Loại hình</p>
+                </div>
+                <div className="min-w-0 grid grid-rows-[minmax(3.4rem,auto)_auto] content-start">
+                  <p className="text-2xl font-semibold leading-tight text-white break-words">{post.city.replace(/^(Tỉnh|Thành phố)\s+/i, "")}</p>
+                  <p className="mt-2 text-sm text-[var(--muted-foreground)]">Khu vực</p>
+                </div>
               </div>
             </div>
 
@@ -718,7 +731,7 @@ export default function PostDetailPage() {
             </div>
           )}
 
-          <div className="glass-card overflow-hidden p-0">
+          <div ref={mapSectionRef} className="glass-card overflow-hidden p-0">
             <div className="border-b border-[var(--border)] px-6 py-4">
               <h2 className="text-2xl font-semibold text-[var(--foreground)]">Vị trí trên bản đồ</h2>
             </div>
@@ -799,22 +812,6 @@ export default function PostDetailPage() {
                     <MessageCircle className="h-4.5 w-4.5 text-[var(--primary-foreground)]" />
                     {isStartingConversation ? "Đang kết nối..." : "Nhắn tin trao đổi"}
                   </button>
-                  <div className="flex gap-2">
-                    <a
-                      href={post.author.phone ? `tel:${post.author.phone}` : `mailto:${post.author.email}`}
-                      className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-[var(--success-border)] bg-[var(--success-soft)] py-2.5 text-xs font-semibold text-[var(--success-foreground)] transition hover:brightness-95"
-                    >
-                      <Phone className="h-4.5 w-4.5" />
-                      Gọi điện
-                    </a>
-                    <a
-                      href={`mailto:${post.author.email}`}
-                      className="theme-surface-soft flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-medium text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)]"
-                    >
-                      <Mail className="h-4.5 w-4.5 text-[var(--muted-foreground)]" />
-                      Email
-                    </a>
-                  </div>
                   {conversationError && (
                     <p className="mt-2 rounded-xl border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-2 text-xs text-[var(--danger-foreground)]">
                       {conversationError}
@@ -888,40 +885,82 @@ export default function PostDetailPage() {
       </div>
 
       {isFullscreen && (
-        <div className="theme-overlay-strong fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm">
+        <div
+          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/95 p-4 backdrop-blur-md"
+          onClick={() => setIsFullscreen(false)}
+        >
           <button
-            onClick={() => setIsFullscreen(false)}
-            className="theme-surface-soft absolute right-6 top-6 z-10 rounded-full p-2 text-[var(--secondary-foreground)] transition hover:text-[var(--foreground)]"
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsFullscreen(false);
+            }}
+            className="absolute right-4 top-4 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white transition hover:bg-white/20"
+            aria-label="Đóng ảnh"
           >
-            <X className="w-6 h-6" />
+            <X className="h-5 w-5" />
           </button>
 
           {images.length > 1 && (
-            <button
-              onClick={() => setSelectedImage((current) => (current === 0 ? images.length - 1 : current - 1))}
-              className="theme-surface-soft absolute left-4 top-1/2 z-10 rounded-full p-3 text-[var(--foreground)] transition hover:bg-[var(--surface-muted)] sm:left-8"
-            >
-              <ChevronLeft className="w-8 h-8" />
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedImage((current) => (current === 0 ? images.length - 1 : current - 1));
+                }}
+                className="absolute left-4 top-1/2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white transition hover:bg-white/20"
+                aria-label="Ảnh trước"
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedImage((current) => (current === images.length - 1 ? 0 : current + 1));
+                }}
+                className="absolute right-4 top-1/2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white transition hover:bg-white/20"
+                aria-label="Ảnh tiếp theo"
+              >
+                <ChevronRight className="h-6 w-6" />
+              </button>
+            </>
           )}
 
-          <img
-            src={activeImage}
-            alt={post.title}
-            className="max-h-[90vh] max-w-[90vw] object-contain"
-          />
-
-          {images.length > 1 && (
-            <button
-              onClick={() => setSelectedImage((current) => (current === images.length - 1 ? 0 : current + 1))}
-              className="theme-surface-soft absolute right-4 top-1/2 z-10 rounded-full p-3 text-[var(--foreground)] transition hover:bg-[var(--surface-muted)] sm:right-8"
-            >
-              <ChevronRight className="w-8 h-8" />
-            </button>
-          )}
-
-          <div className="theme-overlay-dim absolute bottom-6 left-1/2 z-10 -translate-x-1/2 rounded-full px-4 py-2 text-sm text-white">
-            {selectedImage + 1} / {images.length}
+          <div
+            className="flex max-h-[96vh] w-full max-w-[min(96vw,1800px)] flex-col items-center gap-4 px-6 pt-6 md:px-12 md:pt-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="relative flex flex-1 items-center justify-center overflow-hidden">
+              <img
+                src={activeImage}
+                alt={post.title}
+                className="max-h-[76vh] md:max-h-[84vh] max-w-full rounded-xl object-contain shadow-2xl animate-in fade-in zoom-in-95 duration-300"
+              />
+            </div>
+            <div className="rounded-full bg-black/55 px-4 py-1.5 text-sm font-medium text-white ring-1 ring-white/10">
+              {selectedImage + 1} / {images.length}
+            </div>
+            {images.length > 1 && (
+              <div className="scrollbar-hidden flex max-w-full gap-2 overflow-x-auto py-1">
+                {images.map((image, index) => (
+                  <button
+                    key={image.id}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedImage(index);
+                    }}
+                    className={`h-12 w-20 shrink-0 overflow-hidden rounded-lg border transition ${
+                      selectedImage === index ? "border-blue-400 scale-105 opacity-100" : "border-white/15 opacity-60 hover:opacity-100"
+                    }`}
+                  >
+                    <img src={image.imageUrl} alt={`${post.title} ${index + 1}`} className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -962,13 +1001,6 @@ export default function PostDetailPage() {
             <MessageCircle className="h-5 w-5" />
             {isStartingConversation ? "Đang kết nối..." : "Nhắn tin"}
           </button>
-          <a
-            href={post.author.phone ? `tel:${post.author.phone}` : `mailto:${post.author.email}`}
-            className="theme-button-success inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-xl font-bold transition"
-          >
-            <Phone className="h-5 w-5" />
-            Gọi điện
-          </a>
         </div>
       )}
     </div>
