@@ -183,7 +183,11 @@ export function PostList() {
       const saved = sessionStorage.getItem("posts_page_state");
       if (saved) {
         const state = JSON.parse(saved);
-        if (state.searchParamString === searchParamString && state.posts && Array.isArray(state.posts)) {
+        const stateSearchParams = new URLSearchParams(state.searchParamString);
+        const currentSearchParams = new URLSearchParams(searchParamString);
+        stateSearchParams.delete("commentPostId");
+        currentSearchParams.delete("commentPostId");
+        if (stateSearchParams.toString() === currentSearchParams.toString() && state.posts && Array.isArray(state.posts)) {
           setPosts(state.posts);
           setPage(state.page || 1);
           setHasMore(state.hasMore !== false);
