@@ -371,7 +371,7 @@ export default function AdminReportsPage() {
         </NeonCard>
 
         <NeonCard className="overflow-hidden">
-          <div className="theme-admin-table-head hidden grid-cols-[128px_minmax(0,2fr)_minmax(0,1.15fr)_minmax(0,1.5fr)_148px_200px_132px] gap-4 border-b px-5 py-3 text-xs font-semibold uppercase tracking-wide 2xl:grid">
+          <div className="theme-admin-table-head hidden grid-cols-[128px_minmax(0,2fr)_minmax(0,1.15fr)_minmax(0,1.5fr)_148px_200px_132px] gap-4 border-b px-5 py-3 text-xs font-semibold uppercase tracking-wide xl:grid">
             <div>Mã báo cáo</div>
             <div>Bài đăng bị báo cáo</div>
             <div>Người báo cáo</div>
@@ -454,7 +454,7 @@ function ReportRow({
       <button
         type="button"
         onClick={onOpenDetail}
-        className={`block w-full px-4 py-4 text-left transition 2xl:hidden ${
+        className={`block w-full px-4 py-4 text-left transition xl:hidden ${
           selected ? "bg-[var(--accent-soft)]" : "hover:bg-[var(--accent-soft)]"
         }`}
       >
@@ -523,7 +523,7 @@ function ReportRow({
       </button>
 
       <div
-        className={`hidden grid-cols-[128px_minmax(0,2fr)_minmax(0,1.15fr)_minmax(0,1.5fr)_148px_200px_132px] items-center gap-4 px-5 py-3 text-sm transition 2xl:grid ${
+        className={`hidden grid-cols-[128px_minmax(0,2fr)_minmax(0,1.15fr)_minmax(0,1.5fr)_148px_200px_132px] items-center gap-4 px-5 py-3 text-sm transition xl:grid ${
           selected ? "bg-[var(--accent-soft)]" : "hover:bg-[var(--accent-soft)]"
         }`}
       >

@@ -499,70 +499,74 @@ export default function AdminLogsPage() {
         </div>
 
         <NeonCard className="overflow-hidden">
-          <div className="theme-admin-table-head grid grid-cols-[190px_220px_minmax(280px,1fr)_90px_110px_110px_72px] border-b px-3 py-3 text-xs font-semibold uppercase tracking-wide">
-            <div>Thời gian</div>
-            <div>Người thực hiện</div>
-            <div>Mô tả</div>
-            <div className="text-center">Mô-đun</div>
-            <div className="text-center">Mức độ</div>
-            <div className="text-center">Trạng thái</div>
-            <div className="text-right">Thao tác</div>
-          </div>
-
-          <div className="divide-y divide-[var(--border)]">
-            {isLoading && (
-              <div className="px-5 py-10 text-center text-sm text-[var(--muted-foreground)]">
-                Đang tải nhật ký hệ thống...
+          <div className="overflow-x-auto">
+            <div className="min-w-[1200px]">
+              <div className="theme-admin-table-head grid grid-cols-[190px_220px_minmax(280px,1fr)_90px_110px_110px_72px] border-b px-3 py-3 text-xs font-semibold uppercase tracking-wide">
+                <div>Thời gian</div>
+                <div>Người thực hiện</div>
+                <div>Mô tả</div>
+                <div className="text-center">Mô-đun</div>
+                <div className="text-center">Mức độ</div>
+                <div className="text-center">Trạng thái</div>
+                <div className="text-right">Thao tác</div>
               </div>
-            )}
 
-            {!isLoading && !filteredLogs.length && (
-              <div className="px-5 py-10 text-center text-sm text-[var(--muted-foreground)]">
-                Không tìm thấy sự kiện phù hợp.
-              </div>
-            )}
+              <div className="divide-y divide-[var(--border)]">
+                {isLoading && (
+                  <div className="px-5 py-10 text-center text-sm text-[var(--muted-foreground)]">
+                    Đang tải nhật ký hệ thống...
+                  </div>
+                )}
 
-            {!isLoading &&
-              filteredLogs.map((log) => (
-                <div
-                  key={log.id}
-                  className="grid grid-cols-[190px_220px_minmax(280px,1fr)_90px_110px_110px_72px] items-center px-3 py-3 text-sm text-[var(--secondary-foreground)] transition hover:bg-[var(--accent-soft)]"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-[var(--accent)]" />
-                    {formatDateTime(log.time)}
+                {!isLoading && !filteredLogs.length && (
+                  <div className="px-5 py-10 text-center text-sm text-[var(--muted-foreground)]">
+                    Không tìm thấy sự kiện phù hợp.
                   </div>
+                )}
 
-                  <div className="flex min-w-0 items-center gap-3 pr-3">
-                    <ActorAvatar actor={log.actor} />
-                    <div className="min-w-0">
-                      <p className="truncate font-medium text-[var(--foreground)]">{log.actor.name}</p>
-                      <p className="truncate text-xs text-[var(--muted-foreground)]">{log.actor.role}</p>
-                    </div>
-                  </div>
-
-                  <div className="line-clamp-2 pr-4 text-sm leading-6 text-[var(--secondary-foreground)]">
-                    {log.description}
-                  </div>
-                  <div className="text-center text-[var(--secondary-foreground)]">{log.module}</div>
-                  <div className="flex justify-center">
-                    <Badge text={log.severity} tone={severityTone[log.severity]} />
-                  </div>
-                  <div className="flex justify-center">
-                    <Badge text={log.status} tone={statusTone[log.status]} />
-                  </div>
-
-                  <div className="flex justify-end">
-                    <button
-                      className="theme-admin-action grid h-8 w-8 place-items-center rounded-lg transition"
-                      title="Xem chi tiết"
-                      onClick={() => setSelectedLog(log)}
+                {!isLoading &&
+                  filteredLogs.map((log) => (
+                    <div
+                      key={log.id}
+                      className="grid grid-cols-[190px_220px_minmax(280px,1fr)_90px_110px_110px_72px] items-center px-3 py-3 text-sm text-[var(--secondary-foreground)] transition hover:bg-[var(--accent-soft)]"
                     >
-                      <Eye className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-[var(--accent)]" />
+                        {formatDateTime(log.time)}
+                      </div>
+
+                      <div className="flex min-w-0 items-center gap-3 pr-3">
+                        <ActorAvatar actor={log.actor} />
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-[var(--foreground)]">{log.actor.name}</p>
+                          <p className="truncate text-xs text-[var(--muted-foreground)]">{log.actor.role}</p>
+                        </div>
+                      </div>
+
+                      <div className="line-clamp-2 pr-4 text-sm leading-6 text-[var(--secondary-foreground)]">
+                        {log.description}
+                      </div>
+                      <div className="text-center text-[var(--secondary-foreground)]">{log.module}</div>
+                      <div className="flex justify-center">
+                        <Badge text={log.severity} tone={severityTone[log.severity]} />
+                      </div>
+                      <div className="flex justify-center">
+                        <Badge text={log.status} tone={statusTone[log.status]} />
+                      </div>
+
+                      <div className="flex justify-end">
+                        <button
+                          className="theme-admin-action grid h-8 w-8 place-items-center rounded-lg transition"
+                          title="Xem chi tiết"
+                          onClick={() => setSelectedLog(log)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
           </div>
 
           <div className="theme-admin-table-head flex flex-wrap items-center justify-between gap-4 border-t px-5 py-3 text-sm text-[var(--secondary-foreground)]">

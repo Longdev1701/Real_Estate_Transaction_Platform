@@ -418,40 +418,44 @@ export default function AdminPostsPage() {
         </div>
 
         <NeonCard className="overflow-hidden">
-          <div className="theme-admin-table-head grid grid-cols-[minmax(0,1.8fr)_minmax(0,0.85fr)_minmax(0,0.6fr)_minmax(0,0.7fr)_minmax(0,0.9fr)_110px_125px_136px] border-b px-3 py-3 text-xs font-semibold uppercase tracking-wide">
-            <div>Bài đăng</div>
-            <div>Người đăng</div>
-            <div>Loại BDS</div>
-            <div>Giá</div>
-            <div>Vị trí</div>
-            <div>Ngày đăng</div>
-            <div>Trạng thái</div>
-            <div className="text-right">Hành động</div>
-          </div>
-
-          <div className="theme-admin-table-divider divide-y">
-            {isLoading && (
-              <div className="px-5 py-10 text-center text-sm text-[var(--muted-foreground)]">
-                Đang tải bài đăng...
+          <div className="overflow-x-auto">
+            <div className="min-w-[1100px]">
+              <div className="theme-admin-table-head grid grid-cols-[minmax(0,1.8fr)_minmax(0,0.85fr)_minmax(0,0.6fr)_minmax(0,0.7fr)_minmax(0,0.9fr)_110px_125px_136px] border-b px-3 py-3 text-xs font-semibold uppercase tracking-wide">
+                <div>Bài đăng</div>
+                <div>Người đăng</div>
+                <div>Loại BDS</div>
+                <div>Giá</div>
+                <div>Vị trí</div>
+                <div>Ngày đăng</div>
+                <div>Trạng thái</div>
+                <div className="text-right">Hành động</div>
               </div>
-            )}
 
-            {!isLoading && !data?.items.length && (
-              <div className="px-5 py-10 text-center text-sm text-[var(--muted-foreground)]">
-                Không tìm thấy bài đăng phù hợp.
+              <div className="theme-admin-table-divider divide-y">
+                {isLoading && (
+                  <div className="px-5 py-10 text-center text-sm text-[var(--muted-foreground)]">
+                    Đang tải bài đăng...
+                  </div>
+                )}
+
+                {!isLoading && !data?.items.length && (
+                  <div className="px-5 py-10 text-center text-sm text-[var(--muted-foreground)]">
+                    Không tìm thấy bài đăng phù hợp.
+                  </div>
+                )}
+
+                {!isLoading &&
+                  data?.items.map((post) => (
+                    <PostRow
+                      key={post.id}
+                      post={post}
+                      isUpdating={isUpdating}
+                      onOpenDetail={openDetail}
+                      onUpdateStatus={updateStatus}
+                    />
+                  ))}
               </div>
-            )}
-
-            {!isLoading &&
-              data?.items.map((post) => (
-                <PostRow
-                  key={post.id}
-                  post={post}
-                  isUpdating={isUpdating}
-                  onOpenDetail={openDetail}
-                  onUpdateStatus={updateStatus}
-                />
-              ))}
+            </div>
           </div>
 
           <div className="theme-admin-table-head flex flex-wrap items-center justify-between gap-4 border-t px-5 py-3 text-sm text-[var(--secondary-foreground)]">

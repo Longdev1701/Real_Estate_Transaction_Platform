@@ -390,39 +390,43 @@ export default function AdminUsersPage() {
         </section>
 
         <NeonCard className="overflow-hidden">
-          <div className="theme-admin-table-head grid grid-cols-[minmax(240px,1.35fr)_minmax(220px,1.1fr)_120px_150px_130px_130px_120px] border-b px-4 py-3 text-xs font-semibold uppercase tracking-wide">
-            <div>Người dùng</div>
-            <div>Email</div>
-            <div>Vai trò</div>
-            <div>Hoạt động</div>
-            <div>Ngày tham gia</div>
-            <div>Trạng thái</div>
-            <div className="text-right">Thao tác</div>
-          </div>
-
-          <div className="theme-admin-table-divider min-h-[52vh] divide-y">
-            {isLoading && (
-              <div className="px-5 py-10 text-center text-sm text-[var(--muted-foreground)]">
-                Đang tải người dùng...
+          <div className="overflow-x-auto">
+            <div className="min-w-[1000px]">
+              <div className="theme-admin-table-head grid grid-cols-[minmax(240px,1.35fr)_minmax(220px,1.1fr)_120px_150px_130px_130px_120px] border-b px-4 py-3 text-xs font-semibold uppercase tracking-wide">
+                <div>Người dùng</div>
+                <div>Email</div>
+                <div>Vai trò</div>
+                <div>Hoạt động</div>
+                <div>Ngày tham gia</div>
+                <div>Trạng thái</div>
+                <div className="text-right">Thao tác</div>
               </div>
-            )}
 
-            {!isLoading && !data?.items.length && (
-              <div className="px-5 py-10 text-center text-sm text-[var(--muted-foreground)]">
-                Không tìm thấy người dùng phù hợp.
+              <div className="theme-admin-table-divider min-h-[52vh] divide-y">
+                {isLoading && (
+                  <div className="px-5 py-10 text-center text-sm text-[var(--muted-foreground)]">
+                    Đang tải người dùng...
+                  </div>
+                )}
+
+                {!isLoading && !data?.items.length && (
+                  <div className="px-5 py-10 text-center text-sm text-[var(--muted-foreground)]">
+                    Không tìm thấy người dùng phù hợp.
+                  </div>
+                )}
+
+                {!isLoading &&
+                  data?.items.map((user) => (
+                    <UserRow
+                      key={user.id}
+                      user={user}
+                      onOpen={() => setSelectedUserId(user.id)}
+                      onUpdate={handleUpdateUser}
+                      isUpdating={isUpdatingUser}
+                    />
+                  ))}
               </div>
-            )}
-
-            {!isLoading &&
-              data?.items.map((user) => (
-                <UserRow
-                  key={user.id}
-                  user={user}
-                  onOpen={() => setSelectedUserId(user.id)}
-                  onUpdate={handleUpdateUser}
-                  isUpdating={isUpdatingUser}
-                />
-              ))}
+            </div>
           </div>
 
           <div className="theme-admin-table-head flex flex-wrap items-center justify-between gap-4 border-t px-5 py-3 text-sm text-[var(--secondary-foreground)]">
