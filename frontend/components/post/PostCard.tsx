@@ -260,7 +260,11 @@ export function PostCard({ post }: { post: Post }) {
     setIsCommentOpen(true);
   };
 
-  const closeComments = () => {
+  const closeComments = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     setIsCommentOpen(false);
     window.requestAnimationFrame(() => {
       cardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -549,7 +553,11 @@ export function PostCard({ post }: { post: Post }) {
         createPortal(
         <div
           className="theme-media-backdrop fixed inset-0 z-[9999] flex flex-col items-center justify-center p-4 backdrop-blur-md"
-          onClick={() => setIsImageViewerOpen(false)}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsImageViewerOpen(false);
+          }}
         >
           <button
             type="button"
@@ -632,7 +640,7 @@ export function PostCard({ post }: { post: Post }) {
         createPortal(
         <div
           className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/75 p-3 backdrop-blur-md md:p-6"
-          onClick={closeComments}
+          onClick={(e) => closeComments(e)}
         >
           <div
             className="theme-modal-surface relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl"
