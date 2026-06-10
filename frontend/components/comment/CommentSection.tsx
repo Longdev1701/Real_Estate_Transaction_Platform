@@ -502,7 +502,7 @@ function CommentItem({
 
   return (
     <div className={`flex gap-4 pt-4 ${index === 0 ? "border-t-0 pt-0" : ""}`}>
-      <Avatar name={getAuthorName(comment.author)} imageUrl={comment.author.avatarUrl} size="md" />
+      <Avatar name={getAuthorName(comment.author)} imageUrl={comment.author?.avatarUrl} size="md" />
       <div className="min-w-0 flex-1 space-y-2">
         <CommentHeader
           comment={comment}
@@ -555,7 +555,7 @@ function CommentItem({
 
               return (
                 <div key={reply.id} className="flex gap-3 pt-2">
-                  <Avatar name={getAuthorName(reply.author)} imageUrl={reply.author.avatarUrl} size="sm" />
+                  <Avatar name={getAuthorName(reply.author)} imageUrl={reply.author?.avatarUrl} size="sm" />
                   <div className="min-w-0 flex-1 space-y-1">
                     <CommentHeader
                       comment={reply}
