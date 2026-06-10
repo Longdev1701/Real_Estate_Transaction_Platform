@@ -209,9 +209,20 @@ export default async function HomePage() {
 
         {hasPosts ? (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-            {homeData?.featuredPosts.map((post, index) => (
-              <PropertyCard key={post.id} post={post} index={index} />
-            ))}
+            {homeData?.featuredPosts.map((post, index) => {
+              let visibilityClass = "block";
+              if (index === 3) {
+                visibilityClass = "block lg:hidden xl:block";
+              } else if (index === 4) {
+                visibilityClass = "hidden 2xl:block";
+              }
+
+              return (
+                <div key={post.id} className={visibilityClass}>
+                  <PropertyCard post={post} index={index} />
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div className="glass-card theme-text-secondary flex min-h-40 items-center justify-center p-8 text-center">

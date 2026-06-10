@@ -357,38 +357,42 @@ export function PostFilter({
         </div>
  
         {/* Tiện ích mở rộng (Collapsible) */}
-        {features.length > 0 && (
-          <div className="border-t border-[var(--border)] pt-2">
-            <button
-              type="button"
-              onClick={() => setShowFeatures(!showFeatures)}
-              className="flex w-full items-center justify-between text-xs font-medium text-[var(--accent)] transition hover:text-[var(--foreground)]"
-            >
-              <span className="flex items-center gap-1.5">
-                <SlidersHorizontal className="h-3.5 w-3.5" />
-                Tiện ích & Đặc trưng
+        <div className="border-t border-[var(--border)] pt-2">
+          <button
+            type="button"
+            onClick={() => setShowFeatures(!showFeatures)}
+            className="flex w-full items-center justify-between text-xs font-medium text-[var(--accent)] transition hover:text-[var(--foreground)]"
+          >
+            <span className="flex items-center gap-1.5">
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              Tiện ích & Đặc trưng
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="theme-badge-info rounded-full px-1.5 py-0.5 text-[10px]">
+                {selectedIds.length}
               </span>
-<span className="flex items-center gap-2">
-  <span className="theme-badge-info rounded-full px-1.5 py-0.5 text-[10px]">
-    {selectedIds.length}
-  </span>
 
-  <ChevronDown
-    className={`h-3.5 w-3.5 transition-transform duration-300 ${
-      showFeatures ? "rotate-180" : ""
-    }`}
-  />
-</span>
-</button>
+              <ChevronDown
+                className={`h-3.5 w-3.5 transition-transform duration-300 ${
+                  showFeatures ? "rotate-180" : ""
+                }`}
+              />
+            </span>
+          </button>
 
-<div
-  className={`grid overflow-hidden transition-all duration-300 ease-out ${
-    showFeatures
-      ? "mt-2.5 border-t border-[var(--border)] pt-2.5 grid-rows-[1fr] opacity-100"
-      : "grid-rows-[0fr] opacity-0"
-  }`}
->
-  <div className="overflow-hidden">
+          <div
+            className={`grid overflow-hidden transition-all duration-300 ease-out ${
+              showFeatures
+                ? "mt-2.5 border-t border-[var(--border)] pt-2.5 grid-rows-[1fr] opacity-100"
+                : "grid-rows-[0fr] opacity-0"
+            }`}
+          >
+            <div className="overflow-hidden">
+              {features.length === 0 ? (
+                <div className="flex h-12 items-center justify-center text-[10px] text-[var(--muted-foreground)]">
+                  Đang tải tiện ích...
+                </div>
+              ) : (
                 <div className="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto pr-1 custom-scrollbar">
                   {features.map((feature) => {
                     const isSelected = selectedIds.includes(feature.id);
@@ -409,10 +413,10 @@ export function PostFilter({
                     );
                   })}
                 </div>
-              </div>
+              )}
             </div>
           </div>
-        )}
+        </div>
  
       </div>
  
