@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Ban,
   CalendarDays,
@@ -18,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 
+import { AdminPagination } from "@/components/admin/AdminPagination";
 import { AdminShell, NeonCard, StatCard } from "@/components/admin/AdminShell";
 import {
   getAdminPosts,
@@ -29,6 +31,8 @@ import {
   type AdminPostsStats,
   type AdminPostStatus,
 } from "@/lib/admin";
+import { useAdminQuery } from "@/hooks/useAdminQuery";
+import { adminQueryKeys } from "@/lib/admin-query-keys";
 import {
   formatPrice,
   POST_TYPES,
@@ -103,6 +107,7 @@ const buildPostPatch = (
 type StatusTab = "ALL" | "ACTIVE" | "BANNED" | "HIDDEN";
 
 export default function AdminPostsPage() {
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState<AdminPostsFilter>({
     page: 1,
     limit: 10,
@@ -115,13 +120,8 @@ export default function AdminPostsPage() {
   });
   const [keywordInput, setKeywordInput] = useState("");
   const [activeTab, setActiveTab] = useState<StatusTab>("ALL");
-  const [data, setData] = useState<AdminPostsData | null>(null);
-  const [stats, setStats] = useState<AdminPostsStats | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingStats, setIsLoadingStats] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [error, setError] = useState("");
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [mutationError, setMutationError] = useState("");
   const [selectedPost, setSelectedPost] = useState<AdminPost | null>(null);
 
   useEffect(() => {
@@ -136,62 +136,29 @@ export default function AdminPostsPage() {
     return () => window.clearTimeout(timer);
   }, [keywordInput]);
 
-  useEffect(() => {
-    let ignore = false;
+  const postsQuery = useAdminQuery<AdminPostsData>({
+    queryKey: adminQueryKeys.posts.list(filter),
+    queryFn: () => getAdminPosts(filter),
+    errorMessage: "Không thể tải danh sách bài đăng.",
+    staleTime: 10_000,
+    refetchOnWindowFocus: true,
+    refetchInterval: 10_000,
+  });
 
-    const loadPosts = async () => {
-      try {
-        setIsLoading(true);
-        setError("");
-        const result = await getAdminPosts(filter);
-        if (!ignore) {
-          setData(result);
-        }
-      } catch {
-        if (!ignore) {
-          setError("Không thể tải danh sách bài đăng.");
-        }
-      } finally {
-        if (!ignore) {
-          setIsLoading(false);
-        }
-      }
-    };
+  const postStatsQuery = useAdminQuery<AdminPostsStats>({
+    queryKey: adminQueryKeys.posts.stats(),
+    queryFn: getAdminPostsStats,
+    errorMessage: "Không thể tải thống kê bài đăng.",
+    staleTime: 10_000,
+    refetchOnWindowFocus: true,
+    refetchInterval: 10_000,
+  });
 
-    loadPosts();
-
-    return () => {
-      ignore = true;
-    };
-  }, [filter, refreshKey]);
-
-  useEffect(() => {
-    let ignore = false;
-
-    const loadStats = async () => {
-      try {
-        setIsLoadingStats(true);
-        const result = await getAdminPostsStats();
-        if (!ignore) {
-          setStats(result);
-        }
-      } catch {
-        if (!ignore) {
-          setError("Không thể tải thống kê bài đăng.");
-        }
-      } finally {
-        if (!ignore) {
-          setIsLoadingStats(false);
-        }
-      }
-    };
-
-    loadStats();
-
-    return () => {
-      ignore = true;
-    };
-  }, [refreshKey]);
+  const data = postsQuery.data;
+  const stats = postStatsQuery.data;
+  const isLoading = postsQuery.isLoading;
+  const isLoadingStats = postStatsQuery.isLoading;
+  const error = mutationError || postsQuery.error || postStatsQuery.error;
 
   const tabs = useMemo(
     () => [
@@ -207,21 +174,10 @@ export default function AdminPostsPage() {
     [stats],
   );
 
-  const pageButtons = useMemo(() => {
-    const totalPages = data?.meta.totalPages ?? 1;
-    const currentPage = data?.meta.page ?? filter.page;
-    const pages = new Set<number>([
-      1,
-      totalPages,
-      currentPage,
-      Math.max(1, currentPage - 1),
-      Math.min(totalPages, currentPage + 1),
-    ]);
-    return Array.from(pages).sort((a, b) => a - b);
-  }, [data?.meta.page, data?.meta.totalPages, filter.page]);
-
   const startIndex = data?.meta.total ? (data.meta.page - 1) * data.meta.limit + 1 : 0;
   const endIndex = data ? Math.min(data.meta.page * data.meta.limit, data.meta.total) : 0;
+  const currentPage = data?.meta.page ?? filter.page;
+  const totalPages = data?.meta.totalPages ?? 1;
 
   const applyTab = (tab: StatusTab) => {
     setActiveTab(tab);
@@ -233,7 +189,7 @@ export default function AdminPostsPage() {
   };
 
   const syncPost = (patchedPost: AdminPost) => {
-    setData((current) =>
+    postsQuery.setData((current) =>
       current
         ? {
             ...current,
@@ -253,11 +209,16 @@ export default function AdminPostsPage() {
 
     try {
       setIsUpdating(true);
+      setMutationError("");
       await updateAdminPostStatus(post.id, status);
       syncPost(buildPostPatch(post, { status }));
-      setRefreshKey((current) => current + 1);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["admin", "posts"] }),
+        queryClient.invalidateQueries({ queryKey: adminQueryKeys.posts.stats() }),
+        queryClient.invalidateQueries({ queryKey: adminQueryKeys.dashboard() }),
+      ]);
     } catch {
-      setError("Không thể cập nhật trạng thái bài đăng.");
+      setMutationError("Không thể cập nhật trạng thái bài đăng.");
     } finally {
       setIsUpdating(false);
     }
@@ -426,7 +387,10 @@ export default function AdminPostsPage() {
             <button
               className="theme-admin-toolbar-button inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-3 text-sm font-medium transition disabled:opacity-60"
               disabled={isLoading}
-              onClick={() => setRefreshKey((current) => current + 1)}
+              onClick={() => {
+                postsQuery.reload();
+                postStatsQuery.reload();
+              }}
             >
               <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
               Làm mới
@@ -494,22 +458,14 @@ export default function AdminPostsPage() {
             <span>
               Hiển thị {startIndex} - {endIndex} của {formatNumber(data?.meta.total ?? 0)} bài đăng
             </span>
-            <div className="flex items-center gap-2">
-              {pageButtons.map((page) => (
-                <button
-                  key={page}
-                  className={`min-w-10 rounded-lg border px-3 py-2 ${
-                    page === data?.meta.page
-                      ? "theme-admin-tab-active"
-                      : "theme-admin-tab"
-                  }`}
-                  disabled={isLoading}
-                  onClick={() => setFilter((current) => ({ ...current, page }))}
-                >
-                  {page}
-                </button>
-              ))}
-            </div>
+            <AdminPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              isLoading={isLoading}
+              onPageChange={(page) =>
+                setFilter((current) => ({ ...current, page }))
+              }
+            />
           </div>
         </NeonCard>
       </div>

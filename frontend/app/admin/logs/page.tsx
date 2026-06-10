@@ -13,8 +13,12 @@ import {
   X,
 } from "lucide-react";
 
+import { AdminPagination } from "@/components/admin/AdminPagination";
 import { AdminShell, NeonCard, StatCard } from "@/components/admin/AdminShell";
+import { adminQueryKeys } from "@/lib/admin-query-keys";
 import {
+  getAdminSystemLogsStats,
+  type AdminLogCategory,
   getAdminSystemLogs,
   type AdminLogSeverity,
   type AdminLogStatus,
@@ -23,8 +27,9 @@ import {
   type AdminSystemLogsData,
   type AdminSystemLogsFilter,
 } from "@/lib/admin";
+import { useAdminQuery } from "@/hooks/useAdminQuery";
 
-type LogCategory = "ALL" | "AUTH" | "USER" | "POST" | "ADMIN" | "ERROR";
+type LogCategory = AdminLogCategory;
 
 type ViewLog = {
   id: string;
@@ -213,18 +218,16 @@ export default function AdminLogsPage() {
     page: 1,
     limit: 10,
     keyword: "",
+    category: "ALL",
     module: "",
     severity: "",
+    status: "",
     dateFrom: todayInput,
     dateTo: todayInput,
   });
   const [keywordInput, setKeywordInput] = useState("");
   const [category, setCategory] = useState<LogCategory>("ALL");
-  const [data, setData] = useState<AdminSystemLogsData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
   const [selectedLog, setSelectedLog] = useState<ViewLog | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -239,78 +242,89 @@ export default function AdminLogsPage() {
   }, [keywordInput]);
 
   useEffect(() => {
-    let ignore = false;
+    setFilter((current) =>
+      current.category === category
+        ? current
+        : {
+            ...current,
+            page: 1,
+            category,
+          },
+    );
+  }, [category]);
 
-    const loadLogs = async () => {
-      try {
-        setIsLoading(true);
-        setError("");
-        const result = await getAdminSystemLogs(filter);
-        if (!ignore) {
-          setData(result);
-        }
-      } catch {
-        if (!ignore) {
-          setError("Không thể tải nhật ký hệ thống.");
-        }
-      } finally {
-        if (!ignore) {
-          setIsLoading(false);
-        }
-      }
-    };
+  const logsQuery = useAdminQuery<AdminSystemLogsData>({
+    queryKey: adminQueryKeys.logs.list(filter),
+    queryFn: () => getAdminSystemLogs(filter),
+    errorMessage: "Không thể tải nhật ký hệ thống.",
+    staleTime: 5_000,
+    refetchOnWindowFocus: true,
+    refetchInterval: 7_500,
+  });
 
-    loadLogs();
+  const logStatsQuery = useAdminQuery({
+    queryKey: adminQueryKeys.logs.stats({
+      keyword: filter.keyword,
+      module: filter.module,
+      severity: filter.severity,
+      status: filter.status,
+      dateFrom: filter.dateFrom,
+      dateTo: filter.dateTo,
+    }),
+    queryFn: () =>
+      getAdminSystemLogsStats({
+        keyword: filter.keyword,
+        module: filter.module,
+        severity: filter.severity,
+        status: filter.status,
+        dateFrom: filter.dateFrom,
+        dateTo: filter.dateTo,
+      }),
+    errorMessage: "Không thể tải thống kê nhật ký hệ thống.",
+    staleTime: 5_000,
+    refetchOnWindowFocus: true,
+    refetchInterval: 7_500,
+  });
 
-    return () => {
-      ignore = true;
-    };
-  }, [filter, refreshKey]);
+  const data = logsQuery.data;
+  const statsData = logStatsQuery.data;
+  const isLoading = logsQuery.isLoading || logStatsQuery.isLoading;
+  const error = logsQuery.error || logStatsQuery.error;
 
   const mappedLogs = useMemo(() => (data?.items ?? []).map(buildViewLog), [data]);
 
-  const filteredLogs = useMemo(
-    () =>
-      mappedLogs.filter((log) => {
-        if (category !== "ALL" && log.category !== category) {
-          return false;
-        }
-
-        return true;
-      }),
-    [category, mappedLogs],
-  );
+  const filteredLogs = mappedLogs;
 
   const stats = useMemo(
     () => ({
-      total: data?.meta.total ?? 0,
-      security: mappedLogs.filter(
-        (log) => log.severity === "SECURITY" || log.status === "BLOCKED",
-      ).length,
-      errors: mappedLogs.filter((log) => log.severity === "ERROR").length,
-      admin: mappedLogs.filter((log) => log.category === "ADMIN").length,
+      total: statsData?.total ?? 0,
+      security: statsData?.security ?? 0,
+      errors: statsData?.errors ?? 0,
+      admin: statsData?.admin ?? 0,
     }),
-    [data?.meta.total, mappedLogs],
+    [statsData],
   );
 
   const categoryCounts = useMemo(
     () =>
-      categoryTabs.reduce<Record<LogCategory, number>>((acc, item) => {
-        acc[item.key] =
-          item.key === "ALL"
-            ? mappedLogs.length
-            : mappedLogs.filter((log) => log.category === item.key).length;
-        return acc;
-      }, {} as Record<LogCategory, number>),
-    [mappedLogs],
+      statsData?.categoryCounts ?? {
+        ALL: 0,
+        AUTH: 0,
+        USER: 0,
+        POST: 0,
+        ADMIN: 0,
+        ERROR: 0,
+      },
+    [statsData],
   );
 
   const modules = useMemo(
-    () => Array.from(new Set((data?.items ?? []).map((log) => log.module).filter(Boolean))),
-    [data?.items],
+    () => statsData?.modules ?? [],
+    [statsData],
   );
 
   const totalPages = data?.meta.totalPages ?? 1;
+  const currentPage = data?.meta.page ?? filter.page;
   const startIndex = data?.meta.total ? (data.meta.page - 1) * data.meta.limit + 1 : 0;
   const endIndex = data ? Math.min(data.meta.page * data.meta.limit, data.meta.total) : 0;
 
@@ -321,8 +335,10 @@ export default function AdminLogsPage() {
       page: 1,
       limit: 10,
       keyword: "",
+      category: "ALL",
       module: "",
       severity: "",
+      status: "",
       dateFrom: todayInput,
       dateTo: todayInput,
     });
@@ -452,7 +468,10 @@ export default function AdminLogsPage() {
 
             <button
               className="theme-admin-toolbar-button inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-sm font-medium transition"
-              onClick={() => setRefreshKey((current) => current + 1)}
+              onClick={() => {
+                logsQuery.reload();
+                logStatsQuery.reload();
+              }}
             >
               <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
               Làm mới
@@ -573,28 +592,17 @@ export default function AdminLogsPage() {
               <span>kết quả/trang</span>
             </div>
 
-            <div className="flex items-center gap-2">
-              {Array.from({ length: totalPages }, (_, index) => index + 1)
-                .slice(0, 5)
-                .map((pageNumber) => (
-                  <button
-                    key={pageNumber}
-                    className={`min-w-10 rounded-lg border px-3 py-2 ${
-                      pageNumber === filter.page
-                        ? "theme-admin-tab-active"
-                        : "theme-admin-tab"
-                    }`}
-                    onClick={() =>
-                      setFilter((current) => ({
-                        ...current,
-                        page: pageNumber,
-                      }))
-                    }
-                  >
-                    {pageNumber}
-                  </button>
-                ))}
-            </div>
+            <AdminPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              isLoading={isLoading}
+              onPageChange={(page) =>
+                setFilter((current) => ({
+                  ...current,
+                  page,
+                }))
+              }
+            />
           </div>
         </NeonCard>
       </div>

@@ -14,7 +14,7 @@ import {
   Users,
 } from "lucide-react";
 
-import { useAuthStore } from "@/stores/auth.store";
+import { useAdminReady } from "@/hooks/useAdminReady";
 
 const navItems = [
   { href: "/admin", label: "Tổng quan", icon: Home },
@@ -40,31 +40,38 @@ export function AdminShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, hasHydrated } = useAuthStore();
+  const { user, isChecking, isReady } = useAdminReady();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-
-  useEffect(() => {
-    if (!hasHydrated) return;
-    if (!user) {
-      router.replace("/auth/login");
-      return;
-    }
-    if (user.role !== "ADMIN") {
-      router.replace("/");
-    }
-  }, [hasHydrated, router, user]);
 
   useEffect(() => {
     setMobileSidebarOpen(false);
   }, [pathname]);
 
-  if (!hasHydrated || !user || user.role !== "ADMIN") {
+  if (isChecking || !isReady || !user) {
     return (
       <div className="theme-admin-stage flex min-h-screen items-center justify-center text-[var(--secondary-foreground)]">
         Đang kiểm tra quyền truy cập...
       </div>
     );
   }
+
+  const handleNavClick = (
+    event: React.MouseEvent<HTMLAnchorElement>,
+    href: string,
+  ) => {
+    if (!mobileSidebarOpen) {
+      return;
+    }
+
+    event.preventDefault();
+    setMobileSidebarOpen(false);
+
+    window.setTimeout(() => {
+      if (pathname !== href) {
+        router.push(href);
+      }
+    }, 0);
+  };
 
   return (
     <div className="theme-admin-stage min-h-screen text-[var(--foreground)]">
@@ -104,6 +111,7 @@ export function AdminShell({
                 <Link
                   key={item.href}
                   href={item.href}
+                  onClick={(event) => handleNavClick(event, item.href)}
                   className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition ${
                     active
                       ? "theme-admin-nav-active"

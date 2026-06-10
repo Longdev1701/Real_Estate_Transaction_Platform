@@ -8,6 +8,9 @@ import {
   type ReactNode,
 } from "react";
 import {
+  useQueryClient,
+} from "@tanstack/react-query";
+import {
   Ban,
   CalendarDays,
   Eye,
@@ -21,6 +24,7 @@ import {
   X,
 } from "lucide-react";
 
+import { AdminPagination } from "@/components/admin/AdminPagination";
 import { AdminShell, NeonCard, StatCard } from "@/components/admin/AdminShell";
 import {
   getAdminUserDetail,
@@ -33,6 +37,8 @@ import {
   type AdminUsersFilter,
   type AdminUsersStats,
 } from "@/lib/admin";
+import { useAdminQuery } from "@/hooks/useAdminQuery";
+import { adminQueryKeys } from "@/lib/admin-query-keys";
 
 type UserQuickTab = "ALL" | "USER" | "ADMIN" | "AGENT" | "ACTIVE" | "BANNED";
 
@@ -92,6 +98,7 @@ const getActivity = (user: Pick<AdminUserListItem, "updatedAt">) => {
 };
 
 export default function AdminUsersPage() {
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState<AdminUsersFilter>({
     page: 1,
     limit: 10,
@@ -102,15 +109,8 @@ export default function AdminUsersPage() {
   const [keywordInput, setKeywordInput] = useState("");
   const [quickTab, setQuickTab] = useState<UserQuickTab>("ALL");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
-  const [data, setData] = useState<AdminUsersData | null>(null);
-  const [stats, setStats] = useState<AdminUsersStats | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingStats, setIsLoadingStats] = useState(true);
-  const [isLoadingSelectedUser, setIsLoadingSelectedUser] = useState(false);
   const [isUpdatingUser, setIsUpdatingUser] = useState(false);
-  const [error, setError] = useState("");
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [mutationError, setMutationError] = useState("");
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -124,88 +124,41 @@ export default function AdminUsersPage() {
     return () => window.clearTimeout(timer);
   }, [keywordInput]);
 
-  useEffect(() => {
-    let ignore = false;
+  const usersQuery = useAdminQuery<AdminUsersData>({
+    queryKey: adminQueryKeys.users.list(filter),
+    queryFn: () => getAdminUsers(filter),
+    errorMessage: "Không thể tải danh sách người dùng.",
+    staleTime: 10_000,
+    refetchOnWindowFocus: true,
+  });
 
-    const loadUsers = async () => {
-      try {
-        setIsLoading(true);
-        setError("");
-        const result = await getAdminUsers(filter);
-        if (!ignore) setData(result);
-      } catch {
-        if (!ignore) setError("Không thể tải danh sách người dùng.");
-      } finally {
-        if (!ignore) setIsLoading(false);
-      }
-    };
+  const userStatsQuery = useAdminQuery<AdminUsersStats>({
+    queryKey: adminQueryKeys.users.stats(),
+    queryFn: getAdminUsersStats,
+    errorMessage: "Không thể tải thống kê người dùng.",
+    staleTime: 10_000,
+    refetchOnWindowFocus: true,
+  });
 
-    loadUsers();
-    return () => {
-      ignore = true;
-    };
-  }, [filter, refreshKey]);
+  const selectedUserQuery = useAdminQuery<AdminUser>({
+    enabled: Boolean(selectedUserId),
+    queryKey: adminQueryKeys.users.detail(selectedUserId),
+    queryFn: () => getAdminUserDetail(selectedUserId!),
+    errorMessage: "Không thể tải chi tiết người dùng.",
+    staleTime: 10_000,
+  });
 
-  useEffect(() => {
-    let ignore = false;
-
-    const loadStats = async () => {
-      try {
-        setIsLoadingStats(true);
-        const result = await getAdminUsersStats();
-        if (!ignore) {
-          setStats(result);
-        }
-      } catch {
-        if (!ignore) {
-          setError("Không thể tải thống kê người dùng.");
-        }
-      } finally {
-        if (!ignore) {
-          setIsLoadingStats(false);
-        }
-      }
-    };
-
-    loadStats();
-
-    return () => {
-      ignore = true;
-    };
-  }, [refreshKey]);
-
-  useEffect(() => {
-    if (!selectedUserId) {
-      setSelectedUser(null);
-      return;
-    }
-
-    let ignore = false;
-
-    const loadUserDetail = async () => {
-      try {
-        setIsLoadingSelectedUser(true);
-        const result = await getAdminUserDetail(selectedUserId);
-        if (!ignore) {
-          setSelectedUser(result);
-        }
-      } catch {
-        if (!ignore) {
-          setError("Không thể tải chi tiết người dùng.");
-        }
-      } finally {
-        if (!ignore) {
-          setIsLoadingSelectedUser(false);
-        }
-      }
-    };
-
-    loadUserDetail();
-
-    return () => {
-      ignore = true;
-    };
-  }, [selectedUserId]);
+  const data = usersQuery.data;
+  const stats = userStatsQuery.data;
+  const selectedUser = selectedUserQuery.data;
+  const isLoading = usersQuery.isLoading;
+  const isLoadingStats = userStatsQuery.isLoading;
+  const isLoadingSelectedUser = selectedUserQuery.isLoading;
+  const error =
+    mutationError ||
+    usersQuery.error ||
+    userStatsQuery.error ||
+    selectedUserQuery.error;
 
   const counts = useMemo(() => {
     const total = stats?.totalUsers.total ?? 0;
@@ -217,25 +170,14 @@ export default function AdminUsersPage() {
     return { total, admins, users, active, banned, agents: 0 };
   }, [stats]);
 
-  const pageButtons = useMemo(() => {
-    const totalPages = data?.meta.totalPages ?? 1;
-    const currentPage = data?.meta.page ?? filter.page;
-    const pages = new Set<number>([
-      1,
-      totalPages,
-      currentPage,
-      Math.max(1, currentPage - 1),
-      Math.min(totalPages, currentPage + 1),
-    ]);
-    return Array.from(pages).sort((a, b) => a - b);
-  }, [data?.meta.page, data?.meta.totalPages, filter.page]);
-
   const startIndex = data?.meta.total
     ? (data.meta.page - 1) * data.meta.limit + 1
     : 0;
   const endIndex = data
     ? Math.min(data.meta.page * data.meta.limit, data.meta.total)
     : 0;
+  const currentPage = data?.meta.page ?? filter.page;
+  const totalPages = data?.meta.totalPages ?? 1;
 
   const applyQuickTab = (tab: UserQuickTab) => {
     setQuickTab(tab);
@@ -256,10 +198,10 @@ export default function AdminUsersPage() {
   ) => {
     try {
       setIsUpdatingUser(true);
-      setError("");
+      setMutationError("");
       const updatedUser = await updateAdminUser(userId, input);
 
-      setData((current) =>
+      usersQuery.setData((current) =>
         current
           ? {
               ...current,
@@ -281,12 +223,21 @@ export default function AdminUsersPage() {
             }
           : current,
       );
-      setSelectedUser((current) =>
+      selectedUserQuery.setData((current) =>
         current?.id === updatedUser.id ? updatedUser : current,
       );
-      setRefreshKey((current) => current + 1);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["admin", "users"] }),
+        queryClient.invalidateQueries({ queryKey: adminQueryKeys.users.stats() }),
+        queryClient.invalidateQueries({ queryKey: adminQueryKeys.dashboard() }),
+        selectedUserId === updatedUser.id
+          ? queryClient.invalidateQueries({
+              queryKey: adminQueryKeys.users.detail(updatedUser.id),
+            })
+          : Promise.resolve(),
+      ]);
     } catch {
-      setError("Không thể cập nhật người dùng.");
+      setMutationError("Không thể cập nhật người dùng.");
     } finally {
       setIsUpdatingUser(false);
     }
@@ -392,7 +343,13 @@ export default function AdminUsersPage() {
             <button
               className="theme-admin-toolbar-button inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-3 text-sm font-medium transition disabled:opacity-60"
               disabled={isLoading}
-              onClick={() => setRefreshKey((current) => current + 1)}
+              onClick={() => {
+                usersQuery.reload();
+                userStatsQuery.reload();
+                if (selectedUserId) {
+                  selectedUserQuery.reload();
+                }
+              }}
             >
               <RefreshCw
                 className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
@@ -473,22 +430,14 @@ export default function AdminUsersPage() {
               Hiển thị {startIndex} - {endIndex} của{" "}
               {formatNumber(data?.meta.total ?? 0)} người dùng
             </span>
-            <div className="flex items-center gap-2">
-              {pageButtons.map((page) => (
-                <button
-                  key={page}
-                  className={`min-w-10 rounded-lg border px-3 py-2 ${
-                    page === data?.meta.page
-                      ? "theme-admin-tab-active"
-                      : "theme-admin-tab"
-                  }`}
-                  disabled={isLoading}
-                  onClick={() => setFilter((current) => ({ ...current, page }))}
-                >
-                  {page}
-                </button>
-              ))}
-            </div>
+            <AdminPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              isLoading={isLoading}
+              onPageChange={(page) =>
+                setFilter((current) => ({ ...current, page }))
+              }
+            />
           </div>
         </NeonCard>
       </div>
@@ -498,7 +447,7 @@ export default function AdminUsersPage() {
         isLoading={isLoadingSelectedUser}
         onClose={() => {
           setSelectedUserId(null);
-          setSelectedUser(null);
+          selectedUserQuery.setData(null);
         }}
         onUpdate={handleUpdateUser}
         isUpdating={isUpdatingUser}
