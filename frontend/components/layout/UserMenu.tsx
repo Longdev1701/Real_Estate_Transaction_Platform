@@ -1,5 +1,20 @@
 "use client";
 
+import { api } from "@/lib/api";
+import { useAuthStore } from "@/stores/auth.store";
+import { useTheme, type ThemePreference } from "@/components/theme/ThemeProvider";
+import {
+  Bookmark,
+  LayoutDashboard,
+  List,
+  LogOut,
+  Monitor,
+  Moon,
+  Sun,
+  User as UserIcon,
+  LogIn,
+} from "lucide-react";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Bookmark, LayoutDashboard, List, LogOut, User as UserIcon } from "lucide-react";
@@ -25,7 +40,12 @@ export function UserMenu() {
   }, []);
 
   if (!user) {
-    return <Link href="/auth/login" className="btn-primary">Đăng nhập</Link>;
+    return (
+      <Link href="/auth/login" className="btn-primary flex items-center justify-center p-2 sm:px-4">
+        <LogIn className="h-5 w-5 sm:hidden" />
+        <span className="hidden sm:inline">Đăng nhập</span>
+      </Link>
+    );
   }
 
   const handleLogout = async () => {

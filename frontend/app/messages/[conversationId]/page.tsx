@@ -96,7 +96,7 @@ const parseImages = (content: string): string[] => {
 };
 
 function formatPrice(value: number) {
-  if (value >= 1000) return `${(value / 1000).toFixed(1)} tỉ`;
+  if (value >= 1000) return `${(value / 1000).toFixed(1).replace(/\.0$/, "")} tỉ`;
   return `${value} triệu`;
 }
 
@@ -1146,7 +1146,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                 exit={{ opacity: 0, y: 8, scale: 0.94 }}
                 type="button"
                 onClick={scrollToBottom}
-                className="absolute bottom-[7.25rem] right-5 flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--secondary-foreground)] shadow-xl transition hover:text-[var(--foreground)]"
+                className="absolute bottom-[7.25rem] right-1/2 translate-x-1/2 md:right-5 md:translate-x-0 flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--secondary-foreground)] shadow-xl transition hover:text-[var(--foreground)]"
               >
                 <ChevronRight className="h-4 w-4 rotate-90" />
                 {unreadCount > 0 && (

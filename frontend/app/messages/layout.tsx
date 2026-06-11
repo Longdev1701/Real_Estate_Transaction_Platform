@@ -266,8 +266,8 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
   };
 
   return (
-    <div className="mx-auto h-full max-w-[1520px] p-2.5 lg:p-4">
-      <div className="theme-message-shell flex h-full overflow-hidden rounded-[26px] border border-[var(--accent-border)]">
+    <div className={`mx-auto max-w-[1520px] p-0 md:p-2.5 lg:p-4 ${pathname === "/messages" ? "h-[calc(100%-64px)] md:h-full" : "h-full"}`}>
+      <div className="theme-message-shell flex h-full overflow-hidden rounded-none border-none md:rounded-[26px] md:border md:border-[var(--accent-border)]">
         <aside className="theme-message-rail hidden w-[84px] flex-col justify-between border-r border-[var(--border)] px-3 py-5 md:flex">
           <div className="space-y-2.5">
             {navItems.map((item) => {
@@ -334,11 +334,11 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
         >
           <div className="border-b border-[var(--border)] px-4 py-4">
             <div className="mb-4">
-              <h1 className="text-[2rem] font-semibold tracking-tight text-white">Tin nhắn</h1>
-              <p className="mt-1 text-sm text-[var(--muted-foreground)]">Theo dõi khách hàng và bất động sản đang trao đổi.</p>
+              <h1 className="text-2xl md:text-[2rem] font-semibold tracking-tight text-white">Tin nhắn</h1>
+              <p className="mt-1 text-xs md:text-sm text-[var(--muted-foreground)]">Theo dõi khách hàng và bất động sản đang trao đổi.</p>
             </div>
 
-            <div className="mb-3 flex items-center gap-2.5">
+            <div className="mb-3">
               <label className="relative flex-1">
                 <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
                 <input
@@ -349,9 +349,6 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
                   className="w-full rounded-[18px] border border-[var(--border)] bg-[var(--surface-muted)] py-2.5 pl-10 pr-4 text-sm text-[var(--foreground)] outline-none transition placeholder:text-[var(--muted-foreground)] focus:border-[var(--accent-border)] focus:bg-[var(--surface)]"
                 />
               </label>
-              <button className="flex h-11 w-11 items-center justify-center rounded-[18px] border border-[var(--border)] bg-[var(--surface-muted)] text-[var(--secondary-foreground)] transition hover:bg-[var(--surface)] hover:text-[var(--foreground)]">
-                <SlidersHorizontal className="h-[18px] w-[18px]" />
-              </button>
             </div>
 
             <div className="theme-message-chip flex gap-1.5 rounded-[18px] p-1">
@@ -473,7 +470,7 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
                         </span>
                       )}
 
-                      <div className="absolute right-3 top-3 opacity-0 transition group-hover:opacity-100">
+                      <div className="absolute right-3 top-3 opacity-100 transition lg:opacity-0 lg:group-hover:opacity-100">
                         <button
                           type="button"
                           onClick={(event) => {
@@ -486,7 +483,7 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
                         </button>
 
                         {openConvMenuId === conversation.id && (
-                          <div className="theme-message-popover absolute right-0 top-10 z-20 w-40 overflow-hidden rounded-2xl p-1">
+                          <div className="theme-message-popover absolute right-0 top-10 z-20 w-40 overflow-hidden rounded-2xl p-1 shadow-lg">
                             <button
                               type="button"
                               onClick={(event) => handleDeleteConversation(event, conversation.id)}

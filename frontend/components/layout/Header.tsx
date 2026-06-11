@@ -127,7 +127,7 @@ export function Header() {
 
           <Link
             href="/messages"
-            className="relative rounded-xl p-2 text-[var(--muted-foreground)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--foreground)]"
+            className="relative hidden md:flex rounded-xl p-2 text-[var(--muted-foreground)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--foreground)]"
             aria-label="Tin nhắn"
           >
             <MessageCircle size={20} />
@@ -135,7 +135,7 @@ export function Header() {
 
           <Link
             href={user ? "/profile/saved" : "/auth/login"}
-            className="rounded-xl p-2 text-[var(--muted-foreground)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--foreground)]"
+            className="hidden md:flex rounded-xl p-2 text-[var(--muted-foreground)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--foreground)]"
             aria-label="Bài đăng đã lưu"
           >
             <Bookmark size={20} />
@@ -145,7 +145,7 @@ export function Header() {
             + Đăng bài
           </Link>
 
-          <div className="mx-2 h-8 w-px bg-[var(--border)]" />
+          <div className="mx-2 hidden h-8 w-px bg-[var(--border)] md:block" />
 
           <UserMenu />
         </div>

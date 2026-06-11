@@ -7,6 +7,7 @@ import { FloatingCompareBar } from "@/components/layout/FloatingCompareBar";
 import { MainContent } from "@/components/layout/MainContent";
 import { AuthSessionProvider } from "@/components/auth/AuthSessionProvider";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 
 const themeInitScript = `
   (() => {
@@ -50,6 +51,7 @@ export default function RootLayout({
               <Footer />
               <FloatingCreateButton />
               <FloatingCompareBar />
+              <MobileBottomNav />
             </div>
           </AuthSessionProvider>
         </ThemeProvider>
