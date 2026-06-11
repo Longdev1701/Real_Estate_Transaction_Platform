@@ -16,6 +16,12 @@ import {
   signRefreshToken,
   verifyRefreshToken,
 } from "../utils/jwt.js";
+import { redisClient } from "../config/redis.js";
+import { sendResetPasswordEmail, sendRegisterVerificationEmail, isEmailConfigured } from "../services/email.service.js";
+
+const memoryPendingRegistrations = new Map<string, { data: RegisterInput & { code: string }; expiresAt: number }>();
+
+
 
 type RegisterInput = {
   email: string;
@@ -98,32 +104,95 @@ const buildAuthResponse = async (user: User): Promise<AuthResponse> => {
   };
 };
 
-export const register = async (input: RegisterInput): Promise<AuthResponse> => {
+export const register = async (input: RegisterInput) => {
+  const email = input.email.trim().toLowerCase();
   const existingUser = await prisma.user.findUnique({
     where: {
-      email: input.email,
+      email,
     },
   });
 
   if (existingUser) {
-    throw new AppError("Email is already in use.", 409);
+    throw new AppError("Email đã được sử dụng.", 409);
   }
 
-  const passwordHash = await hashValue(input.password);
+  // Generate 6-digit OTP code
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const ttlSeconds = 600; // 10 minutes
+
+  // Store in Redis/Memory
+  const key = `pending-register:${email}`;
+  const registrationData = {
+    ...input,
+    email,
+    code,
+  };
+
+  if (redisClient?.isOpen) {
+    await redisClient.setEx(key, ttlSeconds, JSON.stringify(registrationData));
+  } else {
+    memoryPendingRegistrations.set(key, { data: registrationData, expiresAt: Date.now() + ttlSeconds * 1000 });
+  }
+
+  // Send email via service
+  await sendRegisterVerificationEmail(email, input.fullName, code);
+
+  return {
+    message: "Mã xác thực đăng ký đã được gửi tới email của bạn.",
+    ...(!isEmailConfigured && process.env.NODE_ENV !== "production" ? { devOtpCode: code } : {}),
+  };
+};
+
+export const confirmRegister = async (input: { email: string; code: string }): Promise<AuthResponse> => {
+  const email = input.email.trim().toLowerCase();
+  const code = input.code.trim();
+
+  const key = `pending-register:${email}`;
+  let pendingData: (RegisterInput & { code: string }) | null = null;
+
+  if (redisClient?.isOpen) {
+    const cached = await redisClient.get(key);
+    if (cached) {
+      pendingData = JSON.parse(cached);
+    }
+  } else {
+    const cached = memoryPendingRegistrations.get(key);
+    if (cached) {
+      if (cached.expiresAt > Date.now()) {
+        pendingData = cached.data;
+      } else {
+        memoryPendingRegistrations.delete(key);
+      }
+    }
+  }
+
+  if (!pendingData || pendingData.code !== code) {
+    throw new AppError("Mã xác thực không hợp lệ hoặc đã hết hạn.", 400);
+  }
+
+  const passwordHash = await hashValue(pendingData.password);
 
   const user = await prisma.user.create({
     data: {
-      email: input.email,
+      email: pendingData.email,
       passwordHash,
-      fullName: input.fullName,
-      phone: input.phone,
+      fullName: pendingData.fullName,
+      phone: pendingData.phone || null,
       role: UserRole.USER,
       status: UserStatus.ACTIVE,
     },
   });
 
+  // Clean up
+  if (redisClient?.isOpen) {
+    await redisClient.del(key);
+  } else {
+    memoryPendingRegistrations.delete(key);
+  }
+
   return buildAuthResponse(user);
 };
+
 
 export const login = async (input: LoginInput): Promise<AuthResponse> => {
   const user = await prisma.user.findUnique({
@@ -343,3 +412,114 @@ export const changePassword = async (userId: string, input: ChangePasswordInput)
     data: { passwordHash },
   });
 };
+
+const memoryResetCodes = new Map<string, { code: string; expiresAt: number }>();
+
+export const forgotPassword = async (input: { email: string }) => {
+  const email = input.email.trim().toLowerCase();
+  const user = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (!user) {
+    throw new AppError("Không tìm thấy người dùng với email này.", 404);
+  }
+
+  // Generate 6-digit verification code
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  const ttlSeconds = 600; // 10 minutes
+
+  // Store key-value (key: reset-password:email, value: code)
+  const key = `reset-password:${email}`;
+  if (redisClient?.isOpen) {
+    await redisClient.setEx(key, ttlSeconds, code);
+  } else {
+    memoryResetCodes.set(key, { code, expiresAt: Date.now() + ttlSeconds * 1000 });
+  }
+
+  // Send email via service
+  await sendResetPasswordEmail(email, user.fullName, code);
+
+  // Return development otp code if in development/testing context AND email is not configured
+  return {
+    message: "Mã xác thực đã được gửi tới email của bạn.",
+    ...(!isEmailConfigured && process.env.NODE_ENV !== "production" ? { devOtpCode: code } : {}),
+  };
+};
+
+export const resetPassword = async (input: {
+  email: string;
+  code: string;
+  newPassword: string;
+}) => {
+  const email = input.email.trim().toLowerCase();
+  const code = input.code.trim();
+
+  // Retrieve code from Redis or Memory
+  const key = `reset-password:${email}`;
+  let storedCode: string | null = null;
+
+  if (redisClient?.isOpen) {
+    storedCode = await redisClient.get(key);
+  } else {
+    const data = memoryResetCodes.get(key);
+    if (data) {
+      if (data.expiresAt > Date.now()) {
+        storedCode = data.code;
+      } else {
+        memoryResetCodes.delete(key);
+      }
+    }
+  }
+
+  if (!storedCode || storedCode !== code) {
+    throw new AppError("Mã xác thực không hợp lệ hoặc đã hết hạn.", 400);
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (!user) {
+    throw new AppError("Không tìm thấy người dùng.", 404);
+  }
+
+  // Update password
+  const passwordHash = await hashValue(input.newPassword);
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { passwordHash },
+  });
+
+  // Delete stored code
+  if (redisClient?.isOpen) {
+    await redisClient.del(key);
+  } else {
+    memoryResetCodes.delete(key);
+  }
+};
+
+export const verifyResetCode = async (input: { email: string; code: string }) => {
+  const email = input.email.trim().toLowerCase();
+  const code = input.code.trim();
+
+  const key = `reset-password:${email}`;
+  let storedCode: string | null = null;
+
+  if (redisClient?.isOpen) {
+    storedCode = await redisClient.get(key);
+  } else {
+    const data = memoryResetCodes.get(key);
+    if (data && data.expiresAt > Date.now()) {
+      storedCode = data.code;
+    }
+  }
+
+  if (!storedCode || storedCode !== code) {
+    throw new AppError("Mã xác thực không hợp lệ hoặc đã hết hạn.", 400);
+  }
+
+  return true;
+};
+
+

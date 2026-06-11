@@ -56,7 +56,7 @@ export default function LoginPage() {
 
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-160px)] p-4">
-      <div className="glass-card w-full max-w-md p-8">
+      <div className="glass-card w-full max-w-md p-6 sm:p-8">
         <h1 className="text-3xl font-bold text-center mb-2">Đăng nhập</h1>
         <p className="theme-text-muted mb-8 text-center">Chào mừng trở lại TrustEstate</p>
 
@@ -83,9 +83,17 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="theme-input-label mb-1 block text-sm font-medium">
-              Mật khẩu
-            </label>
+            <div className="flex justify-between items-center mb-1">
+              <label className="theme-input-label block text-sm font-medium">
+                Mật khẩu
+              </label>
+              <Link
+                href="/auth/forgot-password"
+                className="text-sm theme-link transition-colors"
+              >
+                Quên mật khẩu?
+              </Link>
+            </div>
             <input
               type="password"
               {...register("password")}

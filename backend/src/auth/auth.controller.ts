@@ -12,11 +12,24 @@ import {
   register,
   updateProfile,
   updateAvatar,
+  forgotPassword,
+  resetPassword,
+  verifyResetCode,
+  confirmRegister,
 } from "./auth.service.js";
 
 export const registerController: RequestHandler = async (req, res, next) => {
   try {
     const result = await register(req.body);
+    sendSuccess(res, result, "Register verification code sent.", 200);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const confirmRegisterController: RequestHandler = async (req, res, next) => {
+  try {
+    const result = await confirmRegister(req.body);
 
     await createSystemLog({
       module: "AUTH",
@@ -24,7 +37,7 @@ export const registerController: RequestHandler = async (req, res, next) => {
       action: "REGISTER",
       targetType: "User",
       targetId: result.user.id,
-      description: `Tài khoản ${result.user.email} đã đăng ký thành công.`,
+      description: `Tài khoản ${result.user.email} đã đăng ký và xác thực thành công.`,
       severity: "INFO",
       status: "SUCCESS",
       request: req,
@@ -34,7 +47,7 @@ export const registerController: RequestHandler = async (req, res, next) => {
       },
     });
 
-    sendSuccess(res, result, "Register successful.", 201);
+    sendSuccess(res, result, "Register verified successfully.", 201);
   } catch (error) {
     next(error);
   }
@@ -217,3 +230,85 @@ export const changePasswordController: RequestHandler = async (req, res, next) =
     next(error);
   }
 };
+
+export const forgotPasswordController: RequestHandler = async (req, res, next) => {
+  try {
+    const result = await forgotPassword(req.body);
+
+    await createSystemLog({
+      module: "AUTH",
+      action: "FORGOT_PASSWORD_REQUEST",
+      targetType: "User",
+      description: `Yêu cầu đặt lại mật khẩu cho tài khoản ${req.body?.email ?? "không xác định"}.`,
+      severity: "INFO",
+      status: "SUCCESS",
+      request: req,
+      metadata: {
+        email: req.body?.email ?? null,
+      },
+    });
+
+    sendSuccess(res, result, "Verification code sent successfully.");
+  } catch (error) {
+    await createSystemLog({
+      module: "AUTH",
+      action: "FORGOT_PASSWORD_FAILED",
+      targetType: "User",
+      description: `Yêu cầu đặt lại mật khẩu thất bại cho tài khoản ${req.body?.email ?? "không xác định"}.`,
+      severity: "WARNING",
+      status: "FAILED",
+      request: req,
+      metadata: {
+        email: req.body?.email ?? null,
+        error: error instanceof Error ? error.message : String(error),
+      },
+    });
+    next(error);
+  }
+};
+
+export const resetPasswordController: RequestHandler = async (req, res, next) => {
+  try {
+    await resetPassword(req.body);
+
+    await createSystemLog({
+      module: "AUTH",
+      action: "RESET_PASSWORD_SUCCESS",
+      targetType: "User",
+      description: `Tài khoản ${req.body?.email ?? "không xác định"} đã đặt lại mật khẩu thành công.`,
+      severity: "SECURITY",
+      status: "SUCCESS",
+      request: req,
+      metadata: {
+        email: req.body?.email ?? null,
+      },
+    });
+
+    sendSuccess(res, null, "Password reset successfully.");
+  } catch (error) {
+    await createSystemLog({
+      module: "AUTH",
+      action: "RESET_PASSWORD_FAILED",
+      targetType: "User",
+      description: `Đặt lại mật khẩu thất bại cho tài khoản ${req.body?.email ?? "không xác định"}.`,
+      severity: "SECURITY",
+      status: "FAILED",
+      request: req,
+      metadata: {
+        email: req.body?.email ?? null,
+        error: error instanceof Error ? error.message : String(error),
+      },
+    });
+    next(error);
+  }
+};
+
+export const verifyResetCodeController: RequestHandler = async (req, res, next) => {
+  try {
+    await verifyResetCode(req.body);
+    sendSuccess(res, null, "Verification code is valid.");
+  } catch (error) {
+    next(error);
+  }
+};
+

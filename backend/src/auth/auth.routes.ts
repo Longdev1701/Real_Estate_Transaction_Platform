@@ -13,6 +13,10 @@ import {
   registerController,
   updateProfileController,
   updateAvatarController,
+  forgotPasswordController,
+  resetPasswordController,
+  verifyResetCodeController,
+  confirmRegisterController,
 } from "./auth.controller.js";
 import {
   changePasswordSchema,
@@ -21,6 +25,10 @@ import {
   refreshTokenSchema,
   registerSchema,
   updateProfileSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  verifyResetCodeSchema,
+  confirmRegisterSchema,
 } from "./auth.validation.js";
 
 export const authRouter = Router();
@@ -29,6 +37,11 @@ authRouter.post(
   "/register",
   validateRequest({ body: registerSchema }),
   registerController,
+);
+authRouter.post(
+  "/confirm-register",
+  validateRequest({ body: confirmRegisterSchema }),
+  confirmRegisterController,
 );
 authRouter.post("/login", validateRequest({ body: loginSchema }), loginController);
 authRouter.post(
@@ -40,6 +53,21 @@ authRouter.post(
   "/logout",
   validateRequest({ body: logoutSchema }),
   logoutController,
+);
+authRouter.post(
+  "/forgot-password",
+  validateRequest({ body: forgotPasswordSchema }),
+  forgotPasswordController,
+);
+authRouter.post(
+  "/reset-password",
+  validateRequest({ body: resetPasswordSchema }),
+  resetPasswordController,
+);
+authRouter.post(
+  "/verify-reset-code",
+  validateRequest({ body: verifyResetCodeSchema }),
+  verifyResetCodeController,
 );
 authRouter.get("/me", authenticate, (req, res) => {
   sendSuccess(res, req.user, "Current user fetched successfully.");
