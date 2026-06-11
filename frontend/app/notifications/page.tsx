@@ -16,6 +16,7 @@ import {
   Settings,
   ShieldCheck,
   SlidersHorizontal,
+  X,
 } from "lucide-react";
 import { AxiosError } from "axios";
 
@@ -86,6 +87,7 @@ export default function NotificationsPage() {
   const [typeFilter, setTypeFilter] = useState<"all" | NotificationType>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("7d");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const cacheKey = user ? `notifications:list:${user.id}` : "notifications:list";
 
   useEffect(() => {
@@ -177,6 +179,19 @@ export default function NotificationsPage() {
     };
   }, [cacheKey, socket, user]);
 
+  useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isFilterOpen]);
+
   const counts = useMemo(() => {
     const initial: Record<"all" | NotificationType, number> = {
       all: items.length,
@@ -223,6 +238,11 @@ export default function NotificationsPage() {
     });
   }, [items, statusFilter, timeFilter, typeFilter]);
 
+  const activeFilterCount =
+    (typeFilter !== "all" ? 1 : 0) +
+    (statusFilter !== "all" ? 1 : 0) +
+    (timeFilter !== "7d" ? 1 : 0);
+
   const updateCache = (nextItems: NotificationItem[]) => {
     const nextUnreadCount = nextItems.filter((item) => !item.isRead).length;
     setItems(nextItems);
@@ -264,10 +284,10 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="h-auto xl:h-[calc(100vh-5rem)] px-4 py-6 lg:px-6 xl:overflow-hidden">
-      <div className="grid gap-5 xl:grid-cols-[260px_minmax(0,1fr)_320px] h-full min-h-0">
+    <div className="px-4 py-6 lg:px-6 xl:h-[calc(100vh-5rem)] xl:overflow-hidden">
+      <div className="grid min-h-0 gap-5 lg:grid-cols-[minmax(0,1fr)_320px] xl:h-full xl:grid-cols-[260px_minmax(0,1fr)_320px]">
         <aside className="glass-card h-fit p-3.5 xl:max-h-full xl:overflow-y-auto no-scrollbar">
-          <nav className="space-y-2">
+          <nav className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = typeFilter === item.type;
@@ -318,18 +338,33 @@ export default function NotificationsPage() {
           </div>
         </aside>
 
-        <main className="min-w-0 h-full flex flex-col min-h-0">
-          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between shrink-0">
+        <main className="min-w-0 flex min-h-0 flex-col xl:h-full">
+          <div className="mb-4 flex flex-col gap-3 shrink-0 sm:flex-row sm:items-center sm:justify-between">
             <h1 className="text-3xl font-bold text-[var(--foreground)]">Thông báo</h1>
-            <button
-              type="button"
-              onClick={markAllAsRead}
-              disabled={unreadCount === 0}
-              className="theme-link inline-flex items-center gap-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Check className="h-4 w-4" />
-              Đánh dấu tất cả đã đọc
-            </button>
+            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setIsFilterOpen(true)}
+                className="theme-surface-soft inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--surface-muted)] xl:hidden"
+              >
+                <SlidersHorizontal className="h-4 w-4 text-[var(--accent)]" />
+                Bộ lọc
+                {activeFilterCount > 0 ? (
+                  <span className="theme-badge-info inline-flex min-w-6 items-center justify-center rounded-full px-2 py-0.5 text-xs">
+                    {activeFilterCount}
+                  </span>
+                ) : null}
+              </button>
+              <button
+                type="button"
+                onClick={markAllAsRead}
+                disabled={unreadCount === 0}
+                className="theme-link inline-flex items-center gap-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Check className="h-4 w-4" />
+                Đánh dấu tất cả đã đọc
+              </button>
+            </div>
           </div>
 
           {error ? (
@@ -338,7 +373,7 @@ export default function NotificationsPage() {
             </div>
           ) : null}
 
-          <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pr-1 pb-6">
+          <div className="no-scrollbar min-h-0 flex-1 pb-6 xl:overflow-y-auto xl:pr-1">
             {isLoading ? (
               <div className="theme-surface-soft flex h-full min-h-[300px] items-center justify-center rounded-2xl">
                 <div className="theme-text-secondary inline-flex items-center gap-3">
@@ -365,7 +400,7 @@ export default function NotificationsPage() {
                           : "border-[var(--info-border)] bg-[var(--info-soft)] shadow-[var(--shadow-glow)]"
                       }`}
                     >
-                      <div className="grid gap-4 md:grid-cols-[auto_minmax(0,1fr)_auto] md:items-center">
+                      <div className="grid gap-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-start xl:grid-cols-[auto_minmax(0,1fr)_auto] xl:items-center">
                         <div className="flex items-center gap-3">
                           <span className={`h-3 w-3 rounded-full ${notification.isRead ? "theme-notification-dot-read" : "theme-notification-dot-unread"}`} />
                           <span className={`flex h-14 w-14 items-center justify-center rounded-full ${notification.isRead ? "theme-surface-soft text-[var(--secondary-foreground)]" : "theme-button-primary"}`}>
@@ -379,11 +414,11 @@ export default function NotificationsPage() {
                           <p className="theme-text-muted mt-1 text-sm">{formatNotificationTime(notification.createdAt)}</p>
                         </div>
 
-                        <div className="flex items-center gap-2 md:flex-col md:items-end">
+                        <div className="flex flex-col gap-2 sm:col-span-2 sm:flex-row sm:justify-end xl:col-span-1 xl:flex-col xl:items-end">
                           <Link
                             href={href}
                             onClick={() => markOneAsRead(notification)}
-                            className="theme-button-primary inline-flex min-w-32 justify-center rounded-lg px-4 py-2 text-sm font-semibold transition"
+                            className="theme-button-primary inline-flex w-full justify-center rounded-lg px-4 py-2 text-sm font-semibold transition sm:w-auto sm:min-w-32"
                           >
                             {getActionLabel(notification.type)}
                           </Link>
@@ -405,8 +440,8 @@ export default function NotificationsPage() {
           </div>
         </main>
 
-        <aside className="space-y-4 xl:max-h-full xl:overflow-y-auto no-scrollbar pb-6">
-          <section className="glass-card p-4">
+        <aside className="space-y-4 pb-6 lg:col-span-2 xl:col-span-1 xl:max-h-full xl:overflow-y-auto no-scrollbar">
+          <section className="hidden glass-card p-4 xl:block">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-[var(--foreground)]">Bộ lọc thông báo</h2>
               <SlidersHorizontal className="h-4 w-4 text-[var(--primary)]" />
@@ -502,6 +537,90 @@ export default function NotificationsPage() {
           </section>
         </aside>
       </div>
+
+      {isFilterOpen ? (
+        <div className="fixed inset-0 z-50 bg-slate-950/55 backdrop-blur-sm xl:hidden" onClick={() => setIsFilterOpen(false)}>
+          <div
+            className="absolute inset-x-3 bottom-3 top-20 overflow-hidden rounded-[28px] border border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_92%,black)] shadow-[0_24px_90px_rgba(0,0,0,0.45)] sm:left-auto sm:right-4 sm:top-24 sm:w-[360px]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3">
+              <div>
+                <h2 className="text-base font-semibold text-[var(--foreground)]">Bộ lọc thông báo</h2>
+                <p className="text-xs text-[var(--muted-foreground)]">Tinh gọn giao diện và giữ bộ lọc cố định khi xem thông báo.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsFilterOpen(false)}
+                className="theme-surface-soft inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--foreground)] transition hover:bg-[var(--surface-muted)]"
+                aria-label="Đóng bộ lọc"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="no-scrollbar h-full overflow-y-auto p-4 pb-24">
+              <section className="glass-card p-4">
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-xl font-semibold text-[var(--foreground)]">Bộ lọc thông báo</h2>
+                  <SlidersHorizontal className="h-4 w-4 text-[var(--primary)]" />
+                </div>
+
+                <div className="space-y-4">
+                  <label className="block">
+                    <span className="theme-input-label mb-1.5 block text-xs font-medium">Loại thông báo</span>
+                    <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as "all" | NotificationType)} className="input-dark py-2 text-sm">
+                      {typeOptions.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <div>
+                    <span className="theme-input-label mb-1.5 block text-xs font-medium">Trạng thái</span>
+                    <div className="theme-surface-soft grid grid-cols-3 overflow-hidden rounded-xl">
+                      {[
+                        ["all", "Tất cả"],
+                        ["unread", "Chưa đọc"],
+                        ["read", "Đã đọc"],
+                      ].map(([value, label]) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => setStatusFilter(value as StatusFilter)}
+                          className={`px-2 py-2 text-xs font-medium transition ${
+                            statusFilter === value ? "theme-button-primary" : "text-[var(--secondary-foreground)] hover:bg-[var(--hover)]"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <label className="block">
+                    <span className="theme-input-label mb-1.5 block text-xs font-medium">Khoảng thời gian</span>
+                    <select value={timeFilter} onChange={(event) => setTimeFilter(event.target.value as TimeFilter)} className="input-dark py-2 text-sm">
+                      <option value="7d">7 ngày qua</option>
+                      <option value="30d">30 ngày qua</option>
+                      <option value="all">Tất cả thời gian</option>
+                    </select>
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsFilterOpen(false)}
+                    className="btn-primary inline-flex w-full items-center justify-center gap-2 py-2.5 text-sm"
+                  >
+                    <Filter className="h-4.5 w-4.5" />
+                    Xong
+                  </button>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

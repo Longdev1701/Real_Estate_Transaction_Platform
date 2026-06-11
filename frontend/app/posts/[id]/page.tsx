@@ -452,8 +452,8 @@ export default function PostDetailPage() {
   }
 
   return (
-    <div className="container mx-auto space-y-6 px-4 pt-8 pb-28 lg:px-8 lg:py-10">
-      <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--muted-foreground)]">
+    <div className="container mx-auto space-y-5 px-4 pt-5 pb-28 lg:space-y-6 lg:px-8 lg:py-10">
+      <div className="flex flex-wrap items-center gap-2 text-sm leading-6 text-[var(--muted-foreground)]">
         <Link href="/" className="transition hover:text-[var(--foreground)]">
           Trang chủ
         </Link>
@@ -462,7 +462,7 @@ export default function PostDetailPage() {
           Bài đăng
         </Link>
         <span>/</span>
-        <span className="text-[var(--foreground)]">{post.title}</span>
+        <span className="line-clamp-2 text-[var(--foreground)]">{post.title}</span>
       </div>
 
       {error && (
@@ -471,7 +471,7 @@ export default function PostDetailPage() {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <section className="space-y-6 min-w-0">
           <div className="glass-card overflow-hidden p-0">
             <div className={`grid gap-1 overflow-hidden ${images.length === 1 ? 'grid-cols-1' :
@@ -568,16 +568,16 @@ export default function PostDetailPage() {
             </div>
           </div>
 
-          <div className="glass-card relative p-6 md:p-7">
-            <div className="flex items-start justify-between gap-6">
-              <div className="min-w-0 flex-1 lg:pr-[23rem]">
+          <div className="glass-card relative p-4 sm:p-5 md:p-7">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+              <div className="min-w-0 flex-1 xl:pr-[23rem]">
                 <div className="mb-3 flex flex-wrap items-center gap-3">
-                  <h1 className="text-4xl font-bold tracking-tight text-white break-words">{post.title}</h1>
+                  <h1 className="break-words text-[2rem] font-bold leading-tight tracking-tight text-white sm:text-[2.5rem]">{post.title}</h1>
                 </div>
-                <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--muted-foreground)]">
+                <div className="flex flex-col gap-2 text-sm text-[var(--muted-foreground)] sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
                   <span className="inline-flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-[var(--accent)]" />
-                    {formatLocation(post)}
+                    <span className="break-words">{formatLocation(post)}</span>
                   </span>
                   <button
                     type="button"
@@ -593,17 +593,17 @@ export default function PostDetailPage() {
                 </div>
               </div>
 
-              <div className="flex shrink-0 flex-wrap gap-3 self-start lg:absolute lg:right-7 lg:top-7 lg:justify-end">
+              <div className="grid shrink-0 grid-cols-2 gap-2 self-start sm:flex sm:flex-wrap sm:gap-3 lg:absolute lg:right-7 lg:top-7 lg:grid-cols-none lg:justify-end">
                 <button
                   type="button"
                   onClick={handleSaveToggle}
                   disabled={isSaveSubmitting}
-                  className="theme-surface-soft inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="theme-surface-soft inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-60 sm:px-4 sm:py-3"
                 >
                   <Bookmark className={`h-4 w-4 ${post.isSaved ? "fill-[var(--accent)] text-[var(--accent)]" : "text-[var(--accent)]"}`} />
                   {post.isSaved ? "Đã lưu" : "Lưu"}
                 </button>
-                <button type="button" className="theme-surface-soft inline-flex items-center gap-2 rounded-xl px-4 py-3 text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)]">
+                <button type="button" className="theme-surface-soft inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)] sm:px-4 sm:py-3">
                   <Building2 className="h-4 w-4 text-[var(--accent)]" />
                   So sánh
                 </button>
@@ -611,7 +611,7 @@ export default function PostDetailPage() {
                   <button
                     type="button"
                     onClick={handleOpenReportDialog}
-                    className="inline-flex items-center gap-2 rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-amber-100 transition hover:bg-amber-500/15"
+                    className="col-span-2 inline-flex items-center justify-center gap-2 rounded-xl border border-amber-400/20 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-100 transition hover:bg-amber-500/15 sm:col-span-1 sm:px-4 sm:py-3"
                   >
                     <TriangleAlert className="h-4 w-4 text-amber-300" />
                     Báo cáo
@@ -649,7 +649,7 @@ export default function PostDetailPage() {
               </div>
             </div>
 
-            <div className="mt-6 grid gap-8 xl:grid-cols-[minmax(0,1fr)_420px]">
+            <div className="mt-6 grid gap-8 2xl:grid-cols-[minmax(0,1fr)_420px]">
               <div>
                 <h2 className="text-2xl font-semibold text-[var(--foreground)]">Mô tả chi tiết</h2>
                 <p className="mt-4 whitespace-pre-line break-words leading-8 text-[var(--secondary-foreground)]">{post.description}</p>
@@ -715,7 +715,7 @@ export default function PostDetailPage() {
           {post.features && post.features.length > 0 && (
             <div className="glass-card p-6">
               <h2 className="text-2xl font-semibold text-[var(--foreground)]">Tiện ích & Đặc trưng</h2>
-              <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
                 {post.features.map((feature) => (
                   <div
                     key={feature.id}
@@ -747,7 +747,7 @@ export default function PostDetailPage() {
         </section>
 
         <aside className="space-y-5">
-          <div className="lg:sticky lg:top-24 space-y-5">
+          <div className="xl:sticky xl:top-24 space-y-5">
             {canManagePost ? (
 <div className="glass-card relative overflow-hidden border-t-4 border-t-[var(--accent)] p-6">
   <div className="pointer-events-none absolute left-0 top-0 h-24 w-full bg-gradient-to-b from-[var(--accent-soft)] to-transparent" />
@@ -780,10 +780,10 @@ export default function PostDetailPage() {
                 </div>
               </div>
             ) : (
-              <div className="glass-card relative overflow-hidden border-t-4 border-t-[var(--accent)] p-6">
+              <div className="glass-card relative overflow-hidden border-t-4 border-t-[var(--accent)] p-5 sm:p-6">
                 <div className="pointer-events-none absolute left-0 top-0 h-24 w-full bg-gradient-to-b from-[var(--accent-soft)] to-transparent" />
                 <h2 className="relative text-xl font-semibold text-[var(--foreground)]">Liên hệ người bán</h2>
-                <div className="mt-5 flex items-center gap-4 relative">
+                <div className="relative mt-5 flex items-center gap-4">
                   <div className="relative shrink-0">
                     <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border-2 border-[var(--accent-border)] bg-[var(--accent-soft)] text-xl font-semibold text-[var(--accent)]">
                       {post.author.avatarUrl ? (
@@ -796,8 +796,8 @@ export default function PostDetailPage() {
                       <BadgeCheck className="h-4 w-4 text-[var(--accent)]" />
                     </div>
                   </div>
-                  <div>
-                      <p className="line-clamp-1 text-lg font-bold text-[var(--foreground)]">{post.author.fullName}</p>
+                  <div className="min-w-0">
+                    <p className="line-clamp-1 text-lg font-bold text-[var(--foreground)]">{post.author.fullName}</p>
                     <p className="mt-1 text-sm text-[var(--muted-foreground)]">Hoạt động gần đây</p>
                   </div>
                 </div>
@@ -833,9 +833,9 @@ export default function PostDetailPage() {
               </div>
             )}
 
-            <div className="glass-card p-6">
-              <div className="mb-5 flex items-center justify-between gap-3">
-                <h2 className="text-2xl font-semibold text-[var(--foreground)]">Bất động sản tương tự</h2>
+            <div className="glass-card p-5 sm:p-6">
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-xl font-semibold text-[var(--foreground)] sm:text-2xl">Bất động sản tương tự</h2>
                 <Link href="/posts" className="text-sm font-medium text-[var(--accent)] transition hover:brightness-110">
                   Xem tất cả
                 </Link>
@@ -850,18 +850,18 @@ export default function PostDetailPage() {
                     <Link
                       key={item.id}
                       href={`/posts/${item.id}`}
-                      className="flex gap-3 rounded-2xl border border-transparent p-1 transition hover:border-[var(--accent-border)] hover:bg-[var(--surface-muted)]"
+                      className="flex flex-col gap-3 rounded-2xl border border-transparent p-1 transition hover:border-[var(--accent-border)] hover:bg-[var(--surface-muted)] sm:flex-row"
                     >
                       <img
                         src={item.images[0]?.imageUrl || imageFallback}
                         alt={item.title}
                         loading="lazy"
-                        className="h-24 w-28 rounded-2xl object-cover"
+                        className="h-40 w-full rounded-2xl object-cover sm:h-24 sm:w-28"
                       />
                       <div className="min-w-0 flex-1">
                         <p className="line-clamp-2 font-medium text-[var(--foreground)]">{item.title}</p>
                         <p className="mt-1 text-sm text-[var(--muted-foreground)]">{formatLocation(item)}</p>
-                        <div className="mt-2 flex items-center justify-between gap-3">
+                        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                           <span className="font-semibold text-[var(--accent)]">{formatPrice(item.price)}</span>
                           <span className="text-sm text-[var(--muted-foreground)]">{formatArea(item.area)}</span>
                         </div>
@@ -976,7 +976,7 @@ export default function PostDetailPage() {
 
       {/* Mobile Bottom Action Bar */}
       {!isOwnPost && (
-        <div className="theme-bottom-bar fixed bottom-0 left-0 right-0 z-40 flex items-center gap-3 p-4 pb-6 backdrop-blur-xl lg:hidden">
+        <div className="theme-bottom-bar fixed bottom-0 left-0 right-0 z-40 flex items-center gap-2 p-3 pb-4 backdrop-blur-xl lg:hidden">
           <button
             type="button"
             onClick={handleSaveToggle}

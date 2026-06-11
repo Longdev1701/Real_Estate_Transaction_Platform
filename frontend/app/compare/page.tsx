@@ -22,6 +22,7 @@ import {
   Plus,
   Ruler,
   Scale,
+  SlidersHorizontal,
   Square,
   Trash2,
   UserRound,
@@ -206,6 +207,7 @@ export default function ComparePage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [isStartingConversation, setIsStartingConversation] = useState(false);
   const [actionPicker, setActionPicker] = useState<"detail" | "message" | null>(null);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
 
   useEffect(() => {
     if (hasHydrated && !accessToken && !user) {
@@ -288,6 +290,19 @@ export default function ComparePage() {
       isMounted = false;
     };
   }, [hasHydrated, user]);
+
+  useEffect(() => {
+    if (!isPickerOpen) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isPickerOpen]);
 
   const savedPostMap = useMemo(
     () => new Map(savedPosts.map((item) => [item.postId, item])),
@@ -405,7 +420,7 @@ export default function ComparePage() {
   return (
     <div className="min-h-[calc(100vh-5rem)] px-4 py-5 lg:px-6">
       <div className="grid gap-5 xl:grid-cols-[300px_minmax(0,1fr)]">
-        <aside className="glass-card h-fit p-4 xl:sticky xl:top-24">
+        <aside className="hidden glass-card h-fit p-4 xl:sticky xl:top-24 xl:block">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold text-[var(--foreground)]">Bất động sản đã lưu</h2>
@@ -430,7 +445,7 @@ export default function ComparePage() {
               </Link>
             </div>
           ) : (
-            <div className="no-scrollbar max-h-[58vh] space-y-3 overflow-y-auto overflow-x-hidden">
+            <div className="no-scrollbar space-y-3 overflow-x-hidden xl:max-h-[58vh] xl:overflow-y-auto">
               {savedPosts.map((savedPost) => {
                 const post = savedPost.post;
                 const selected = selectedPostIds.includes(post.id);
@@ -474,10 +489,30 @@ export default function ComparePage() {
         </aside>
 
         <main className="glass-card overflow-hidden p-4 md:p-6">
+          <div className="mb-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)]/50 p-4 xl:hidden">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-[var(--foreground)]">Danh sách chọn so sánh</p>
+                <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+                  {selectedPosts.length > 0
+                    ? `Đã chọn ${selectedPosts.length}/${maxCompareItems} bất động sản`
+                    : "Chọn tối đa 3 bất động sản đã lưu để đưa vào bảng so sánh."}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPickerOpen(true)}
+                className="theme-surface-soft inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--surface-muted)]"
+              >
+                <SlidersHorizontal className="h-4 w-4 text-[var(--accent)]" />
+                Chọn bài
+              </button>
+            </div>
+          </div>
           <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-[var(--foreground)] md:text-4xl">So sánh bất động sản</h1>
-              <p className="mt-2 max-w-3xl text-[var(--muted-foreground)]">
+              <h1 className="text-2xl font-bold text-[var(--foreground)] sm:text-3xl md:text-4xl">So sánh bất động sản</h1>
+              <p className="mt-2 max-w-3xl text-sm text-[var(--muted-foreground)] sm:text-base">
                 So sánh chi tiết các bất động sản đã lưu để tìm lựa chọn phù hợp nhất với nhu cầu của bạn.
               </p>
             </div>
@@ -509,7 +544,7 @@ export default function ComparePage() {
             </div>
           ) : (
             <>
-              <div className={`grid gap-4 ${selectedPosts.length === 1 ? "lg:grid-cols-1" : selectedPosts.length === 2 ? "lg:grid-cols-2" : "lg:grid-cols-3"}`}>
+              <div className={`hidden gap-4 md:grid ${selectedPosts.length === 1 ? "lg:grid-cols-1" : selectedPosts.length === 2 ? "md:grid-cols-2" : "md:grid-cols-2 lg:grid-cols-3"}`}>
                 {selectedPosts.map((post) => {
                   const imageUrl = post.images[0]?.imageUrl ?? imageFallback;
 
@@ -532,7 +567,7 @@ export default function ComparePage() {
                           <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent)]" />
                           <span className="line-clamp-1">{formatLocation(post) || post.address}</span>
                         </p>
-                        <div className="flex items-center justify-between gap-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
                           <p className="text-2xl font-bold text-[var(--primary)]">{compactPrice(post.price)}</p>
                           <p className="text-sm text-[var(--muted-foreground)]">{propertyTypeLabels[post.propertyType]}</p>
                         </div>
@@ -546,12 +581,66 @@ export default function ComparePage() {
                 })}
               </div>
 
-              <div className="theme-table-surface mt-4 overflow-x-auto rounded-xl">
-                <table className="w-full min-w-[860px] border-collapse text-sm">
+              <div className="mt-4 space-y-2">
+                <div className="flex items-center justify-between gap-3 px-1 md:hidden">
+                  <p className="text-xs text-[var(--muted-foreground)]">
+                    Vuốt ngang để xem đầy đủ bảng so sánh.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setIsPickerOpen(true)}
+                    className="theme-surface-soft inline-flex shrink-0 items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-[var(--foreground)] transition hover:bg-[var(--surface-muted)]"
+                  >
+                    <SlidersHorizontal className="h-3.5 w-3.5 text-[var(--accent)]" />
+                    Chọn lại
+                  </button>
+                </div>
+                <p className="hidden px-1 text-xs text-[var(--muted-foreground)] md:hidden">
+                  Vuốt ngang để xem đầy đủ bảng so sánh.
+                </p>
+                <div className="theme-table-surface overflow-x-auto rounded-xl">
+                <table className="w-full min-w-[640px] sm:min-w-[760px] border-collapse text-sm">
+                  <thead>
+                    <tr className="border-b border-[var(--border)]">
+                      <th className="theme-table-header sticky left-0 top-0 z-20 w-32 bg-[var(--surface)] px-3 py-3 text-left font-medium md:w-48 md:px-4 md:py-4">Tiêu chí</th>
+                      {selectedPosts.map((post, index) => (
+                        <th key={post.id} className="theme-table-header sticky top-0 z-10 border-l border-[var(--border)] bg-[var(--surface)] px-3 py-3 text-left align-top md:px-4 md:py-4">
+                          <div className="space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <span className="theme-badge-info inline-flex h-6 min-w-6 items-center justify-center rounded-full px-2 text-xs font-bold">
+                                {index + 1}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => removeFromCompare(post.id)}
+                                className="theme-icon-button inline-flex h-7 w-7 items-center justify-center rounded-full transition hover:text-[var(--danger)] md:hidden"
+                                aria-label="Xóa khỏi so sánh"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                            <img
+                              src={post.images[0]?.imageUrl ?? imageFallback}
+                              alt={post.title}
+                              className="h-16 w-full rounded-xl object-cover md:hidden"
+                            />
+                            <span className="hidden md:inline-flex theme-badge-info h-6 min-w-6 items-center justify-center rounded-full px-2 text-xs font-bold">
+                              {index + 1}
+                            </span>
+                            <p className="line-clamp-2 text-sm font-semibold text-[var(--foreground)] md:text-base">{post.title}</p>
+                            <p className="text-xs font-medium text-[var(--accent)]">{compactPrice(post.price)}</p>
+                            <p className="line-clamp-1 text-[11px] text-[var(--muted-foreground)] md:hidden">
+                              {formatLocation(post) || post.address}
+                            </p>
+                          </div>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
                   <tbody>
                     {compareRows.map((row) => (
                       <tr key={row.label} className="border-b border-[var(--border)] last:border-b-0">
-                        <th className="theme-table-header w-48 px-4 py-4 text-left font-medium">
+                        <th className="theme-table-header sticky left-0 z-10 w-32 bg-[var(--surface)] px-3 py-4 text-left font-medium md:w-48 md:px-4">
                           <span className="inline-flex items-center gap-3">
                             <row.icon className="h-4 w-4 text-[var(--accent)]" />
                             {row.label}
@@ -561,12 +650,12 @@ export default function ComparePage() {
                           const best = isBestValue(row, post, selectedPosts);
 
                           return (
-                            <td key={post.id} className="border-l border-[var(--border)] px-4 py-4 text-[var(--foreground)]">
-                              <div className="flex items-center gap-2">
+                            <td key={post.id} className="border-l border-[var(--border)] px-4 py-4 align-top text-[var(--foreground)]">
+                              <div className="flex flex-wrap items-center gap-2">
                                 {row.label === "Người đăng" && post.author.avatarUrl ? (
                                   <img src={post.author.avatarUrl} alt={post.author.fullName} className="h-8 w-8 rounded-full object-cover" />
                                 ) : null}
-                                <span>{row.getValue(post)}</span>
+                                <span className="break-words">{row.getValue(post)}</span>
                                 {best ? (
                                   <span className="theme-button-info inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold">
                                     <Crown className="h-3 w-3" />
@@ -582,9 +671,10 @@ export default function ComparePage() {
                   </tbody>
                 </table>
               </div>
+              </div>
 
               <div className="theme-surface-soft mt-4 rounded-xl p-4">
-                <div className="grid gap-3 md:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   <button
                     type="button"
                     onClick={handleViewDetail}
@@ -660,7 +750,7 @@ export default function ComparePage() {
                           }
                         }}
                         disabled={disabledMessage || isStartingConversation}
-                        className="group theme-card flex items-center gap-3 rounded-xl p-3 text-left transition hover:border-[var(--accent-border)] hover:bg-[var(--accent-soft)] disabled:cursor-not-allowed disabled:opacity-50"
+                        className="group theme-card flex flex-col items-start gap-3 rounded-xl p-3 text-left transition hover:border-[var(--accent-border)] hover:bg-[var(--accent-soft)] disabled:cursor-not-allowed disabled:opacity-50 sm:flex-row sm:items-center"
                       >
                         <img src={imageUrl} alt={post.title} className="h-20 w-24 shrink-0 rounded-lg object-cover" />
                         <span className="min-w-0 flex-1">
@@ -690,6 +780,108 @@ export default function ComparePage() {
           ) : null}
         </main>
       </div>
+
+      {isPickerOpen ? (
+        <div className="fixed inset-0 z-50 bg-slate-950/55 backdrop-blur-sm xl:hidden" onClick={() => setIsPickerOpen(false)}>
+          <div
+            className="absolute inset-x-3 bottom-3 top-20 overflow-hidden rounded-[28px] border border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_92%,black)] shadow-[0_24px_90px_rgba(0,0,0,0.45)] sm:left-auto sm:right-4 sm:top-24 sm:w-[380px]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3">
+              <div>
+                <h2 className="text-base font-semibold text-[var(--foreground)]">Chọn bài để so sánh</h2>
+                <p className="text-xs text-[var(--muted-foreground)]">Danh sách bất động sản đã lưu của bạn.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPickerOpen(false)}
+                className="theme-surface-soft inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--foreground)] transition hover:bg-[var(--surface-muted)]"
+                aria-label="Đóng danh sách chọn"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="no-scrollbar h-full overflow-y-auto p-4 pb-24">
+              <section className="glass-card p-4">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-semibold text-[var(--foreground)]">Bất động sản đã lưu</h3>
+                    <p className="mt-1 text-sm text-[var(--muted-foreground)]">Chọn tối đa 3 bất động sản để so sánh.</p>
+                  </div>
+                  <span className="rounded-full border border-[var(--accent-border)] bg-[var(--accent-soft)] px-3 py-1 text-sm font-semibold text-[var(--accent)]">
+                    {savedPosts.length}
+                  </span>
+                </div>
+
+                {isSavedPostsLoading ? (
+                  <div className="space-y-3">
+                    {Array.from({ length: 4 }).map((_, index) => (
+                      <div key={index} className="theme-skeleton h-24 rounded-xl" />
+                    ))}
+                  </div>
+                ) : savedPosts.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-[var(--border)] p-5 text-sm text-[var(--muted-foreground)]">
+                    Bạn chưa lưu bất động sản nào.
+                    <Link href="/posts" className="mt-4 inline-flex text-[var(--accent)] hover:text-[var(--foreground)]">
+                      Mở bảng tin
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {savedPosts.map((savedPost) => {
+                      const post = savedPost.post;
+                      const selected = selectedPostIds.includes(post.id);
+                      const imageUrl = post.images[0]?.imageUrl ?? imageFallback;
+
+                      return (
+                        <button
+                          key={savedPost.id}
+                          type="button"
+                          onClick={() => toggleSelectedPost(post.id)}
+                          className={`flex w-full items-center gap-3 rounded-xl border p-2 text-left transition ${
+                            selected ? "theme-selection-active" : "theme-selection-idle"
+                          }`}
+                        >
+                          <img src={imageUrl} alt={post.title} className="h-16 w-16 shrink-0 rounded-lg object-cover" />
+                          <span className="min-w-0 flex-1">
+                            <span className="line-clamp-2 text-sm font-medium text-[var(--foreground)]">{post.title}</span>
+                            <span className="mt-1 block truncate text-sm text-[var(--muted-foreground)]">{compactPrice(post.price)}</span>
+                          </span>
+                          {selected ? (
+                            <CheckSquare className="h-5 w-5 shrink-0 text-[var(--accent)]" />
+                          ) : (
+                            <Square className="h-5 w-5 shrink-0 text-[var(--muted)]" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className="mt-4 rounded-xl border border-[var(--info-border)] bg-[var(--info-soft)] p-4">
+                  <div className="mb-2 inline-flex rounded-full bg-[var(--accent-soft)] p-2 text-[var(--accent)]">
+                    <Lightbulb className="h-5 w-5" />
+                  </div>
+                  <h3 className="font-semibold text-[var(--foreground)]">Mẹo so sánh</h3>
+                  <p className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">
+                    Các tiêu chí nổi bật sẽ được đánh dấu bằng nhãn xanh để bạn dễ nhận ra lựa chọn phù hợp.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsPickerOpen(false)}
+                  className="btn-primary mt-4 inline-flex w-full items-center justify-center gap-2 py-2.5 text-sm"
+                >
+                  <SlidersHorizontal className="h-4.5 w-4.5" />
+                  Xong
+                </button>
+              </section>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
