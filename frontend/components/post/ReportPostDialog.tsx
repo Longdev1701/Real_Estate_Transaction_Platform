@@ -144,7 +144,7 @@ export function ReportPostDialog({
                 rows={5}
                 maxLength={2000}
                 placeholder="Mô tả ngắn gọn lý do bạn cho rằng bài đăng này cần được kiểm tra."
-                className="theme-admin-input w-full resize-none rounded-2xl px-4 py-3 text-sm leading-6"
+                className="theme-public-input w-full resize-none rounded-2xl px-4 py-3 text-sm leading-6"
               />
               <p className="mt-2 text-xs text-[var(--muted-foreground)]">{description.trim().length}/2000 ký tự</p>
             </div>

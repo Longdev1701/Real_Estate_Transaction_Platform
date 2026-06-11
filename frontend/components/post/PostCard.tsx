@@ -293,14 +293,14 @@ export function PostCard({ post }: { post: Post }) {
     <>
       <article
         ref={cardRef}
-        className="overflow-hidden rounded-2xl border border-blue-400/15 bg-slate-950/55 shadow-[0_20px_70px_rgba(0,0,0,0.32)] backdrop-blur-xl animate-in fade-in slide-in-from-bottom-4 duration-500"
+        className="theme-post-card animate-in overflow-hidden rounded-2xl fade-in slide-in-from-bottom-4 duration-500 backdrop-blur-xl"
       >
         <div className="flex items-start justify-between gap-4 px-4 pb-3 pt-4 md:px-5">
           <div className="flex min-w-0 items-center gap-3">
 
             <Link
               href={`/profile/posts?authorId=${post.author.id}`}
-              className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--accent-border)] bg-[var(--accent-soft)] text-sm font-semibold text-[var(--accent)] transition hover:border-[var(--accent)] hover:ring-2 hover:ring-blue-500/30"
+              className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--accent-border)] bg-[var(--accent-soft)] text-sm font-semibold text-[var(--accent)] transition hover:border-[var(--accent)] hover:ring-2 hover:ring-[color:color-mix(in_srgb,var(--accent)_22%,transparent)]"
               aria-label={`Xem bài đăng của ${post.author.fullName}`}
             >
               {post.author.avatarUrl ? (
@@ -532,7 +532,7 @@ export function PostCard({ post }: { post: Post }) {
               type="button"
               onClick={openComments}
               data-pulse={commentPulseKey > 0 ? "true" : "false"}
-              className="group/comment relative inline-flex items-center justify-center gap-2 overflow-hidden border-l border-white/10 px-2 py-3 text-blue-200 transition hover:bg-cyan-400/10 hover:text-cyan-100 data-[pulse=true]:animate-[commentButtonPulse_700ms_ease-out]"
+              className="theme-comment-action group/comment relative inline-flex items-center justify-center gap-2 overflow-hidden px-2 py-3 transition data-[pulse=true]:animate-[commentButtonPulse_700ms_ease-out]"
             >
               <span className="pointer-events-none absolute bottom-1 left-1/2 h-7 w-16 -translate-x-1/2 rounded-full bg-[color:color-mix(in_srgb,var(--effect-comment)_0%,transparent)] blur-md transition duration-500 group-hover/comment:bg-[color:color-mix(in_srgb,var(--effect-comment)_35%,transparent)]" />
               {[0, 1, 2, 3, 4].map((item) => (
@@ -656,7 +656,7 @@ export function PostCard({ post }: { post: Post }) {
       {isClient && isCommentOpen &&
         createPortal(
         <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/75 p-3 backdrop-blur-md md:p-6"
+          className="theme-media-backdrop fixed inset-0 z-[9999] flex items-center justify-center p-3 backdrop-blur-md md:p-6"
           onClick={(e) => closeComments(e)}
         >
           <div
@@ -685,7 +685,7 @@ export function PostCard({ post }: { post: Post }) {
               <button
                 type="button"
                 onClick={closeComments}
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-gray-300 transition hover:bg-white/10 hover:text-white"
+                className="theme-icon-button inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition"
                 aria-label="Đóng bình luận"
               >
                 <X className="h-5 w-5" />
@@ -705,7 +705,7 @@ export function PostCard({ post }: { post: Post }) {
                     alt={post.title}
                     className="aspect-[16/9] w-full object-cover transition duration-300 group-hover/image:scale-[1.02]"
                   />
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between bg-gradient-to-t from-black/65 via-black/10 to-transparent px-3 py-3 opacity-100">
+                  <div className="theme-media-overlay pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between px-3 py-3 opacity-100">
                     <span className="theme-overlay-badge rounded-full px-3 py-1 text-xs font-medium backdrop-blur">
                       Bấm để phóng to
                     </span>

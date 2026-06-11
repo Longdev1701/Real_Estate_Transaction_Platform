@@ -128,7 +128,7 @@ export function AppealBanDialog({
                 value={message}
                 onChange={(event) => setMessage(event.target.value)}
                 placeholder="Trình bày vì sao bạn cho rằng quyết định khóa bài là chưa chính xác."
-                className="theme-admin-input w-full resize-none rounded-2xl px-4 py-3 text-sm leading-6"
+                className="theme-public-input w-full resize-none rounded-2xl px-4 py-3 text-sm leading-6"
               />
             </div>
 
@@ -139,7 +139,7 @@ export function AppealBanDialog({
                 value={evidence}
                 onChange={(event) => setEvidence(event.target.value)}
                 placeholder="Đính kèm mô tả giấy tờ, đường link, ảnh chụp hoặc các thông tin chứng minh khác."
-                className="theme-admin-input w-full resize-none rounded-2xl px-4 py-3 text-sm leading-6"
+                className="theme-public-input w-full resize-none rounded-2xl px-4 py-3 text-sm leading-6"
               />
             </div>
 

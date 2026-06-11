@@ -521,7 +521,7 @@ function UserRow({
           title={nextRole === "ADMIN" ? "Cấp quyền quản trị" : "Chuyển về người dùng"}
           disabled={isUpdating}
           onClick={() => onUpdate(user.id, { role: nextRole })}
-          className="border-violet-400/25 bg-violet-500/10 text-violet-300"
+          className="theme-admin-action-accent"
         >
           <Shield className="h-3.5 w-3.5" />
         </ActionButton>
@@ -688,7 +688,7 @@ function UserDrawer({
           <button
             disabled={isUpdating}
             onClick={() => onUpdate(user.id, { role: nextRole })}
-            className="h-11 rounded-xl border border-violet-400/25 bg-violet-500/10 font-semibold text-violet-200 hover:bg-violet-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+            className="theme-admin-action-accent h-11 rounded-xl font-semibold disabled:cursor-not-allowed disabled:opacity-60"
           >
             Chuyển vai trò sang {roleLabels[nextRole]}
           </button>

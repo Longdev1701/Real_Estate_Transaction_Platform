@@ -941,7 +941,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
     .reverse();
 
   return (
-    <div className="theme-message-surface relative flex h-full min-h-0 flex-1 overflow-hidden overflow-x-hidden rounded-[26px] border border-[var(--border)] shadow-[0_22px_60px_var(--shadow-glow)]">
+    <div className="theme-message-surface theme-shadow-lg relative flex h-full min-h-0 flex-1 overflow-hidden overflow-x-hidden rounded-[26px] border border-[var(--border)]">
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-[78px] shrink-0 items-center justify-between border-b border-[var(--border)] bg-[var(--surface-muted)] px-5 lg:px-6">
           <div className="flex min-w-0 items-center gap-3">
@@ -967,7 +967,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
             </div>
 
             <div className="min-w-0">
-              <h2 className="truncate text-[1.55rem] font-semibold tracking-tight text-white">{otherUser.fullName}</h2>
+              <h2 className="truncate text-[1.55rem] font-semibold tracking-tight text-[var(--foreground)]">{otherUser.fullName}</h2>
               <div className="mt-0.5 flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
                 <span className={`h-2 w-2 rounded-full ${isOtherUserOnline ? "bg-[var(--success)]" : "bg-[var(--muted-foreground)]"}`} />
                 <span>{isOtherUserOnline ? "online" : "offline"}</span>
@@ -1328,14 +1328,14 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsDetailsPanelOpen(false)}
-              className="absolute inset-0 z-40 bg-[color:color-mix(in_srgb,var(--background)_35%,transparent)] backdrop-blur-[2px]"
+              className="theme-overlay-dim absolute inset-0 z-40 backdrop-blur-[2px]"
             />
 
             <motion.aside
               initial={{ opacity: 0, x: 32 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 32 }}
-              className="theme-message-sidebar absolute right-0 top-0 z-50 flex h-full w-full max-w-[380px] flex-col overflow-hidden border-l border-[var(--border)] p-5 shadow-[-24px_0_60px_var(--shadow-glow)]"
+              className="theme-message-sidebar theme-shadow-side absolute right-0 top-0 z-50 flex h-full w-full max-w-[380px] flex-col overflow-hidden border-l border-[var(--border)] p-5"
             >
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium uppercase tracking-[0.2em] text-[var(--muted-foreground)]">Thông tin chat</p>
@@ -1419,7 +1419,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
 
                   <div className="rounded-[30px] border border-[var(--border)] bg-[var(--surface-muted)] p-5">
                     <div className="mb-4 flex items-center justify-between">
-                      <p className="text-lg font-semibold text-white">Tệp đã chia sẻ</p>
+                      <p className="text-lg font-semibold text-[var(--foreground)]">Tệp đã chia sẻ</p>
                       <span className="text-sm text-[var(--muted-foreground)]">{sharedAssets.length}</span>
                     </div>
 
@@ -1430,7 +1430,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                         </div>
                       ) : (
                         sharedAssets.map((asset, index) => (
-                          <div key={asset.id} className="flex items-center gap-3 rounded-[22px] border border-[var(--border)] bg-[var(--surface)] p-3">
+                          <div key={asset.id} className="theme-media-surface flex items-center gap-3 rounded-[22px] p-3">
                             <div className="h-16 w-16 overflow-hidden rounded-2xl">
                               <FallbackMedia
                                 src={asset.url}
@@ -1440,7 +1440,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                               />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-medium text-white">{getFileLabel(index)}</p>
+                              <p className="truncate text-sm font-medium text-[var(--foreground)]">{getFileLabel(index)}</p>
                               <p className="mt-1 text-xs text-[var(--muted-foreground)]">{format(new Date(asset.createdAt), "dd/MM/yyyy HH:mm")}</p>
                             </div>
                             <a

@@ -551,9 +551,9 @@ export function PostList() {
 
     </div>
     {isFilterOpen ? (
-      <div className="fixed inset-0 z-50 bg-slate-950/55 backdrop-blur-sm xl:hidden" onClick={() => setIsFilterOpen(false)}>
+      <div className="theme-overlay-dim fixed inset-0 z-50 backdrop-blur-sm xl:hidden" onClick={() => setIsFilterOpen(false)}>
         <div
-          className="absolute inset-x-3 bottom-3 top-20 overflow-hidden rounded-[28px] border border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_92%,black)] shadow-[0_24px_90px_rgba(0,0,0,0.45)] sm:left-auto sm:right-4 sm:top-24 sm:w-[360px] xl:right-6 xl:w-[380px]"
+          className="theme-drawer-surface absolute inset-x-3 bottom-3 top-20 overflow-hidden rounded-[28px] sm:left-auto sm:right-4 sm:top-24 sm:w-[360px] xl:right-6 xl:w-[380px]"
           onClick={(event) => event.stopPropagation()}
         >
           <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3">
