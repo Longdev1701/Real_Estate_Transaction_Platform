@@ -9,39 +9,40 @@ import { useAuthStore } from "@/stores/auth.store";
 import { useState, useEffect } from "react";
 import { AxiosError } from "axios";
 import { api } from "@/lib/api";
-import { normalizeUser } from "@/components/auth/AuthSessionProvider";
 
-const registerSchema = z
-  .object({
-    fullName: z.string().min(2, "Họ tên ít nhất 2 ký tự"),
-    email: z.string().email("Email không hợp lệ"),
-    phone: z.string().optional(),
-    password: z.string().min(8, "Mật khẩu ít nhất 8 ký tự"),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Mật khẩu không khớp",
-    path: ["confirmPassword"],
-  });
+const requestOtpSchema = z.object({
+  email: z.string().email("Email không hợp lệ"),
+});
 
-const otpVerifySchema = z.object({
+const verifyOtpSchema = z.object({
   code: z.string().length(6, "Mã xác thực phải gồm 6 chữ số"),
 });
 
-type RegisterFormValues = z.infer<typeof registerSchema>;
-type OtpVerifyFormValues = z.infer<typeof otpVerifySchema>;
+const resetPasswordSchema = z
+  .object({
+    newPassword: z.string().min(8, "Mật khẩu mới ít nhất 8 ký tự"),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Mật khẩu xác nhận không khớp",
+    path: ["confirmPassword"],
+  });
 
-export default function RegisterPage() {
+type RequestOtpFormValues = z.infer<typeof requestOtpSchema>;
+type VerifyOtpFormValues = z.infer<typeof verifyOtpSchema>;
+type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
+
+export default function ForgotPasswordPage() {
   const router = useRouter();
-  const { setAuth, user, hasHydrated } = useAuthStore();
-  
-  const [step, setStep] = useState<1 | 2>(1);
+  const { user, hasHydrated } = useAuthStore();
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [devOtp, setDevOtp] = useState<string | null>(null);
   
-  // Custom split OTP input state
+  // Custom state for split OTP inputs
   const [otp, setOtp] = useState<string[]>(Array(6).fill(""));
 
   useEffect(() => {
@@ -54,8 +55,8 @@ export default function RegisterPage() {
     register: registerStep1,
     handleSubmit: handleSubmitStep1,
     formState: { errors: errorsStep1, isSubmitting: isSubmittingStep1 },
-  } = useForm<RegisterFormValues>({
-    resolver: zodResolver(registerSchema),
+  } = useForm<RequestOtpFormValues>({
+    resolver: zodResolver(requestOtpSchema),
   });
 
   const {
@@ -63,31 +64,33 @@ export default function RegisterPage() {
     handleSubmit: handleSubmitStep2,
     setValue: setValueStep2,
     formState: { errors: errorsStep2, isSubmitting: isSubmittingStep2 },
-  } = useForm<OtpVerifyFormValues>({
-    resolver: zodResolver(otpVerifySchema),
+  } = useForm<VerifyOtpFormValues>({
+    resolver: zodResolver(verifyOtpSchema),
   });
 
-  // Sync OTP inputs to Step 2 form value
+  const {
+    register: registerStep3,
+    handleSubmit: handleSubmitStep3,
+    formState: { errors: errorsStep3, isSubmitting: isSubmittingStep3 },
+  } = useForm<ResetPasswordFormValues>({
+    resolver: zodResolver(resetPasswordSchema),
+  });
+
+  // Sync custom OTP array to the React Hook Form "code" field in step 2
   useEffect(() => {
     if (step === 2) {
       setValueStep2("code", otp.join(""));
     }
   }, [otp, step, setValueStep2]);
 
-  const onRegisterSubmit = async (data: RegisterFormValues) => {
+  const onRequestOtp = async (data: RequestOtpFormValues) => {
     try {
       setError(null);
       setSuccessMsg(null);
       setDevOtp(null);
-      const { confirmPassword: _confirmPassword, phone, ...payload } = data;
-
-      const response = await api.post("/auth/register", {
-        ...payload,
-        ...(phone ? { phone } : {}),
-      });
-
+      const response = await api.post("/auth/forgot-password", { email: data.email });
       setEmail(data.email);
-      setSuccessMsg("Mã xác thực đăng ký đã được gửi tới email của bạn.");
+      setSuccessMsg("Mã xác thực OTP đã được gửi thành công tới hòm thư của bạn.");
       
       if (response.data?.data?.devOtpCode) {
         setDevOtp(response.data.data.devOtpCode);
@@ -97,37 +100,48 @@ export default function RegisterPage() {
       setStep(2);
     } catch (err) {
       const error = err as AxiosError<{ message?: string }>;
-      setError(error.response?.data?.message || "Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.");
+      setError(error.response?.data?.message || "Yêu cầu gửi mã xác thực thất bại. Vui lòng kiểm tra lại email.");
     }
   };
 
-  const onVerifyOtpSubmit = async (data: OtpVerifyFormValues) => {
+  const onVerifyOtp = async (data: VerifyOtpFormValues) => {
     try {
       setError(null);
       setSuccessMsg(null);
-      
-      const response = await api.post("/auth/confirm-register", {
+      await api.post("/auth/verify-reset-code", {
         email,
         code: data.code,
       });
-
-      const user = response.data.data.user;
-      const accessToken = response.data.data.tokens.accessToken;
-      const refreshToken = response.data.data.tokens.refreshToken;
-      
-      setSuccessMsg("Xác thực thành công! Đang đăng nhập...");
-      setAuth(normalizeUser(user), accessToken, refreshToken);
-      
-      setTimeout(() => {
-        router.push("/");
-      }, 1500);
+      setCode(data.code);
+      setSuccessMsg("Xác thực thành công! Vui lòng thiết lập mật khẩu mới của bạn.");
+      setStep(3);
     } catch (err) {
       const error = err as AxiosError<{ message?: string }>;
       setError(error.response?.data?.message || "Mã xác thực không đúng hoặc đã hết hạn.");
     }
   };
 
-  // OTP split inputs logic
+  const onResetPassword = async (data: ResetPasswordFormValues) => {
+    try {
+      setError(null);
+      setSuccessMsg(null);
+      await api.post("/auth/reset-password", {
+        email,
+        code,
+        newPassword: data.newPassword,
+        confirmPassword: data.confirmPassword,
+      });
+      setSuccessMsg("Mật khẩu của bạn đã được đặt lại thành công. Đang chuyển hướng về trang đăng nhập...");
+      setTimeout(() => {
+        router.push("/auth/login");
+      }, 2000);
+    } catch (err) {
+      const error = err as AxiosError<{ message?: string }>;
+      setError(error.response?.data?.message || "Đặt lại mật khẩu thất bại. Vui lòng thực hiện lại từ đầu.");
+    }
+  };
+
+  // OTP split input logic
   const handleOtpChange = (element: HTMLInputElement, index: number) => {
     const value = element.value.replace(/[^0-9]/g, ""); // Allow only digits
     const newOtp = [...otp];
@@ -187,11 +201,15 @@ export default function RegisterPage() {
           <div className={`flex items-center justify-center w-8 h-8 rounded-full font-semibold text-sm transition-colors duration-300 ${step >= 1 ? 'bg-indigo-600 text-white' : 'bg-gray-800 text-gray-400'}`}>1</div>
           <div className={`flex-1 h-0.5 mx-2 transition-colors duration-300 ${step >= 2 ? 'bg-indigo-600' : 'bg-gray-800'}`}></div>
           <div className={`flex items-center justify-center w-8 h-8 rounded-full font-semibold text-sm transition-colors duration-300 ${step >= 2 ? 'bg-indigo-600 text-white' : 'bg-gray-800 text-gray-400'}`}>2</div>
+          <div className={`flex-1 h-0.5 mx-2 transition-colors duration-300 ${step >= 3 ? 'bg-indigo-600' : 'bg-gray-800'}`}></div>
+          <div className={`flex items-center justify-center w-8 h-8 rounded-full font-semibold text-sm transition-colors duration-300 ${step >= 3 ? 'bg-indigo-600 text-white' : 'bg-gray-800 text-gray-400'}`}>3</div>
         </div>
 
-        <h1 className="text-3xl font-bold text-center mb-2">Đăng ký</h1>
+        <h1 className="text-3xl font-bold text-center mb-2">Quên mật khẩu</h1>
         <p className="theme-text-muted mb-8 text-center">
-          {step === 1 ? "Tham gia TrustEstate ngay hôm nay" : `Nhập mã xác thực đã gửi đến ${email}`}
+          {step === 1 && "Nhập email của bạn để nhận mã xác thực đặt lại mật khẩu"}
+          {step === 2 && `Nhập mã xác thực đã gửi đến ${email}`}
+          {step === 3 && "Thiết lập mật khẩu mới cho tài khoản của bạn"}
         </p>
 
         {error && (
@@ -212,26 +230,11 @@ export default function RegisterPage() {
           </div>
         )}
 
-        {step === 1 ? (
-          <form onSubmit={handleSubmitStep1(onRegisterSubmit)} className="space-y-4">
+        {step === 1 && (
+          <form onSubmit={handleSubmitStep1(onRequestOtp)} className="space-y-4">
             <div>
               <label className="theme-input-label mb-1 block text-sm font-medium">
-                Họ tên
-              </label>
-              <input
-                type="text"
-                {...registerStep1("fullName")}
-                className="input-dark"
-                placeholder="Nguyễn Văn A"
-              />
-              {errorsStep1.fullName && (
-                <p className="mt-1 text-sm text-[var(--danger-foreground)]">{errorsStep1.fullName.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="theme-input-label mb-1 block text-sm font-medium">
-                Email
+                Email tài khoản
               </label>
               <input
                 type="email"
@@ -240,68 +243,27 @@ export default function RegisterPage() {
                 placeholder="nhap@email.com"
               />
               {errorsStep1.email && (
-                <p className="mt-1 text-sm text-[var(--danger-foreground)]">{errorsStep1.email.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="theme-input-label mb-1 block text-sm font-medium">
-                Số điện thoại
-              </label>
-              <input
-                type="tel"
-                {...registerStep1("phone")}
-                className="input-dark"
-                placeholder="0901234567"
-              />
-              {errorsStep1.phone && (
-                <p className="mt-1 text-sm text-[var(--danger-foreground)]">{errorsStep1.phone.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="theme-input-label mb-1 block text-sm font-medium">
-                Mật khẩu
-              </label>
-              <input
-                type="password"
-                {...registerStep1("password")}
-                className="input-dark"
-                placeholder="••••••••"
-              />
-              {errorsStep1.password && (
-                <p className="mt-1 text-sm text-[var(--danger-foreground)]">{errorsStep1.password.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="theme-input-label mb-1 block text-sm font-medium">
-                Xác nhận mật khẩu
-              </label>
-              <input
-                type="password"
-                {...registerStep1("confirmPassword")}
-                className="input-dark"
-                placeholder="••••••••"
-              />
-              {errorsStep1.confirmPassword && (
-                <p className="mt-1 text-sm text-[var(--danger-foreground)]">{errorsStep1.confirmPassword.message}</p>
+                <p className="mt-1 text-sm text-[var(--danger-foreground)]">
+                  {errorsStep1.email.message}
+                </p>
               )}
             </div>
 
             <button
               type="submit"
               disabled={isSubmittingStep1}
-              className="w-full btn-primary py-3 mt-4 flex justify-center items-center"
+              className="w-full btn-primary py-3 mt-4 flex justify-center items-center font-medium"
             >
-              {isSubmittingStep1 ? "Đang gửi yêu cầu..." : "Đăng ký"}
+              {isSubmittingStep1 ? "Đang gửi..." : "Gửi mã xác thực"}
             </button>
           </form>
-        ) : (
-          <form onSubmit={handleSubmitStep2(onVerifyOtpSubmit)} className="space-y-4">
+        )}
+
+        {step === 2 && (
+          <form onSubmit={handleSubmitStep2(onVerifyOtp)} className="space-y-4">
             <div>
               <label className="theme-input-label mb-1 block text-sm font-medium text-center">
-                Mã xác thực (OTP) đăng ký
+                Mã xác thực (OTP)
               </label>
               
               {/* Premium 6-digit input row */}
@@ -341,16 +303,72 @@ export default function RegisterPage() {
                 disabled={isSubmittingStep2}
                 className="w-2/3 btn-primary py-3 flex justify-center items-center font-medium"
               >
-                {isSubmittingStep2 ? "Đang xác thực..." : "Xác thực tài khoản"}
+                {isSubmittingStep2 ? "Đang xác thực..." : "Xác nhận mã"}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {step === 3 && (
+          <form onSubmit={handleSubmitStep3(onResetPassword)} className="space-y-4">
+            <div>
+              <label className="theme-input-label mb-1 block text-sm font-medium">
+                Mật khẩu mới
+              </label>
+              <input
+                type="password"
+                {...registerStep3("newPassword")}
+                className="input-dark"
+                placeholder="••••••••"
+                autoFocus
+              />
+              {errorsStep3.newPassword && (
+                <p className="mt-1 text-sm text-[var(--danger-foreground)]">
+                  {errorsStep3.newPassword.message}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="theme-input-label mb-1 block text-sm font-medium">
+                Xác nhận mật khẩu mới
+              </label>
+              <input
+                type="password"
+                {...registerStep3("confirmPassword")}
+                className="input-dark"
+                placeholder="••••••••"
+              />
+              {errorsStep3.confirmPassword && (
+                <p className="mt-1 text-sm text-[var(--danger-foreground)]">
+                  {errorsStep3.confirmPassword.message}
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => setStep(2)}
+                className="w-1/3 btn-secondary py-3 flex justify-center items-center font-medium"
+              >
+                Quay lại
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmittingStep3}
+                className="w-2/3 btn-primary py-3 flex justify-center items-center font-medium"
+              >
+                {isSubmittingStep3 ? "Đang xử lý..." : "Xác nhận đổi mật khẩu"}
               </button>
             </div>
           </form>
         )}
 
         <p className="theme-text-muted mt-6 text-center text-sm">
-          Đã có tài khoản?{" "}
+          Nhớ mật khẩu?{" "}
           <Link href="/auth/login" className="theme-link transition-colors">
-            Đăng nhập
+            Đăng nhập ngay
           </Link>
         </p>
       </div>
