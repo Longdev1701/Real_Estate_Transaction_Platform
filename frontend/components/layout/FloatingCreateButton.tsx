@@ -12,6 +12,7 @@ export function FloatingCreateButton() {
 
   if (
     pathname === "/posts" ||
+    pathname?.startsWith("/posts/") ||
     pathname === "/posts/create" ||
     pathname?.startsWith("/messages") ||
     pathname?.startsWith("/admin") ||

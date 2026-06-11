@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import {
   ArrowLeft,
   BarChart3,
+  ChevronRight,
   ClipboardList,
   Home,
   Menu,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 
 import { useAdminReady } from "@/hooks/useAdminReady";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 const navItems = [
   { href: "/admin", label: "Tổng quan", icon: Home },
@@ -42,9 +44,14 @@ export function AdminShell({
   const router = useRouter();
   const { user, isChecking, isReady } = useAdminReady();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [userNavOpen, setUserNavOpen] = useState(false);
 
   useEffect(() => {
     setMobileSidebarOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    setUserNavOpen(false);
   }, [pathname]);
 
   if (isChecking || !isReady || !user) {
@@ -132,16 +139,6 @@ export function AdminShell({
               <span className="truncate">Về trang khách</span>
             </Link>
           </nav>
-
-          <div className="theme-admin-user-card mx-3 mb-3 mt-auto rounded-2xl p-4">
-            <div className="flex items-center gap-2">
-              <AdminAvatar name={user.name} className="theme-admin-avatar" />
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-[var(--foreground)]">{getPrimaryName(user.name)}</p>
-                <p className="text-xs text-[var(--muted-foreground)]">Quản trị viên</p>
-              </div>
-            </div>
-          </div>
         </aside>
 
         <section className="min-w-0 lg:pl-56">
@@ -166,15 +163,55 @@ export function AdminShell({
 
             <div className="ml-auto flex shrink-0 items-center gap-3">
               {action}
-              <div className="hidden items-center gap-3 border-l border-[var(--border)] pl-4 md:flex">
-                <AdminAvatar
-                  name={user.name}
-                  className="theme-admin-avatar"
-                />
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold">{getPrimaryName(user.name)}</p>
-                  <p className="text-xs text-[var(--muted-foreground)]">Quản trị viên</p>
-                </div>
+              <ThemeToggle />
+              <div className="relative hidden md:block">
+                <button
+                  type="button"
+                  onClick={() => setUserNavOpen((current) => !current)}
+                  className="flex items-center gap-3 border-l border-[var(--border)] pl-4 text-left"
+                >
+                  <AdminAvatar
+                    name={user.name}
+                    className="theme-admin-avatar"
+                  />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold">{getPrimaryName(user.name)}</p>
+                    <p className="text-xs text-[var(--muted-foreground)]">Quản trị viên</p>
+                  </div>
+                  <ChevronRight
+                    className={`h-4 w-4 shrink-0 text-[var(--muted-foreground)] transition-transform ${
+                      userNavOpen ? "rotate-90" : ""
+                    }`}
+                  />
+                </button>
+
+                {userNavOpen ? (
+                  <div className="theme-popover absolute right-0 top-full z-30 mt-3 w-64 rounded-2xl p-2">
+                    <div className="grid gap-1">
+                      <Link
+                        href="/profile"
+                        className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-[var(--secondary-foreground)] transition hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
+                      >
+                        <Home className="h-4 w-4" />
+                        Hồ sơ cá nhân
+                      </Link>
+                      <Link
+                        href="/profile/posts"
+                        className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-[var(--secondary-foreground)] transition hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
+                      >
+                        <ClipboardList className="h-4 w-4" />
+                        Bài đăng của tôi
+                      </Link>
+                      <Link
+                        href="/"
+                        className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-[var(--secondary-foreground)] transition hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                        Về trang khách
+                      </Link>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </div>
           </header>

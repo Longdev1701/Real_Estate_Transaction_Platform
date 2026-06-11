@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { AxiosError } from "axios";
 import {
   Building2,
+  Filter,
   Gem,
   House,
   Landmark,
@@ -12,6 +13,8 @@ import {
   MapPinned,
   Newspaper,
   Search,
+  SlidersHorizontal,
+  X,
   Warehouse,
 } from "lucide-react";
 
@@ -114,6 +117,7 @@ export function PostList() {
   const scrollContainerRef = useRef<HTMLElement | null>(null);
   const [isRestored, setIsRestored] = useState(false);
   const [hasRestoredAttempted, setHasRestoredAttempted] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const isFirstMountRef = useRef(true);
 
   const fetchPosts = useCallback(
@@ -292,6 +296,19 @@ export function PostList() {
     return () => observer.disconnect();
   }, [activeFilter, fetchPosts, hasMore, isLoading, isLoadingMore, page]);
 
+  useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isFilterOpen]);
+
   const applyCategory = (propertyType: "" | PropertyType) => {
     const nextValue = normalizePostFilter({
       ...draftFilter,
@@ -310,7 +327,34 @@ export function PostList() {
     setActiveFilter(nextValue);
   };
 
+  const applyAdvancedFilter = () => {
+    const normalizedFilter = normalizePostFilter(draftFilter);
+    setDraftFilter(normalizedFilter);
+    setActiveFilter(normalizedFilter);
+    setIsFilterOpen(false);
+  };
+
+  const resetAdvancedFilter = () => {
+    setDraftFilter(defaultPostFilter);
+    setActiveFilter(defaultPostFilter);
+    setIsFilterOpen(false);
+  };
+
+  const activeFilterCount = [
+    draftFilter.keyword,
+    draftFilter.city,
+    draftFilter.district,
+    draftFilter.postType,
+    draftFilter.propertyType,
+    draftFilter.minPrice,
+    draftFilter.maxPrice,
+    draftFilter.minArea,
+    draftFilter.maxArea,
+    draftFilter.featureIds,
+  ].filter(Boolean).length;
+
   return (
+    <>
     <div className="grid min-h-0 flex-1 gap-6 xl:grid-cols-[260px_minmax(0,1fr)_340px] 2xl:grid-cols-[280px_minmax(0,1fr)_360px]">
       <aside className="hidden min-h-0 xl:block">
         <div className="sticky top-20 h-full max-h-[calc(100vh-100px)] space-y-5 overflow-y-auto pr-1 scrollbar-thin">
@@ -363,7 +407,7 @@ export function PostList() {
       <section
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="no-scrollbar h-full max-h-[calc(100vh-100px)] min-w-0 overflow-y-auto pr-1"
+        className="no-scrollbar min-w-0 xl:h-full xl:max-h-[calc(100vh-100px)] xl:overflow-y-auto xl:pr-1"
       >
         <div className="space-y-5">
           <section className="flex flex-wrap items-center gap-2 text-sm text-[var(--muted-foreground)]">
@@ -372,62 +416,56 @@ export function PostList() {
             <span className="text-[var(--foreground)]">Bài đăng</span>
           </section>
 
-          <div className="glass-card p-5 md:p-6">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--accent-border)] bg-[var(--accent-soft)] text-sm font-semibold text-[var(--accent)]">
-                T
+          <div className="glass-card p-4 sm:p-5 md:p-6">
+            <form
+              className="space-y-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const normalizedFilter = normalizePostFilter(draftFilter);
+                setDraftFilter(normalizedFilter);
+                setActiveFilter(normalizedFilter);
+              }}
+            >
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <div className="relative flex-1">
+                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--accent)]" />
+                  <input
+                    type="search"
+                    value={draftFilter.keyword}
+                    onChange={(event) => setDraftFilter({ ...draftFilter, keyword: event.target.value })}
+                    className="input-dark h-12 rounded-xl pl-11 text-sm sm:text-base"
+                    placeholder="Tìm kiếm bất động sản..."
+                  />
+                </div>
+                <button type="submit" className="btn-primary inline-flex h-12 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold sm:min-w-36">
+                  <Search className="h-4 w-4" />
+                  Tìm kiếm
+                </button>
               </div>
-              <div className="flex-1">
-                <form
-                  className="space-y-4"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    const normalizedFilter = normalizePostFilter(draftFilter);
-                    setDraftFilter(normalizedFilter);
-                    setActiveFilter(normalizedFilter);
-                  }}
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row">
-                    <div className="relative flex-1">
-                      <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--accent)]" />
-                      <input
-                        type="search"
-                        value={draftFilter.keyword}
-                        onChange={(event) => setDraftFilter({ ...draftFilter, keyword: event.target.value })}
-                        className="input-dark pl-11 text-base"
-                        placeholder="Bạn đang tìm kiếm bất động sản nào?"
-                      />
-                    </div>
-                    <button type="submit" className="btn-primary inline-flex items-center justify-center gap-2 px-6 py-3">
-                      <Search className="h-4 w-4" />
-                      Tìm kiếm
+
+              <div className="flex flex-wrap gap-2">
+                {transactionItems.map((item) => {
+                  const isActive = draftFilter.postType === item.value;
+                  return (
+                    <button
+                      key={item.value || "all"}
+                      type="button"
+                      onClick={() => applyPostType(item.value)}
+                      className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
+                        isActive
+                          ? "theme-filter-chip-active"
+                          : "theme-filter-chip"
+                      }`}
+                    >
+                      {item.label}
                     </button>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {transactionItems.map((item) => {
-                      const isActive = draftFilter.postType === item.value;
-                      return (
-                        <button
-                          key={item.value || "all"}
-                          type="button"
-                          onClick={() => applyPostType(item.value)}
-                          className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
-                            isActive
-                              ? "theme-filter-chip-active"
-                              : "theme-filter-chip"
-                          }`}
-                        >
-                          {item.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </form>
+                  );
+                })}
               </div>
-            </div>
+            </form>
           </div>
 
-          <div className="flex items-center justify-between gap-4 px-1">
+          <div className="flex flex-wrap items-center justify-between gap-4 px-1">
             <div>
               <h2 className="text-2xl font-semibold text-[var(--foreground)]">Bảng tin bất động sản</h2>
               <p className="mt-1 text-sm text-[var(--muted-foreground)]">
@@ -438,6 +476,14 @@ export function PostList() {
                   : "Chưa có bài đăng phù hợp."}
               </p>
             </div>
+            <button
+              type="button"
+              onClick={() => setIsFilterOpen(true)}
+              className="theme-surface-soft inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--surface-muted)] xl:hidden"
+            >
+              <Filter className="h-4 w-4 text-[var(--accent)]" />
+              Mở bộ lọc
+            </button>
           </div>
 
           {error && (
@@ -484,8 +530,8 @@ export function PostList() {
         </div>
       </section>
 
-      <aside className="min-h-0">
-        <div className="no-scrollbar xl:sticky xl:top-20 xl:h-full xl:max-h-[calc(100vh-100px)] xl:overflow-y-auto xl:space-y-5">
+      <aside className="hidden min-h-0 xl:block">
+        <div className="no-scrollbar sticky top-20 h-full max-h-[calc(100vh-100px)] overflow-y-auto xl:space-y-5">
           <PostFilter
             value={draftFilter}
             isLoading={isLoading}
@@ -502,6 +548,41 @@ export function PostList() {
           />
         </div>
       </aside>
+
     </div>
+    {isFilterOpen ? (
+      <div className="fixed inset-0 z-50 bg-slate-950/55 backdrop-blur-sm xl:hidden" onClick={() => setIsFilterOpen(false)}>
+        <div
+          className="absolute inset-x-3 bottom-3 top-20 overflow-hidden rounded-[28px] border border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_92%,black)] shadow-[0_24px_90px_rgba(0,0,0,0.45)] sm:left-auto sm:right-4 sm:top-24 sm:w-[360px] xl:right-6 xl:w-[380px]"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3">
+            <div>
+              <h2 className="text-base font-semibold text-[var(--foreground)]">Bộ lọc tìm kiếm</h2>
+              <p className="text-xs text-[var(--muted-foreground)]">Giữ cố định ở mép phải để dễ điều chỉnh khi xem bài đăng.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsFilterOpen(false)}
+              className="theme-surface-soft inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--foreground)] transition hover:bg-[var(--surface-muted)]"
+              aria-label="Đóng bộ lọc"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="no-scrollbar h-full overflow-y-auto p-4 pb-24">
+            <PostFilter
+              value={draftFilter}
+              isLoading={isLoading}
+              onChange={setDraftFilter}
+              onSubmit={applyAdvancedFilter}
+              onReset={resetAdvancedFilter}
+            />
+          </div>
+        </div>
+      </div>
+    ) : null}
+    </>
   );
 }

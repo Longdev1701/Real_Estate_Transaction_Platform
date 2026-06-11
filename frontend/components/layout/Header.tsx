@@ -9,6 +9,7 @@ import { api } from "@/lib/api";
 import type { NotificationItem, NotificationListData } from "@/lib/notifications";
 import { useAuthStore } from "@/stores/auth.store";
 import { useSocketStore } from "@/stores/socket.store";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { UserMenu } from "./UserMenu";
 
 export function Header() {
@@ -105,6 +106,8 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-4">
+          <ThemeToggle />
+
           <Link
             href={user ? "/notifications" : "/auth/login"}
             className={`relative rounded-xl p-2 transition-colors ${pathname === "/notifications" ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--muted-foreground)] hover:bg-[var(--accent-soft)] hover:text-[var(--foreground)]"
