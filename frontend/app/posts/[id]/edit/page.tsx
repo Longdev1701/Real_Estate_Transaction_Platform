@@ -716,7 +716,7 @@ export default function EditPostPage() {
               <ArrowLeft className="h-4 w-4" />
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-white">Chỉnh sửa bài đăng</h1>
+              <h1 className="text-2xl font-bold text-[var(--foreground)]">Chỉnh sửa bài đăng</h1>
               <p className="mt-1 text-sm text-[var(--muted-foreground)]">
                 ID: #{post.id} • Đăng ngày {toDateTime(post.createdAt)}
               </p>
@@ -753,7 +753,7 @@ export default function EditPostPage() {
             <div className="glass-card p-5 md:p-7">
               <div className="space-y-8">
                 <section>
-                  <h2 className="text-xl font-semibold text-white">Thông tin cơ bản</h2>
+                  <h2 className="text-xl font-semibold text-[var(--foreground)]">Thông tin cơ bản</h2>
                   <div className="mt-5 grid gap-5 lg:grid-cols-12">
                     <Field className="lg:col-span-8" label="Tiêu đề" required error={errors.title?.message}>
                       <input {...register("title")} className="input-dark" />
@@ -792,7 +792,7 @@ export default function EditPostPage() {
                 </section>
 
                 <section className="border-t border-[var(--border)] pt-7">
-                  <h2 className="text-xl font-semibold text-white">Vị trí & Bản đồ</h2>
+                  <h2 className="text-xl font-semibold text-[var(--foreground)]">Vị trí & Bản đồ</h2>
                   <div className="mt-5 grid gap-5 lg:grid-cols-12">
                     <Field className="lg:col-span-12" label="Địa chỉ cụ thể" required error={errors.address?.message}>
                       <input {...register("address")} onBlur={handleAddressBlur} className="input-dark" />
@@ -953,7 +953,7 @@ export default function EditPostPage() {
                 </section>
 
                 <section className="border-t border-[var(--border)] pt-7">
-                  <h2 className="text-xl font-semibold text-white">Thông tin mô tả</h2>
+                  <h2 className="text-xl font-semibold text-[var(--foreground)]">Thông tin mô tả</h2>
                   <Field className="mt-5" label="Mô tả chi tiết" required error={errors.description?.message}>
                     <textarea
                       {...register("description")}
@@ -967,7 +967,7 @@ export default function EditPostPage() {
                 {/* Đặc trưng bất động sản */}
                 {features.length > 0 && (
                   <section className="border-t border-[var(--border)] pt-7">
-                    <h2 className="text-xl font-semibold text-white mb-4">Đặc trưng bất động sản</h2>
+                    <h2 className="mb-4 text-xl font-semibold text-[var(--foreground)]">Đặc trưng bất động sản</h2>
                     <div className="space-y-4">
                       {Object.entries(groupedFeatures).map(([category, list]) => (
                         <div key={category} className="space-y-2">
@@ -1013,7 +1013,7 @@ export default function EditPostPage() {
 
           <aside className="space-y-5">
             <section className="glass-card p-5">
-              <h2 className="text-xl font-semibold text-white">Hình ảnh & Video</h2>
+              <h2 className="text-xl font-semibold text-[var(--foreground)]">Hình ảnh & Video</h2>
               <div className="mt-5">
                 <div className="mb-3 flex items-center justify-between">
                   <label className="text-sm font-medium text-[var(--secondary-foreground)]">
@@ -1098,7 +1098,7 @@ export default function EditPostPage() {
             </section>
 
             <section className="glass-card p-5">
-              <h2 className="text-lg font-semibold text-white">Thông tin người đăng</h2>
+              <h2 className="text-lg font-semibold text-[var(--foreground)]">Thông tin người đăng</h2>
               <div className="mt-4 flex items-center gap-4">
                 <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--card)] text-xl font-bold text-[var(--foreground)]">
                   {post.author.avatarUrl ? (
@@ -1108,7 +1108,7 @@ export default function EditPostPage() {
                   )}
                 </div>
                 <div className="min-w-0">
-                  <p className="flex items-center gap-1.5 font-semibold text-white">
+                  <p className="flex items-center gap-1.5 font-semibold text-[var(--foreground)]">
                     <span className="truncate">{post.author.fullName}</span>
                     <BadgeCheck className="h-4 w-4 shrink-0 text-[var(--accent)]" />
                   </p>
@@ -1119,7 +1119,7 @@ export default function EditPostPage() {
             </section>
 
             <section className="glass-card p-5">
-              <h2 className="text-lg font-semibold text-white">Thống kê bài đăng</h2>
+              <h2 className="text-lg font-semibold text-[var(--foreground)]">Thống kê bài đăng</h2>
               <div className="mt-5 grid grid-cols-3 gap-3 text-center">
                 <Metric icon={<Eye className="h-4 w-4 text-[var(--accent)]" />} value="1,245" label="Lượt xem" />
                 <Metric icon={<Building2 className="h-4 w-4 text-[var(--danger)]" />} value={formatPrice(Number(watchedPrice) || post.price)} label="Giá" />
@@ -1128,11 +1128,11 @@ export default function EditPostPage() {
               <div className="mt-5 grid gap-4 border-t border-[var(--border)] pt-5 text-sm sm:grid-cols-2">
                 <div>
                   <p className="text-[var(--muted-foreground)]">Đăng ngày</p>
-                  <p className="mt-1 text-white">{toDateTime(post.createdAt)}</p>
+                  <p className="mt-1 text-[var(--foreground)]">{toDateTime(post.createdAt)}</p>
                 </div>
                 <div>
                   <p className="text-[var(--muted-foreground)]">Cập nhật lần cuối</p>
-                  <p className="mt-1 text-white">{toDateTime(post.updatedAt)}</p>
+                  <p className="mt-1 text-[var(--foreground)]">{toDateTime(post.updatedAt)}</p>
                 </div>
               </div>
             </section>
@@ -1171,7 +1171,7 @@ function Field({
 function Metric({ icon, value, label }: { icon: React.ReactNode; value: string; label: string }) {
   return (
     <div className="min-w-0 border-r border-[var(--border)] last:border-r-0">
-      <div className="flex items-center justify-center gap-2 font-semibold text-white">
+      <div className="flex items-center justify-center gap-2 font-semibold text-[var(--foreground)]">
         {icon}
         <span className="truncate">{value}</span>
       </div>

@@ -689,7 +689,7 @@ export default function CreatePostPage() {
       {/* Header */}
       <div className="mb-4 shrink-0 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-wide">Đăng bài mới</h1>
+          <h1 className="text-2xl font-bold tracking-wide text-[var(--foreground)]">Đăng bài mới</h1>
           <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">
             Điền các thông tin mô tả chi tiết, vị trí và tải ảnh lên trực quan.
           </p>

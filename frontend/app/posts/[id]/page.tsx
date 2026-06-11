@@ -377,7 +377,7 @@ export default function PostDetailPage() {
           <span className="text-[var(--foreground)]">Bài đăng bị khóa</span>
         </div>
 
-        <div className="mx-auto max-w-4xl rounded-[32px] border border-[var(--post-banned-shell-border)] bg-[image:var(--post-banned-shell)] p-6 shadow-[0_24px_80px_var(--shadow-glow)] md:p-8">
+        <div className="theme-shadow-lg mx-auto max-w-4xl rounded-[32px] border border-[var(--post-banned-shell-border)] bg-[image:var(--post-banned-shell)] p-6 md:p-8">
           <div className="theme-surface-strong rounded-3xl border border-[var(--danger-border)] p-6 md:p-8">
             <div className="mx-auto max-w-2xl text-center">
               <span className="inline-flex items-center gap-2 rounded-full border border-[var(--danger-border)] bg-[var(--danger-soft)] px-4 py-2 text-sm font-semibold text-[var(--danger-foreground)]">
@@ -572,7 +572,7 @@ export default function PostDetailPage() {
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0 flex-1 xl:pr-[23rem]">
                 <div className="mb-3 flex flex-wrap items-center gap-3">
-                  <h1 className="break-words text-[2rem] font-bold leading-tight tracking-tight text-white sm:text-[2.5rem]">{post.title}</h1>
+                  <h1 className="break-words text-[2rem] font-bold leading-tight tracking-tight text-[var(--foreground)] sm:text-[2.5rem]">{post.title}</h1>
                 </div>
                 <div className="flex flex-col gap-2 text-sm text-[var(--muted-foreground)] sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
                   <span className="inline-flex items-center gap-2">
@@ -611,9 +611,9 @@ export default function PostDetailPage() {
                   <button
                     type="button"
                     onClick={handleOpenReportDialog}
-                    className="col-span-2 inline-flex items-center justify-center gap-2 rounded-xl border border-amber-400/20 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-100 transition hover:bg-amber-500/15 sm:col-span-1 sm:px-4 sm:py-3"
+                    className="theme-button-warning col-span-2 inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm transition sm:col-span-1 sm:px-4 sm:py-3"
                   >
-                    <TriangleAlert className="h-4 w-4 text-amber-300" />
+                    <TriangleAlert className="h-4 w-4" />
                     Báo cáo
                   </button>
                 ) : null}
@@ -632,18 +632,18 @@ export default function PostDetailPage() {
                   <p className="text-sm text-[var(--muted-foreground)]">{post.postType === "SELL" ? "Giá bán" : "Giá thuê"}</p>
                 </div>
                 <div className="min-w-0 grid content-start gap-1">
-                  <p className="inline-flex items-start gap-2 text-2xl font-semibold leading-tight text-white break-words">
+                  <p className="inline-flex items-start gap-2 break-words text-2xl font-semibold leading-tight text-[var(--foreground)]">
                     <Expand className="mt-1 h-5 w-5 shrink-0 text-[var(--accent)]" />
                     {formatArea(post.area)}
                   </p>
                   <p className="text-sm text-[var(--muted-foreground)]">Diện tích</p>
                 </div>
                 <div className="min-w-0 grid content-start gap-1">
-                  <p className="text-2xl font-semibold leading-tight text-white break-words">{propertyTypeLabels[post.propertyType]}</p>
+                  <p className="break-words text-2xl font-semibold leading-tight text-[var(--foreground)]">{propertyTypeLabels[post.propertyType]}</p>
                   <p className="text-sm text-[var(--muted-foreground)]">Loại hình</p>
                 </div>
                 <div className="min-w-0 grid content-start gap-1">
-                  <p className="text-2xl font-semibold leading-tight text-white break-words">{post.city.replace(/^(Tỉnh|Thành phố)\s+/i, "")}</p>
+                  <p className="break-words text-2xl font-semibold leading-tight text-[var(--foreground)]">{post.city.replace(/^(Tỉnh|Thành phố)\s+/i, "")}</p>
                   <p className="text-sm text-[var(--muted-foreground)]">Khu vực</p>
                 </div>
               </div>
@@ -886,7 +886,7 @@ export default function PostDetailPage() {
 
       {isFullscreen && (
         <div
-          className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/95 p-4 backdrop-blur-md"
+          className="theme-media-backdrop fixed inset-0 z-[9999] flex flex-col items-center justify-center p-4 backdrop-blur-md"
           onClick={() => setIsFullscreen(false)}
         >
           <button
@@ -895,7 +895,7 @@ export default function PostDetailPage() {
               e.stopPropagation();
               setIsFullscreen(false);
             }}
-            className="absolute right-4 top-4 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white transition hover:bg-white/20"
+            className="theme-media-control absolute right-4 top-4 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full transition"
             aria-label="Đóng ảnh"
           >
             <X className="h-5 w-5" />
@@ -909,7 +909,7 @@ export default function PostDetailPage() {
                   e.stopPropagation();
                   setSelectedImage((current) => (current === 0 ? images.length - 1 : current - 1));
                 }}
-                className="absolute left-4 top-1/2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white transition hover:bg-white/20"
+                className="theme-media-control absolute left-4 top-1/2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full transition"
                 aria-label="Ảnh trước"
               >
                 <ChevronLeft className="h-6 w-6" />
@@ -920,7 +920,7 @@ export default function PostDetailPage() {
                   e.stopPropagation();
                   setSelectedImage((current) => (current === images.length - 1 ? 0 : current + 1));
                 }}
-                className="absolute right-4 top-1/2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white transition hover:bg-white/20"
+                className="theme-media-control absolute right-4 top-1/2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full transition"
                 aria-label="Ảnh tiếp theo"
               >
                 <ChevronRight className="h-6 w-6" />
@@ -939,7 +939,7 @@ export default function PostDetailPage() {
                 className="max-h-[76vh] md:max-h-[84vh] max-w-full rounded-xl object-contain shadow-2xl animate-in fade-in zoom-in-95 duration-300"
               />
             </div>
-            <div className="rounded-full bg-black/55 px-4 py-1.5 text-sm font-medium text-white ring-1 ring-white/10">
+            <div className="theme-count-pill rounded-full px-4 py-1.5 text-sm font-medium">
               {selectedImage + 1} / {images.length}
             </div>
             {images.length > 1 && (
@@ -953,7 +953,9 @@ export default function PostDetailPage() {
                       setSelectedImage(index);
                     }}
                     className={`h-12 w-20 shrink-0 overflow-hidden rounded-lg border transition ${
-                      selectedImage === index ? "border-blue-400 scale-105 opacity-100" : "border-white/15 opacity-60 hover:opacity-100"
+                      selectedImage === index
+                        ? "border-[var(--accent)] scale-105 opacity-100"
+                        : "border-[var(--media-badge-border)] opacity-60 hover:opacity-100"
                     }`}
                   >
                     <img src={image.imageUrl} alt={`${post.title} ${index + 1}`} className="h-full w-full object-cover" />
@@ -988,9 +990,9 @@ export default function PostDetailPage() {
           <button
             type="button"
             onClick={handleOpenReportDialog}
-            className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-amber-400/20 bg-amber-500/10 text-amber-100 transition hover:bg-amber-500/15"
+            className="theme-button-warning inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition"
           >
-            <TriangleAlert className="h-5 w-5 text-amber-300" />
+            <TriangleAlert className="h-5 w-5" />
           </button>
           <button
             type="button"

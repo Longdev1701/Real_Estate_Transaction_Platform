@@ -119,25 +119,25 @@ export default async function HomePage() {
       icon: Sparkles,
       value: formatCompactNumber(homeData?.stats.sellPostCount ?? 0),
       label: "Bất động sản đang bán",
-      color: "theme-admin-icon-blue",
+      color: "theme-public-icon-blue",
     },
     {
       icon: Home,
       value: formatCompactNumber(homeData?.stats.rentPostCount ?? 0),
       label: "Bất động sản cho thuê",
-      color: "theme-admin-icon-violet",
+      color: "theme-public-icon-violet",
     },
     {
       icon: Building2,
       value: formatCompactNumber(homeData?.stats.activePostCount ?? 0),
       label: "Tin đang hoạt động",
-      color: "theme-admin-icon-green",
+      color: "theme-public-icon-green",
     },
     {
       icon: UsersRound,
       value: formatCompactNumber(homeData?.stats.userCount ?? 0),
       label: "Người dùng trong hệ thống",
-      color: "theme-admin-icon-orange",
+      color: "theme-public-icon-orange",
     },
   ];
 
@@ -172,8 +172,8 @@ export default async function HomePage() {
       <section className={`${sectionContainerClass} relative z-10 -mt-8`}>
         <div className="theme-card grid grid-cols-2 gap-3 rounded-2xl p-4 backdrop-blur-xl sm:gap-4 sm:p-5 lg:grid-cols-4">
           {stats.map((stat) => (
-            <div key={stat.label} className="flex flex-col sm:flex-row items-center sm:items-start sm:justify-start gap-2 sm:gap-4 px-1 py-2 text-center sm:text-left">
-              <span className={`flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-full ${stat.color} text-white shadow-lg`}>
+            <div key={stat.label} className="flex flex-col items-center gap-2 px-1 py-2 text-center sm:flex-row sm:items-start sm:justify-start sm:gap-4 sm:text-left">
+              <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full sm:h-14 sm:w-14 ${stat.color} shadow-lg`}>
                 <stat.icon className="h-5 w-5 sm:h-6 sm:w-6" />
               </span>
 

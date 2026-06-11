@@ -187,7 +187,7 @@ export function HomeSearchForm({
           sessionStorage.removeItem("posts_page_state");
         } catch (e) {}
       }}
-      className="mt-7 w-full max-w-[1360px] rounded-2xl border border-white/10 bg-slate-950/75 p-4 shadow-2xl shadow-blue-950/30 backdrop-blur-xl"
+      className="theme-hero-search mt-7 w-full max-w-[1360px] rounded-2xl p-4"
     >
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-[1.15fr_1fr_1fr_1fr_auto]">
         <div className="col-span-2 md:col-span-1">
@@ -240,13 +240,13 @@ export function HomeSearchForm({
       </div>
 
       {popularLocations.length > 0 ? (
-        <div className="mt-5 hidden md:flex max-h-20 flex-wrap items-center gap-3 overflow-hidden text-sm">
-          <span className="text-gray-300">Tìm kiếm phổ biến:</span>
+        <div className="mt-5 hidden max-h-20 flex-wrap items-center gap-3 overflow-hidden text-sm md:flex">
+          <span className="text-[var(--secondary-foreground)]">Tìm kiếm phổ biến:</span>
           {popularLocations.map((item) => (
             <Link
               key={item.city}
               href={`/posts?city=${encodeURIComponent(item.city)}`}
-              className="rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-gray-200 transition hover:bg-white/10"
+              className="theme-filter-chip rounded-full px-4 py-1.5 transition"
             >
               {item.city}
             </Link>

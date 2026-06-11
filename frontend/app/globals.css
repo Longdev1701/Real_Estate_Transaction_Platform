@@ -567,50 +567,6 @@
     color: #ffffff !important;
   }
 
-  :is(a, button, [role="button"], div, span)[class*="bg-blue-6"],
-  :is(a, button, [role="button"], div, span)[class*="bg-blue-5"],
-  :is(a, button, [role="button"], div, span)[class*="bg-emerald-6"],
-  :is(a, button, [role="button"], div, span)[class*="bg-emerald-5"],
-  :is(a, button, [role="button"], div, span)[class*="bg-red-6"],
-  :is(a, button, [role="button"], div, span)[class*="bg-red-5"],
-  :is(a, button, [role="button"], div, span)[class*="bg-violet-6"],
-  :is(a, button, [role="button"], div, span)[class*="bg-violet-5"],
-  :is(a, button, [role="button"], div, span)[class*="bg-amber-6"],
-  :is(a, button, [role="button"], div, span)[class*="bg-amber-5"],
-  :is(a, button, [role="button"], div, span)[class*="bg-orange-6"],
-  :is(a, button, [role="button"], div, span)[class*="bg-orange-5"],
-  :is(a, button, [role="button"], div, span)[class*="bg-rose-6"],
-  :is(a, button, [role="button"], div, span)[class*="bg-rose-5"],
-  :is(a, button, [role="button"], div, span)[class*="bg-cyan-6"],
-  :is(a, button, [role="button"], div, span)[class*="bg-cyan-5"],
-  :is(a, button, [role="button"], div, span)[class*="bg-lime-6"],
-  :is(a, button, [role="button"], div, span)[class*="bg-lime-5"],
-  :is(a, button, [role="button"], div, span)[class*="bg-[linear-gradient"] {
-    color: #ffffff !important;
-  }
-
-  :is(a, button, [role="button"], div, span)[class*="bg-blue-6"] svg,
-  :is(a, button, [role="button"], div, span)[class*="bg-blue-5"] svg,
-  :is(a, button, [role="button"], div, span)[class*="bg-emerald-6"] svg,
-  :is(a, button, [role="button"], div, span)[class*="bg-emerald-5"] svg,
-  :is(a, button, [role="button"], div, span)[class*="bg-red-6"] svg,
-  :is(a, button, [role="button"], div, span)[class*="bg-red-5"] svg,
-  :is(a, button, [role="button"], div, span)[class*="bg-violet-6"] svg,
-  :is(a, button, [role="button"], div, span)[class*="bg-violet-5"] svg,
-  :is(a, button, [role="button"], div, span)[class*="bg-amber-6"] svg,
-  :is(a, button, [role="button"], div, span)[class*="bg-amber-5"] svg,
-  :is(a, button, [role="button"], div, span)[class*="bg-orange-6"] svg,
-  :is(a, button, [role="button"], div, span)[class*="bg-orange-5"] svg,
-  :is(a, button, [role="button"], div, span)[class*="bg-rose-6"] svg,
-  :is(a, button, [role="button"], div, span)[class*="bg-rose-5"] svg,
-  :is(a, button, [role="button"], div, span)[class*="bg-cyan-6"] svg,
-  :is(a, button, [role="button"], div, span)[class*="bg-cyan-5"] svg,
-  :is(a, button, [role="button"], div, span)[class*="bg-lime-6"] svg,
-  :is(a, button, [role="button"], div, span)[class*="bg-lime-5"] svg,
-  :is(a, button, [role="button"], div, span)[class*="bg-[linear-gradient"] svg {
-    color: currentColor !important;
-  }
-
   .input-dark {
     background: var(--input);
     border: 1px solid var(--border);
@@ -692,6 +648,81 @@
     box-shadow: 0 1px 0 rgba(255, 255, 255, 0.48) inset;
   }
 
+  .theme-public-input {
+    background: color-mix(in srgb, var(--input) 92%, transparent);
+    border: 1px solid var(--border);
+    color: var(--foreground);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.55) inset,
+      0 6px 18px rgba(148, 163, 184, 0.05);
+  }
+
+  .theme-public-input:focus,
+  .theme-public-input:focus-visible {
+    border-color: var(--accent);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.55) inset,
+      0 6px 18px rgba(148, 163, 184, 0.05),
+      0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
+    outline: none;
+  }
+
+  .theme-public-icon-blue,
+  .theme-public-icon-violet,
+  .theme-public-icon-green,
+  .theme-public-icon-orange {
+    border: 1px solid var(--border);
+    box-shadow:
+      0 10px 22px color-mix(in srgb, currentColor 12%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  }
+
+  .theme-public-icon-blue {
+    color: var(--primary);
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--info-soft) 84%, var(--card)),
+      color-mix(in srgb, var(--primary) 14%, var(--surface))
+    );
+  }
+
+  .theme-public-icon-violet {
+    color: color-mix(in srgb, var(--accent-purple) 72%, var(--foreground));
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--badge-premium-bg) 88%, var(--card)),
+      color-mix(in srgb, var(--accent-purple) 12%, var(--surface))
+    );
+  }
+
+  .theme-public-icon-green {
+    color: var(--success);
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--success-soft) 84%, var(--card)),
+      color-mix(in srgb, var(--success) 12%, var(--surface))
+    );
+  }
+
+  .theme-public-icon-orange {
+    color: var(--warning-foreground);
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--warning-soft) 86%, var(--card)),
+      color-mix(in srgb, var(--warning) 12%, var(--surface))
+    );
+  }
+
+  .theme-comment-action {
+    border-left: 1px solid var(--border);
+    color: var(--info-foreground);
+  }
+
+  .theme-comment-action:hover {
+    background: color-mix(in srgb, var(--info-soft) 55%, transparent);
+    color: var(--foreground);
+  }
+
   .theme-surface-muted {
     background: var(--surface-muted);
     border: 1px solid var(--border);
@@ -702,6 +733,32 @@
     background: var(--card);
     border: 1px solid var(--border);
     box-shadow: 0 1px 0 rgba(255, 255, 255, 0.34) inset;
+  }
+
+  .theme-shadow-sm {
+    box-shadow: var(--shadow-soft);
+  }
+
+  .theme-shadow-md {
+    box-shadow: 0 12px 40px var(--shadow-glow);
+  }
+
+  .theme-shadow-lg {
+    box-shadow: 0 24px 80px var(--shadow-glow);
+  }
+
+  .theme-shadow-focus {
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--accent-border) 82%, transparent),
+      0 16px 40px color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+
+  .theme-shadow-side {
+    box-shadow: -24px 0 60px var(--shadow-glow);
+  }
+
+  .theme-overlay {
+    background: var(--overlay);
   }
 
   .theme-overlay-dim {
@@ -1027,6 +1084,17 @@
     color: var(--primary);
   }
 
+  .theme-admin-action-accent {
+    border: 1px solid color-mix(in srgb, var(--accent-purple) 28%, var(--border));
+    background: color-mix(in srgb, var(--admin-tone-accent) 80%, var(--surface));
+    color: color-mix(in srgb, var(--accent-purple) 72%, var(--foreground));
+  }
+
+  .theme-admin-action-accent:hover {
+    background: color-mix(in srgb, var(--accent-purple) 16%, var(--surface));
+    color: color-mix(in srgb, var(--accent-purple) 82%, var(--foreground));
+  }
+
   .theme-admin-action-info {
     border: 1px solid var(--info-border);
     background: var(--info-soft);
@@ -1225,11 +1293,21 @@
   }
 
   .theme-modal-backdrop {
-    background: rgba(15, 23, 42, 0.35);
+    background: var(--overlay);
   }
 
   .theme-media-backdrop {
     background: var(--media-backdrop);
+  }
+
+  .theme-media-overlay {
+    background: linear-gradient(to top, var(--media-overlay-strong), var(--media-overlay-soft), transparent);
+  }
+
+  .theme-media-surface {
+    background: color-mix(in srgb, var(--surface) 96%, transparent);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-strong);
   }
 
   .theme-media-control {
@@ -1360,6 +1438,16 @@
 
   .theme-button-danger-solid:hover {
     background: color-mix(in srgb, var(--danger) 22%, var(--surface));
+  }
+
+  .theme-button-warning {
+    background: var(--warning-soft);
+    color: var(--warning-foreground);
+    border: 1px solid var(--warning-border);
+  }
+
+  .theme-button-warning:hover {
+    background: color-mix(in srgb, var(--warning) 14%, var(--surface));
   }
 
   .theme-button-info {

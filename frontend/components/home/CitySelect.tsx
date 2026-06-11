@@ -138,12 +138,12 @@ export function CitySelect() {
             setIsOpen((current) => !current);
           }
         }}
-        className="flex min-h-16 items-center gap-3 rounded-xl border border-white/10 bg-slate-950/45 px-4 transition hover:bg-white/10 cursor-pointer select-none text-left w-full outline-none focus-within:border-blue-400/40"
+        className="theme-hero-field flex min-h-16 w-full cursor-pointer select-none items-center gap-3 rounded-xl px-4 text-left outline-none transition hover:bg-[var(--hover)] focus-within:border-[var(--accent-border)]"
       >
-        <MapPin className="h-5 w-5 shrink-0 text-gray-300" />
+        <MapPin className="h-5 w-5 shrink-0 text-[var(--secondary-foreground)]" />
         <span className="min-w-0 flex-1">
-          <span className="block text-xs text-gray-400">Vị trí</span>
-          <span className="mt-1 block text-sm font-medium text-white truncate">
+          <span className="block text-xs text-[var(--muted-foreground)]">Vị trí</span>
+          <span className="mt-1 block truncate text-sm font-medium text-[var(--foreground)]">
             {selectedCityName ? cleanName(selectedCityName) : "Tất cả vị trí"}
           </span>
         </span>
