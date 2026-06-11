@@ -32,7 +32,7 @@ export function FloatingCreateButton() {
   return (
     <button
       onClick={handleClick}
-      className="theme-floating-action group fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center md:bottom-8 md:right-8"
+      className="theme-floating-action group fixed bottom-6 right-6 z-50 hidden h-14 w-14 items-center justify-center md:bottom-8 md:right-8 md:flex"
       aria-label={"T\u1ea1o b\u00e0i \u0111\u0103ng"}
     >
       <Plus size={28} className="transition-transform duration-300 group-hover:rotate-90" />
