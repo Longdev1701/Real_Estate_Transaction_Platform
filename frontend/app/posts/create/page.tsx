@@ -229,10 +229,10 @@ export default function CreatePostPage() {
   useEffect(() => {
     const initialize = async () => {
       try {
-        const pRes = await fetch("https://production.cas.so/address-kit/2025-07-01/provinces");
+        const pRes = await fetch("https://esgoo.net/api-tinhthanh/1/0.htm");
         const pDataObj = await pRes.json();
-        
-        const pData: Province[] = (pDataObj.provinces || []).map((p: any) => ({ code: p.code, name: p.name }));
+
+        const pData: Province[] = (pDataObj.data || []).map((p: any) => ({ code: Number(p.id), name: p.full_name }));
         setProvinces(pData);
 
         const draft = localStorage.getItem(DRAFT_KEY);
@@ -253,10 +253,10 @@ export default function CreatePostPage() {
               setSelProvinceCode(String(matchProv.code));
 
               try {
-                const cRes = await fetch(`https://production.cas.so/address-kit/2025-07-01/provinces/${matchProv.code}/communes`);
+                const cRes = await fetch(`https://esgoo.net/api-tinhthanh/2/${matchProv.code}.htm`);
                 const cDataObj = await cRes.json();
-                const distList: District[] = (cDataObj.communes || [])
-                  .map((c: any) => ({ code: c.code, name: c.name.replace(/\n/g, "").trim() }))
+                const distList: District[] = (cDataObj.data || [])
+                  .map((c: any) => ({ code: Number(c.id), name: c.full_name.replace(/\n/g, "").trim() }))
                   .sort((a: District, b: District) => a.name.localeCompare(b.name, 'vi'));
                 setDistricts(distList);
 
@@ -369,10 +369,10 @@ export default function CreatePostPage() {
                 setWards([]);
 
                 try {
-                  const res = await fetch(`https://production.cas.so/address-kit/2025-07-01/provinces/${provCodeStr}/communes`);
+                  const res = await fetch(`https://esgoo.net/api-tinhthanh/2/${provCodeStr}.htm`);
                   const data = await res.json();
-                  const distList: District[] = (data.communes || [])
-                    .map((c: any) => ({ code: c.code, name: c.name.replace(/\n/g, "").trim() }))
+                  const distList: District[] = (data.data || [])
+                    .map((c: any) => ({ code: Number(c.id), name: c.full_name.replace(/\n/g, "").trim() }))
                     .sort((a: District, b: District) => a.name.localeCompare(b.name, 'vi'));
                   setDistricts(distList);
                   currentDistricts = distList;
@@ -448,10 +448,10 @@ export default function CreatePostPage() {
       setValue("city", name, { shouldValidate: true });
 
       try {
-        const res = await fetch(`https://production.cas.so/address-kit/2025-07-01/provinces/${code}/communes`);
+        const res = await fetch(`https://esgoo.net/api-tinhthanh/2/${code}.htm`);
         const data = await res.json();
-        const dataList: District[] = (data.communes || [])
-          .map((c: any) => ({ code: c.code, name: c.name.replace(/\n/g, "").trim() }))
+        const dataList: District[] = (data.data || [])
+          .map((c: any) => ({ code: Number(c.id), name: c.full_name.replace(/\n/g, "").trim() }))
           .sort((a: District, b: District) => a.name.localeCompare(b.name, 'vi'));
         setDistricts(dataList);
       } catch (err) {
@@ -772,15 +772,15 @@ export default function CreatePostPage() {
                     className="input-dark py-2 text-sm pr-8"
                   />
                   <div className="absolute right-1 top-0 bottom-0 flex flex-col justify-center gap-[2px]">
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => setValue("price", (Number(watch("price")) || 0) + 1000000, { shouldValidate: true, shouldDirty: true })}
                       className="theme-step-button rounded p-[2px] focus:outline-none"
                     >
                       <ChevronUp size={14} />
                     </button>
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => setValue("price", Math.max(0, (Number(watch("price")) || 0) - 1000000), { shouldValidate: true, shouldDirty: true })}
                       className="theme-step-button rounded p-[2px] focus:outline-none"
                     >
@@ -811,15 +811,15 @@ export default function CreatePostPage() {
                     className="input-dark py-2 text-sm pr-8 appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                   <div className="absolute right-1 top-0 bottom-0 flex flex-col justify-center gap-[2px]">
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => setValue("area", (Number(watch("area")) || 0) + 1, { shouldValidate: true, shouldDirty: true })}
                       className="theme-step-button rounded p-[2px] focus:outline-none"
                     >
                       <ChevronUp size={14} />
                     </button>
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => setValue("area", Math.max(0, (Number(watch("area")) || 0) - 1), { shouldValidate: true, shouldDirty: true })}
                       className="theme-step-button rounded p-[2px] focus:outline-none"
                     >
@@ -903,15 +903,15 @@ export default function CreatePostPage() {
                     className="input-dark theme-post-input py-2 text-sm pr-8 appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                   <div className="absolute right-1 top-0 bottom-0 flex flex-col justify-center gap-[2px]">
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => setValue("latitude", (Number(watch("latitude")) || 0) + 0.0001, { shouldValidate: true, shouldDirty: true })}
                       className="theme-step-button rounded p-[2px] focus:outline-none"
                     >
                       <ChevronUp size={14} />
                     </button>
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => setValue("latitude", (Number(watch("latitude")) || 0) - 0.0001, { shouldValidate: true, shouldDirty: true })}
                       className="theme-step-button rounded p-[2px] focus:outline-none"
                     >
@@ -941,15 +941,15 @@ export default function CreatePostPage() {
                     className="input-dark theme-post-input py-2 text-sm pr-8 appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                   <div className="absolute right-1 top-0 bottom-0 flex flex-col justify-center gap-[2px]">
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => setValue("longitude", (Number(watch("longitude")) || 0) + 0.0001, { shouldValidate: true, shouldDirty: true })}
                       className="theme-step-button rounded p-[2px] focus:outline-none"
                     >
                       <ChevronUp size={14} />
                     </button>
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => setValue("longitude", (Number(watch("longitude")) || 0) - 0.0001, { shouldValidate: true, shouldDirty: true })}
                       className="theme-step-button rounded p-[2px] focus:outline-none"
                     >
@@ -1033,7 +1033,7 @@ export default function CreatePostPage() {
                           setWards([]);
 
                           try {
-                            const res = await fetch(`https://production.cas.so/address-kit/2025-07-01/provinces/${provCodeStr}/communes`);
+                            const res = await fetch(`https://esgoo.net/api-tinhthanh-new/1/0.htm/2025-07-01/provinces/${provCodeStr}/communes`);
                             const data = await res.json();
                             const distList: District[] = (data.communes || [])
                               .map((c: any) => ({ code: c.code, name: c.name.replace(/\n/g, "").trim() }))
@@ -1106,8 +1106,8 @@ export default function CreatePostPage() {
                               key={feature.id}
                               onClick={() => toggleFeature(feature.id)}
                               className={`flex items-center justify-between p-2.5 rounded-xl border transition-all duration-300 cursor-pointer select-none text-xs font-medium group ${isSelected
-                                  ? "border-[var(--accent-border)] bg-[var(--accent-soft)] text-[var(--accent)] ring-1 ring-[color:var(--accent-border)] shadow-[var(--shadow-glow)]"
-                                  : "border-[var(--border)] bg-[var(--surface)] text-[var(--secondary-foreground)] hover:border-[var(--accent-border)] hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
+                                ? "border-[var(--accent-border)] bg-[var(--accent-soft)] text-[var(--accent)] ring-1 ring-[color:var(--accent-border)] shadow-[var(--shadow-glow)]"
+                                : "border-[var(--border)] bg-[var(--surface)] text-[var(--secondary-foreground)] hover:border-[var(--accent-border)] hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
                                 }`}
                             >
                               <div className="flex items-center gap-2 min-w-0">

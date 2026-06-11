@@ -9,11 +9,13 @@ import {
   Bookmark,
   Check,
   CheckSquare,
+  Filter,
   LoaderCircle,
   MapPin,
   Search,
   SlidersHorizontal,
   Square,
+  X,
 } from "lucide-react";
 
 import { api } from "@/lib/api";
@@ -46,6 +48,7 @@ export default function SavedPostsPage() {
   const [removingPostId, setRemovingPostId] = useState<string | null>(null);
   const [selectedPostIds, setSelectedPostIds] = useState<string[]>([]);
   const [isBulkRemoving, setIsBulkRemoving] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   useEffect(() => {
     if (hasHydrated && !accessToken && !user) {
@@ -95,6 +98,19 @@ export default function SavedPostsPage() {
     };
   }, [hasHydrated, isLoadingUser, user]);
 
+  useEffect(() => {
+    if (!isFilterOpen) {
+      return;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isFilterOpen]);
+
   const cities = useMemo(
     () =>
       Array.from(new Set(savedPosts.map((item) => item.post.city).filter(Boolean))).sort((a, b) =>
@@ -142,6 +158,13 @@ export default function SavedPostsPage() {
     setPostTypeFilter("");
     setSortBy("newest");
   };
+
+  const activeFilterCount =
+    (search.trim() ? 1 : 0) +
+    (cityFilter ? 1 : 0) +
+    (propertyTypeFilter ? 1 : 0) +
+    (postTypeFilter ? 1 : 0) +
+    (sortBy !== "newest" ? 1 : 0);
 
   const togglePostSelection = (postId: string) => {
     setSelectedPostIds((currentPostIds) =>
@@ -283,8 +306,32 @@ export default function SavedPostsPage() {
           </div>
         </section>
 
-        <section className="glass-card p-5 md:p-6">
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_repeat(4,minmax(0,1fr))]">
+        <section className="glass-card p-4 xl:hidden">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-[var(--foreground)]">Bộ lọc bài đã lưu</p>
+              <p className="mt-1 text-xs text-[var(--secondary-foreground)]">
+                {activeFilterCount > 0 ? `${activeFilterCount} bộ lọc đang áp dụng` : "Lọc theo khu vực, loại hình và mức giá ưu tiên."}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsFilterOpen(true)}
+              className="theme-surface-soft inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--surface-muted)]"
+            >
+              <SlidersHorizontal className="h-4 w-4 text-[var(--accent)]" />
+              Bộ lọc
+              {activeFilterCount > 0 ? (
+                <span className="theme-badge-info inline-flex min-w-6 items-center justify-center rounded-full px-2 py-0.5 text-xs">
+                  {activeFilterCount}
+                </span>
+              ) : null}
+            </button>
+          </div>
+        </section>
+
+        <section className="hidden glass-card p-5 md:p-6 xl:block">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-[minmax(0,1.6fr)_repeat(4,minmax(0,1fr))]">
             <label className="relative">
               <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--accent)]" />
               <input
@@ -513,7 +560,7 @@ export default function SavedPostsPage() {
         )}
 
         {selectedPostIds.length > 0 ? (
-          <div className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4">
+          <div className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center px-4">
             <div className="theme-floating-panel pointer-events-auto flex w-full max-w-3xl flex-wrap items-center justify-center gap-3 rounded-2xl border border-[var(--accent-border)] px-4 py-3 backdrop-blur-xl">
               <span className="text-sm font-medium text-[var(--foreground)]">
                 Đã chọn {selectedPostIds.length} bài
@@ -536,10 +583,123 @@ export default function SavedPostsPage() {
                 type="button"
                 onClick={handleBulkUnsave}
                 disabled={isBulkRemoving}
-                className="btn-primary rounded-full px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60"
+                className="btn-primary w-full rounded-full px-4 py-2 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               >
                 {isBulkRemoving ? "Đang bỏ lưu..." : "Bỏ lưu tất cả"}
               </button>
+            </div>
+          </div>
+        ) : null}
+
+        {isFilterOpen ? (
+          <div className="fixed inset-0 z-50 bg-slate-950/55 backdrop-blur-sm xl:hidden" onClick={() => setIsFilterOpen(false)}>
+            <div
+              className="absolute inset-x-3 bottom-3 top-20 overflow-hidden rounded-[28px] border border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_92%,black)] shadow-[0_24px_90px_rgba(0,0,0,0.45)] sm:left-auto sm:right-4 sm:top-24 sm:w-[380px]"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3">
+                <div>
+                  <h2 className="text-base font-semibold text-[var(--foreground)]">Bộ lọc bài đã lưu</h2>
+                  <p className="text-xs text-[var(--muted-foreground)]">Giữ giao diện gọn hơn khi xem danh sách đã lưu trên màn hình nhỏ.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsFilterOpen(false)}
+                  className="theme-surface-soft inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--foreground)] transition hover:bg-[var(--surface-muted)]"
+                  aria-label="Đóng bộ lọc"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="no-scrollbar h-full overflow-y-auto p-4 pb-24">
+                <section className="glass-card p-4">
+                  <div className="grid gap-4">
+                    <label className="relative">
+                      <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--accent)]" />
+                      <input
+                        value={search}
+                        onChange={(event) => setSearch(event.target.value)}
+                        className="input-dark pl-11"
+                        placeholder="Tìm trong bài đã lưu..."
+                      />
+                    </label>
+
+                    <select
+                      value={cityFilter}
+                      onChange={(event) => setCityFilter(event.target.value)}
+                      className="input-dark"
+                    >
+                      <option value="">Tất cả khu vực</option>
+                      {cities.map((city) => (
+                        <option key={city} value={city}>
+                          {city}
+                        </option>
+                      ))}
+                    </select>
+
+                    <select
+                      value={propertyTypeFilter}
+                      onChange={(event) => setPropertyTypeFilter(event.target.value)}
+                      className="input-dark"
+                    >
+                      <option value="">Tất cả loại BĐS</option>
+                      {PROPERTY_TYPES.map((type) => (
+                        <option key={type} value={type}>
+                          {propertyTypeLabels[type]}
+                        </option>
+                      ))}
+                    </select>
+
+                    <select
+                      value={postTypeFilter}
+                      onChange={(event) => setPostTypeFilter(event.target.value)}
+                      className="input-dark"
+                    >
+                      <option value="">Tất cả giao dịch</option>
+                      <option value="SELL">Bán</option>
+                      <option value="RENT">Cho thuê</option>
+                    </select>
+
+                    <select
+                      value={sortBy}
+                      onChange={(event) => setSortBy(event.target.value as SortValue)}
+                      className="input-dark"
+                    >
+                      <option value="newest">Mới lưu gần đây</option>
+                      <option value="priceAsc">Giá tăng dần</option>
+                      <option value="priceDesc">Giá giảm dần</option>
+                    </select>
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="theme-button-secondary rounded-full px-4 py-2 text-sm font-medium transition"
+                    >
+                      Xóa tất cả bộ lọc
+                    </button>
+                    <span className="theme-badge-info inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium">
+                      <ArrowUpDown className="h-4 w-4" />
+                      {sortBy === "newest"
+                        ? "Ưu tiên bài lưu gần đây"
+                        : sortBy === "priceAsc"
+                          ? "Ưu tiên giá thấp"
+                          : "Ưu tiên giá cao"}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsFilterOpen(false)}
+                    className="btn-primary mt-4 inline-flex w-full items-center justify-center gap-2 py-2.5 text-sm"
+                  >
+                    <Filter className="h-4.5 w-4.5" />
+                    Xong
+                  </button>
+                </section>
+              </div>
             </div>
           </div>
         ) : null}

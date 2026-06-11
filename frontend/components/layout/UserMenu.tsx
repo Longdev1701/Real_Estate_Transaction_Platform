@@ -16,20 +16,14 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { Bookmark, LayoutDashboard, List, LogOut, User as UserIcon } from "lucide-react";
 
-const themeOptions: Array<{
-  value: ThemePreference;
-  label: string;
-  icon: typeof Monitor;
-}> = [
-  { value: "default", label: "Mặc định", icon: Monitor },
-  { value: "light", label: "Sáng", icon: Sun },
-  { value: "dark", label: "Tối", icon: Moon },
-];
+import { api } from "@/lib/api";
+import { useAuthStore } from "@/stores/auth.store";
 
 export function UserMenu() {
   const { user, refreshToken, logout } = useAuthStore();
-  const { themePreference, resolvedTheme, setThemePreference } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -72,6 +66,7 @@ export function UserMenu() {
   return (
     <div className="relative z-[130]" ref={menuRef}>
       <button
+        type="button"
         onClick={() => setIsOpen((current) => !current)}
         className="flex items-center gap-2 rounded-xl border border-transparent p-2 text-[var(--foreground)] transition-colors hover:border-[var(--border)] hover:bg-[var(--hover)]"
       >
@@ -124,49 +119,8 @@ export function UserMenu() {
 
           <div className="theme-divider my-2 h-px" />
 
-          <div className="px-4 pb-2">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-[0.05em] text-[var(--muted)]">
-                Chủ đề
-              </span>
-              <span className="text-xs text-[var(--muted)]">
-                {themePreference === "default"
-                  ? `Mặc định · ${resolvedTheme === "dark" ? "tối" : "sáng"}`
-                  : resolvedTheme === "dark"
-                    ? "tối"
-                    : "sáng"}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              {themeOptions.map((option) => {
-                const Icon = option.icon;
-                const selected = themePreference === option.value;
-
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setThemePreference(option.value)}
-                    className={`rounded-xl border px-3 py-2 text-sm transition ${
-                      selected
-                        ? "theme-usermenu-option-active"
-                        : "border-[var(--border)] bg-[var(--surface)] text-[var(--secondary-foreground)] hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
-                    }`}
-                  >
-                    <span className="mb-1 flex items-center justify-center">
-                      <Icon className="h-4 w-4" />
-                    </span>
-                    <span className="block text-center text-xs font-medium">{option.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="theme-divider my-2 h-px" />
-
           <button
+            type="button"
             onClick={handleLogout}
             disabled={isLoggingOut}
             className="flex w-full items-center gap-3 px-4 py-2 text-left text-[var(--badge-danger-text)] transition-colors hover:bg-[var(--badge-danger-bg)]"
