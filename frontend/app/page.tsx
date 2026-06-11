@@ -143,7 +143,7 @@ export default async function HomePage() {
 
   return (
     <div className="pb-14">
-      <section className="relative min-h-[560px] overflow-hidden border-b border-[var(--border)]">
+      <section className="relative min-h-[480px] lg:min-h-[560px] overflow-hidden border-b border-[var(--border)]">
         <div className="absolute inset-0 z-0">
           <HeroSlideshow />
         </div>
@@ -158,17 +158,11 @@ export default async function HomePage() {
               {"Nền tảng bất động sản TrustEstate"}
             </div>
 
-            <h1 className="max-w-2xl text-4xl font-bold leading-tight tracking-tight text-[var(--foreground)] sm:text-5xl lg:text-[56px]">
+            <h1 className="max-w-2xl text-3xl font-bold leading-tight tracking-tight text-[var(--foreground)] sm:text-4xl lg:text-[56px]">
               {"Tìm kiếm bất động sản "}
               <span className="text-[var(--accent)]">{"phù hợp"}</span>
               {" với bạn"}
             </h1>
-
-            <p className="mt-5 max-w-2xl text-base leading-8 text-[var(--secondary-foreground)] sm:text-lg">
-              {
-                "Khám phá bất động sản đang hoạt động trong hệ thống, lọc theo nhu cầu và xem chi tiết từ dữ liệu thật."
-              }
-            </p>
           </div>
 
           <HomeSearchForm popularLocations={popularLocations} />
@@ -176,23 +170,23 @@ export default async function HomePage() {
       </section>
 
       <section className={`${sectionContainerClass} relative z-10 -mt-8`}>
-        <div className="theme-card grid gap-4 rounded-2xl p-5 backdrop-blur-xl sm:grid-cols-2 xl:grid-cols-4">
+        <div className="theme-card grid grid-cols-2 gap-3 rounded-2xl p-4 backdrop-blur-xl sm:gap-4 sm:p-5 lg:grid-cols-4">
           {stats.map((stat) => (
-            <div key={stat.label} className="flex items-center gap-4 px-2 py-2">
-              <span className={`flex h-14 w-14 items-center justify-center rounded-full ${stat.color} text-white shadow-lg`}>
-                <stat.icon className="h-6 w-6" />
+            <div key={stat.label} className="flex flex-col sm:flex-row items-center sm:items-start sm:justify-start gap-2 sm:gap-4 px-1 py-2 text-center sm:text-left">
+              <span className={`flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-full ${stat.color} text-white shadow-lg`}>
+                <stat.icon className="h-5 w-5 sm:h-6 sm:w-6" />
               </span>
 
               <span>
-                <span className="block text-2xl font-bold text-[var(--foreground)]">{stat.value}</span>
-                <span className="text-sm text-[var(--secondary-foreground)]">{stat.label}</span>
+                <span className="block text-xl sm:text-2xl font-bold text-[var(--foreground)]">{stat.value}</span>
+                <span className="text-[11px] leading-tight sm:text-sm text-[var(--secondary-foreground)]">{stat.label}</span>
               </span>
             </div>
           ))}
         </div>
       </section>
 
-      <section className={`${sectionContainerClass} mt-8`}>
+      <section className={`${sectionContainerClass} mt-6 sm:mt-8`}>
         <div className="mb-5 flex items-center justify-between gap-4">
           <h2 className="text-2xl font-bold text-[var(--foreground)] sm:text-3xl">
             {"Bất động sản mới nhất"}
@@ -232,7 +226,7 @@ export default async function HomePage() {
       </section>
 
       {homeData && homeData.categories.length > 0 && (
-        <section className={`${sectionContainerClass} mt-9`}>
+        <section className={`${sectionContainerClass} mt-6 sm:mt-9`}>
           <div className="mb-5 flex items-center justify-between gap-4">
             <h2 className="text-2xl font-bold text-[var(--foreground)] sm:text-3xl">
               {"Khám phá theo loại hình"}

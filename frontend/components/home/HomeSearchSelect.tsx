@@ -106,12 +106,12 @@ export function HomeSearchSelect({
             setIsOpen((current) => !current);
           }
         }}
-        className="flex min-h-16 items-center gap-3 rounded-xl border border-white/10 bg-slate-950/45 px-4 transition hover:bg-white/10 cursor-pointer select-none text-left w-full outline-none focus-within:border-blue-400/40"
+        className="flex min-h-16 items-center gap-2 sm:gap-3 rounded-xl border border-white/10 bg-slate-950/45 px-2.5 sm:px-4 transition hover:bg-white/10 cursor-pointer select-none text-left w-full outline-none focus-within:border-blue-400/40"
       >
-        <Icon className="h-5 w-5 shrink-0 text-gray-300" />
+        <Icon className="h-4 w-4 sm:h-5 sm:w-5 shrink-0 text-gray-300" />
         <span className="min-w-0 flex-1">
-          <span className="block text-xs text-gray-400">{label}</span>
-          <span className="mt-1 block text-sm font-medium text-white truncate">
+          <span className="block text-[10px] sm:text-xs text-gray-400">{label}</span>
+          <span className="mt-1 block text-xs sm:text-sm font-medium text-white truncate">
             {selectedOption ? selectedOption.label : placeholder}
           </span>
         </span>

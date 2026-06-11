@@ -189,42 +189,50 @@ export function HomeSearchForm({
       }}
       className="mt-7 w-full max-w-[1360px] rounded-2xl border border-white/10 bg-slate-950/75 p-4 shadow-2xl shadow-blue-950/30 backdrop-blur-xl"
     >
-      <div className="grid gap-3 lg:grid-cols-[1.15fr_1fr_1fr_1fr_auto]">
-        <CitySelect />
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-[1.15fr_1fr_1fr_1fr_auto]">
+        <div className="col-span-2 md:col-span-1">
+          <CitySelect />
+        </div>
 
-        <HomeSearchSelect
-          icon={Home}
-          label="Loại bất động sản"
-          name="propertyType"
-          value={propertyType}
-          onChange={handlePropertyTypeChange}
-          options={propertyTypeOptions}
-          placeholder="Chọn loại"
-        />
+        <div className="col-span-2 md:col-span-1">
+          <HomeSearchSelect
+            icon={Home}
+            label="Loại bất động sản"
+            name="propertyType"
+            value={propertyType}
+            onChange={handlePropertyTypeChange}
+            options={propertyTypeOptions}
+            placeholder="Chọn loại"
+          />
+        </div>
 
-        <HomeSearchSelect
-          icon={SlidersHorizontal}
-          label={propertyType === "ROOM" ? "Khoảng giá thuê" : "Khoảng giá"}
-          name="maxPrice"
-          value={maxPrice}
-          onChange={setMaxPrice}
-          options={priceOptions}
-          placeholder={propertyType === "ROOM" ? "Chọn khoảng giá thuê" : "Chọn khoảng giá"}
-        />
+        <div className="col-span-1">
+          <HomeSearchSelect
+            icon={SlidersHorizontal}
+            label={propertyType === "ROOM" ? "Khoảng giá thuê" : "Khoảng giá"}
+            name="maxPrice"
+            value={maxPrice}
+            onChange={setMaxPrice}
+            options={priceOptions}
+            placeholder={propertyType === "ROOM" ? "Chọn khoảng giá thuê" : "Chọn khoảng giá"}
+          />
+        </div>
 
-        <HomeSearchSelect
-          icon={Ruler}
-          label="Diện tích"
-          name="minArea"
-          value={minArea}
-          onChange={setMinArea}
-          options={areaOptions}
-          placeholder="Chọn diện tích"
-        />
+        <div className="col-span-1">
+          <HomeSearchSelect
+            icon={Ruler}
+            label="Diện tích"
+            name="minArea"
+            value={minArea}
+            onChange={setMinArea}
+            options={areaOptions}
+            placeholder="Chọn diện tích"
+          />
+        </div>
 
         <button
           type="submit"
-          className="btn-primary inline-flex min-h-16 items-center justify-center gap-2 rounded-xl px-8"
+          className="btn-primary col-span-2 inline-flex min-h-16 items-center justify-center gap-2 rounded-xl px-8 md:col-span-full lg:col-span-1"
         >
           <Search className="h-5 w-5" />
           Tìm kiếm
@@ -232,7 +240,7 @@ export function HomeSearchForm({
       </div>
 
       {popularLocations.length > 0 ? (
-        <div className="mt-5 flex max-h-20 flex-wrap items-center gap-3 overflow-hidden text-sm">
+        <div className="mt-5 hidden md:flex max-h-20 flex-wrap items-center gap-3 overflow-hidden text-sm">
           <span className="text-gray-300">Tìm kiếm phổ biến:</span>
           {popularLocations.map((item) => (
             <Link
