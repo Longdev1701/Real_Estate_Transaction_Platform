@@ -16,11 +16,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import { Bookmark, LayoutDashboard, List, LogOut, User as UserIcon } from "lucide-react";
-
-import { api } from "@/lib/api";
-import { useAuthStore } from "@/stores/auth.store";
 
 export function UserMenu() {
   const { user, refreshToken, logout } = useAuthStore();
