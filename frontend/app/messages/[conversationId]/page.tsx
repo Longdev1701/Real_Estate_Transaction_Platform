@@ -995,7 +995,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
         <div className="relative flex min-h-0 flex-1 flex-col">
           <Virtuoso<{ message: Message; actualIndex: number }>
             ref={virtuosoRef}
-            className="no-scrollbar flex-1 overflow-x-hidden px-4 py-5 lg:px-6 xl:px-7"
+            className="no-scrollbar flex-1 overflow-x-hidden px-3 py-5 sm:px-4 lg:px-5 xl:px-6"
             data={messageItems}
             firstItemIndex={firstItemIndex}
             initialTopMostItemIndex={{ 
@@ -1013,16 +1013,16 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
             components={{
               Scroller: VirtuosoScroller,
               Header: () => (
-                <div className="mx-auto w-full max-w-[62rem]">
+                <div className="w-full">
                   <div className="mb-6 flex items-center gap-4 text-xs font-medium text-[var(--muted-foreground)]">
                     <span className="h-px flex-1 bg-[var(--border)]" />
                     <span>{formatMessageDayLabel(new Date().toISOString())}</span>
                     <span className="h-px flex-1 bg-[var(--border)]" />
                   </div>
 
-                  <div className="mb-6 overflow-hidden rounded-[22px] border border-[var(--border)] bg-[var(--surface-muted)] shadow-[var(--shadow-strong)]">
-                    <div className="flex flex-col gap-4 p-4 md:flex-row">
-                      <div className="theme-post-gallery h-36 w-full overflow-hidden rounded-[18px] md:h-40 md:w-[220px]">
+                  <div className="mx-auto mb-5 w-full max-w-[20.5rem] overflow-hidden rounded-[18px] border border-[var(--border)] bg-[var(--surface-muted)] shadow-[var(--shadow-strong)] sm:max-w-[22.5rem]">
+                    <div className="flex flex-col gap-3 p-3">
+                      <div className="theme-post-gallery h-24 w-full overflow-hidden rounded-[14px] sm:h-28">
                         <FallbackMedia
                           src={conversation.post.images[0]?.imageUrl}
                           alt={conversation.post.title}
@@ -1031,31 +1031,31 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                         />
                       </div>
 
-                      <div className="flex min-w-0 flex-1 flex-col justify-between gap-4">
+                      <div className="flex min-w-0 flex-1 flex-col justify-between gap-3">
                         <div>
-                          <p className="text-sm font-medium text-[var(--accent)]">Bất động sản đang trao đổi</p>
-                          <h3 className="mt-1.5 text-[1.25rem] font-semibold leading-tight text-[var(--foreground)]">{conversation.post.title}</h3>
-                          <p className="mt-2 text-[1.5rem] font-semibold text-[var(--accent)]">{formatPrice(conversation.post.price)}</p>
+                          <p className="text-xs font-medium text-[var(--accent)] sm:text-sm">Bất động sản đang trao đổi</p>
+                          <h3 className="mt-1 line-clamp-2 text-[1.05rem] font-semibold leading-tight text-[var(--foreground)] sm:text-[1.15rem]">{conversation.post.title}</h3>
+                          <p className="mt-1.5 text-[1.1rem] font-semibold text-[var(--accent)] sm:text-[1.25rem]">{formatPrice(conversation.post.price)}</p>
                         </div>
 
-                        <div className="grid gap-3 text-sm text-[var(--secondary-foreground)] sm:grid-cols-2">
-                          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+                        <div className="grid gap-2 text-[13px] text-[var(--secondary-foreground)] sm:grid-cols-2">
+                          <div className="rounded-[16px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5">
                             {conversation.post.propertyType}
                           </div>
-                          <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+                          <div className="rounded-[16px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5">
                             {conversation.post.area} m²
                           </div>
                         </div>
 
-                        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                          <div className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
-                            <MapPin className="h-4 w-4" />
+                        <div className="flex flex-col gap-2.5">
+                          <div className="flex items-center gap-2 text-[13px] text-[var(--muted-foreground)]">
+                            <MapPin className="h-3.5 w-3.5" />
                             <span>{conversation.post.city}</span>
                           </div>
 
                           <Link
                             href={`/posts/${conversation.post.id}`}
-                            className="inline-flex items-center justify-center rounded-[18px] border border-[var(--accent-border)] px-4 py-2.5 text-sm font-medium text-[var(--accent)] transition hover:bg-[var(--accent-soft)] hover:text-[var(--foreground)]"
+                            className="inline-flex min-h-10 w-full items-center justify-center rounded-[16px] border border-[var(--accent-border)] px-4 py-2 text-sm font-medium text-[var(--accent)] transition hover:bg-[var(--accent-soft)] hover:text-[var(--foreground)]"
                           >
                             Xem chi tiết
                           </Link>
@@ -1072,7 +1072,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                 </div>
               ),
               Footer: () => (
-                <div className={`mx-auto w-full max-w-[62rem] overflow-hidden transition-[height] duration-150 ${otherUserTyping ? "h-[72px]" : "h-0"}`}>
+                <div className={`w-full overflow-hidden transition-[height] duration-150 ${otherUserTyping ? "h-[72px]" : "h-0"}`}>
                   <div
                     className={`flex h-full items-end justify-start transition-opacity duration-150 ${otherUserTyping ? "opacity-100" : "opacity-0"
                       }`}
@@ -1526,8 +1526,8 @@ const MessageBubble = memo(({
         className={`group/message flex w-full overflow-visible ${isMine ? "justify-end" : "justify-start"} ${isGroupedWithNext ? "mb-2" : "mb-5"
           }`}
       >
-        <div className={`flex max-w-[95%] items-end overflow-visible ${isMine ? "flex-row-reverse gap-2" : "flex-row gap-0.5"} md:max-w-[88%] xl:max-w-[76%]`}>
-          {isMine && <div className="h-10 w-8 shrink-0" aria-hidden="true" />}
+        <div className={`flex max-w-[88%] items-end overflow-visible ${isMine ? "flex-row-reverse gap-1 sm:gap-2" : "flex-row gap-0.5"} sm:max-w-[84%] md:max-w-[80%] xl:max-w-[76%]`}>
+          {isMine && <div className="h-10 w-1 shrink-0 sm:w-8" aria-hidden="true" />}
 
           {!isMine && (
             <div className="flex h-10 w-10 shrink-0 items-end justify-start">
@@ -1571,9 +1571,9 @@ const MessageBubble = memo(({
               >
                 {message.messageType === "IMAGE" ? (
                   <div
-                    className={`relative overflow-hidden rounded-[24px] ${imageUrls.length === 1
-                      ? "w-[min(360px,76vw)] md:w-[400px]"
-                      : "w-[min(340px,74vw)] md:w-[390px]"
+                    className={`relative overflow-hidden rounded-[22px] sm:rounded-[24px] ${imageUrls.length === 1
+                      ? "w-[min(300px,70vw)] sm:w-[min(340px,72vw)] md:w-[400px]"
+                      : "w-[min(280px,68vw)] sm:w-[min(320px,70vw)] md:w-[390px]"
                       }`}
                   >
                     {imageUrls.length === 1 ? (
@@ -1618,7 +1618,7 @@ const MessageBubble = memo(({
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <p className="whitespace-pre-wrap break-words text-[14px] leading-6">{message.content}</p>
+                    <p className="whitespace-pre-wrap break-words text-[13px] leading-5 sm:text-[14px] sm:leading-6">{message.content}</p>
                     {message.isOptimistic && (
                       <p className={`text-[11px] ${isMine ? "text-[var(--message-meta-own)]" : "text-[var(--message-meta-other)]"}`}>
                         Đang gửi...
