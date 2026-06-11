@@ -68,12 +68,14 @@ const Metric = ({
   icon: Icon,
   label,
   value,
+  className = "",
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: string;
+  className?: string;
 }) => (
-  <div className="theme-post-metric min-w-0 rounded-xl px-3 py-2">
+  <div className={`theme-post-metric min-w-0 rounded-xl px-3 py-2 ${className}`}>
     <div className="flex min-w-0 items-center gap-2">
       <Icon className="h-4 w-4 shrink-0 text-[var(--accent)]" />
       <p className="truncate text-sm font-semibold text-[var(--foreground)]">{value}</p>
@@ -83,17 +85,17 @@ const Metric = ({
 );
 
 const getTileClassName = (imageCount: number, index: number) => {
-  if (imageCount === 1) return "h-80";
-  if (imageCount === 2) return "h-64";
-  if (imageCount === 3) return index === 0 ? "col-span-2 h-64" : "h-52";
-  return "h-56";
+  if (imageCount === 1) return "aspect-[4/3] md:aspect-auto md:h-80";
+  if (imageCount === 2) return "aspect-[4/3] md:aspect-auto md:h-64";
+  if (imageCount === 3) return index === 0 ? "aspect-[4/3] md:aspect-auto md:col-span-2 md:h-64" : "aspect-[4/3] md:aspect-auto md:h-52";
+  return index === 0 ? "aspect-[4/3] md:aspect-auto md:h-56" : "aspect-[4/3] md:aspect-auto md:h-56";
 };
 
 const getGalleryGridClassName = (imageCount: number) => {
   if (imageCount === 1) return "grid-cols-1";
-  if (imageCount === 2) return "grid-cols-2 gap-1";
-  if (imageCount === 3) return "grid-cols-2 gap-1 auto-rows-min";
-  return "grid-cols-3 gap-1";
+  if (imageCount === 2) return "grid-cols-1 md:grid-cols-2 gap-1";
+  if (imageCount === 3) return "grid-cols-1 md:grid-cols-2 gap-1 md:auto-rows-min";
+  return "grid-cols-1 md:grid-cols-3 gap-1";
 };
 
 export function PostCard({ post }: { post: Post }) {
@@ -115,7 +117,32 @@ export function PostCard({ post }: { post: Post }) {
   const [isClient, setIsClient] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [commentPulseKey, setCommentPulseKey] = useState(0);
+  const [visibleImageIndex, setVisibleImageIndex] = useState(0);
   const cardRef = useRef<HTMLElement | null>(null);
+  const galleryRef = useRef<HTMLDivElement>(null);
+
+  const handleGalleryScroll = () => {
+    if (galleryRef.current) {
+      const { scrollLeft, clientWidth } = galleryRef.current;
+      if (clientWidth === 0) return;
+      const newIndex = Math.round(scrollLeft / clientWidth);
+      if (newIndex !== visibleImageIndex) {
+        setVisibleImageIndex(newIndex);
+      }
+    }
+  };
+
+  const scrollGallery = (direction: "left" | "right", e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (galleryRef.current) {
+      const scrollAmount = galleryRef.current.clientWidth;
+      galleryRef.current.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+    }
+  };
 
   useEffect(() => {
     setIsClient(true);
@@ -442,52 +469,82 @@ export function PostCard({ post }: { post: Post }) {
           ) : null}
         </div>          
 
-          <div className={`theme-post-gallery grid overflow-hidden rounded-xl ${getGalleryGridClassName(images.length)}`}>
-            {visibleImages.map((image, index) => {
-              const remainingImages = Math.max(0, totalImages - 3);
-              const isLastVisibleImage = index === visibleImages.length - 1;
+          <div className="relative group/mobile-gallery mb-5">
+            <div 
+              ref={galleryRef}
+              onScroll={handleGalleryScroll}
+              className={`theme-post-gallery flex overflow-x-auto snap-x snap-mandatory custom-scrollbar md:grid overflow-hidden rounded-xl ${getGalleryGridClassName(images.length)}`}
+            >
+              {images.map((image, index) => {
+                const remainingImages = Math.max(0, totalImages - 3);
 
-              return (
-                <button
-                  key={image.id}
+                return (
+                  <button
+                    key={image.id}
+                    type="button"
+                    onClick={() => openImageViewer(index)}
+                    className={`group relative block shrink-0 w-full snap-center overflow-hidden bg-[var(--surface)] text-left ${getTileClassName(images.length, index)} ${index > 2 ? "md:hidden" : ""} md:w-auto md:shrink`}
+                  >
+                    <img
+                      src={imageError ? imageFallback : image.imageUrl}
+                      alt={`${post.title} ${index + 1}`}
+                      className="h-full w-full object-cover transition-transform duration-[800ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-105"
+                      onError={() => setImageError(true)}
+                    />
+                    {index === 0 && (
+                      <div className="theme-button-primary absolute left-3 top-3 rounded-md px-2.5 py-1 text-xs font-semibold shadow-sm">
+                        {propertyTypeLabels[post.propertyType]}
+                      </div>
+                    )}
+                    {remainingImages > 0 && index === 2 && (
+                      <div className="theme-overlay-strong absolute inset-0 hidden md:flex items-center justify-center text-2xl font-bold text-[var(--foreground)] backdrop-blur-[1px]">
+                        +{remainingImages}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            
+            {totalImages > 1 && totalImages - 1 - visibleImageIndex > 0 && (
+              <div className="theme-overlay-dim absolute bottom-3 right-3 pointer-events-none rounded-md px-2 py-1 text-xs font-semibold text-white shadow-sm md:hidden">
+                +{totalImages - 1 - visibleImageIndex} ảnh
+              </div>
+            )}
+            
+            {images.length > 1 && (
+              <>
+                <button 
                   type="button"
-                  onClick={() => openImageViewer(index)}
-                  className={`group relative block overflow-hidden bg-[var(--surface)] text-left ${getTileClassName(images.length, index)}`}
+                  onClick={(e) => scrollGallery("left", e)}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white opacity-0 transition-opacity group-hover/mobile-gallery:opacity-100 md:hidden"
                 >
-                  <img
-                    src={imageError ? imageFallback : image.imageUrl}
-                    alt={`${post.title} ${index + 1}`}
-                    className="h-full w-full object-cover transition-transform duration-[800ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-105"
-                    onError={() => setImageError(true)}
-                  />
-                  {index === 0 && (
-                    <div className="theme-button-primary absolute left-3 top-3 rounded-md px-2.5 py-1 text-xs font-semibold">
-                      {propertyTypeLabels[post.propertyType]}
-                    </div>
-                  )}
-                  {remainingImages > 0 && isLastVisibleImage && (
-                    <div className="theme-overlay-strong absolute inset-0 flex items-center justify-center text-2xl font-bold text-[var(--foreground)] backdrop-blur-[1px]">
-                      +{remainingImages}
-                    </div>
-                  )}
+                  <ChevronLeft className="h-5 w-5" />
                 </button>
-              );
-            })}
+                <button 
+                  type="button"
+                  onClick={(e) => scrollGallery("right", e)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white opacity-0 transition-opacity group-hover/mobile-gallery:opacity-100 md:hidden"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+              </>
+            )}
           </div>
         </div>
 
         <div className="space-y-4 px-4 pb-4 md:px-5 md:pb-5">
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3">
             <Metric icon={Building2} label="Giá bán" value={formatPrice(post.price)} />
             <Metric icon={Ruler} label="Diện tích" value={formatArea(post.area)} />
-            <Metric icon={MapPin} label="Vị trí" value={location} />
+            <Metric className="col-span-2 md:col-span-1" icon={MapPin} label="Vị trí" value={location} />
           </div>
 
-          <div className="theme-bottom-action grid grid-cols-3 overflow-visible rounded-xl text-sm">
+          <div className="theme-bottom-action grid grid-cols-3 overflow-visible rounded-xl text-sm border border-[var(--border)]">
             <button
               type="button"
               onClick={handleLikeClick}
-              className={`group/like relative inline-flex items-center justify-center gap-2 overflow-visible px-2 py-3 transition hover:bg-[color:color-mix(in_srgb,var(--danger)_10%,transparent)] ${
+              className={`group/like relative inline-flex items-center justify-center gap-2 overflow-visible border-r border-[var(--border)] px-2 py-3 transition hover:bg-[color:color-mix(in_srgb,var(--danger)_10%,transparent)] ${
                 isLiked ? "theme-reaction-active" : "hover:text-[var(--danger-foreground)]"
               }`}
             >
@@ -560,7 +617,8 @@ export function PostCard({ post }: { post: Post }) {
               <span className="relative flex h-7 w-7 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--primary-foreground)_16%,transparent)] text-[var(--primary-foreground)] ring-1 ring-[color:color-mix(in_srgb,var(--primary-foreground)_22%,transparent)] transition duration-700 ease-out group-hover:rotate-[720deg] group-hover:scale-110">
                 <Expand className="h-4 w-4 transition duration-700 ease-out group-hover:rotate-[360deg] group-hover:scale-125" />
               </span>
-              <span className="relative">Xem chi tiết</span>
+              <span className="relative hidden sm:inline">Xem chi tiết</span>
+              <span className="relative sm:hidden">Chi tiết</span>
             </Link>
           </div>
         </div>

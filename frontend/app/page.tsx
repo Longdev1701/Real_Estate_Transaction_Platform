@@ -64,7 +64,7 @@ function PropertyCard({ post, index }: { post: Post; index: number }) {
   return (
     <Link
       href={`/posts/${post.id}`}
-      className="glass-card group overflow-hidden transition hover:border-[var(--accent-border)] hover:bg-[var(--hover)]"
+      className="glass-card group flex h-full flex-col overflow-hidden transition hover:border-[var(--accent-border)] hover:bg-[var(--hover)]"
     >
       <div className="relative aspect-[4/3] overflow-hidden">
         <img
@@ -84,8 +84,8 @@ function PropertyCard({ post, index }: { post: Post; index: number }) {
         </div>
       </div>
 
-      <div className="p-4">
-        <h3 className="line-clamp-2 min-h-12 font-semibold text-[var(--foreground)]">{post.title}</h3>
+      <div className="flex flex-1 flex-col p-4">
+        <h3 className="line-clamp-2 min-h-[3rem] font-semibold text-[var(--foreground)]">{post.title}</h3>
 
         <p className="mt-2 flex items-center gap-1.5 text-sm text-[var(--secondary-foreground)]">
           <MapPin className="h-4 w-4 shrink-0" />
@@ -101,7 +101,7 @@ function PropertyCard({ post, index }: { post: Post; index: number }) {
           </span>
         </div>
 
-        <div className="mt-4 flex items-end justify-between gap-3">
+        <div className="mt-auto flex items-end justify-between gap-3 pt-4">
           <span className="text-2xl font-bold text-[var(--accent)]">{formatPrice(post.price)}</span>
         </div>
       </div>
@@ -151,7 +151,7 @@ export default async function HomePage() {
         <div className="theme-hero-overlay absolute inset-0 z-10" />
         <div className="theme-hero-accent absolute inset-0 z-10" />
 
-        <div className={`${sectionContainerClass} relative z-20 py-8 lg:py-10`}>
+        <div className={`${sectionContainerClass} relative z-20 flex min-h-[480px] flex-col py-8 lg:min-h-[560px] lg:py-10`}>
           <div className="max-w-2xl">
             <div className="theme-hero-badge mb-5 inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-[var(--accent)] backdrop-blur">
               <ShieldCheck className="h-4 w-4 text-[var(--accent)]" />
@@ -163,17 +163,23 @@ export default async function HomePage() {
               <span className="text-[var(--accent)]">{"phù hợp"}</span>
               {" với bạn"}
             </h1>
+
+            <p className="mt-4 max-w-xl text-sm leading-relaxed text-[var(--secondary-foreground)] sm:text-base sm:leading-8">
+              Hệ sinh thái với hơn 100,000+ bất động sản được xác thực. Khám phá ngay không gian sống mơ ước và cơ hội đầu tư an toàn cùng TrustEstate.
+            </p>
           </div>
 
-          <HomeSearchForm popularLocations={popularLocations} />
+          <div className="mt-4 mb-12 lg:mb-4 lg:mt-auto">
+            <HomeSearchForm popularLocations={popularLocations} />
+          </div>
         </div>
       </section>
 
       <section className={`${sectionContainerClass} relative z-10 -mt-8`}>
-        <div className="theme-card grid grid-cols-2 gap-3 rounded-2xl p-4 backdrop-blur-xl sm:gap-4 sm:p-5 lg:grid-cols-4">
+        <div className="theme-card flex overflow-x-auto snap-x snap-mandatory gap-3 rounded-2xl p-4 backdrop-blur-xl sm:grid sm:grid-cols-2 sm:gap-4 sm:p-5 xl:grid-cols-4">
           {stats.map((stat) => (
-            <div key={stat.label} className="flex flex-col items-center gap-2 px-1 py-2 text-center sm:flex-row sm:items-start sm:justify-start sm:gap-4 sm:text-left">
-              <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full sm:h-14 sm:w-14 ${stat.color} shadow-lg`}>
+            <div key={stat.label} className="min-w-[140px] shrink-0 snap-start flex flex-col sm:flex-row items-center gap-2 sm:gap-4 px-1 sm:px-2 py-2 text-center sm:text-left sm:min-w-0 sm:shrink">
+              <span className={`flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-full ${stat.color} text-white shadow-lg`}>
                 <stat.icon className="h-5 w-5 sm:h-6 sm:w-6" />
               </span>
 
@@ -241,7 +247,7 @@ export default async function HomePage() {
             </Link>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
             {homeData.categories.map((category) => {
               const Icon = propertyIcons[category.propertyType];
 
@@ -249,19 +255,19 @@ export default async function HomePage() {
                 <Link
                   key={category.propertyType}
                   href={`/posts?propertyType=${category.propertyType}`}
-                  className="glass-card flex items-center gap-4 p-5 transition hover:border-[var(--info-border)] hover:bg-[var(--hover)]"
+                  className="glass-card flex flex-col sm:flex-row items-center sm:justify-start justify-center gap-2 sm:gap-4 p-3 sm:p-5 text-center sm:text-left transition hover:border-[var(--info-border)] hover:bg-[var(--hover)]"
                 >
                   <span
-                    className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border ${
+                    className={`flex h-10 w-10 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-xl border ${
                       categoryColors[category.propertyType]
                     }`}
                   >
-                    <Icon className="h-7 w-7" />
+                    <Icon className="h-5 w-5 sm:h-7 sm:w-7" />
                   </span>
 
                   <span>
-                    <span className="block font-semibold text-[var(--foreground)]">{category.label}</span>
-                    <span className="theme-text-muted mt-1 block text-sm">
+                    <span className="block text-sm sm:text-base font-semibold text-[var(--foreground)]">{category.label}</span>
+                    <span className="theme-text-muted mt-0.5 sm:mt-1 block text-xs sm:text-sm">
                       {formatCompactNumber(category.count)} tin
                     </span>
                   </span>

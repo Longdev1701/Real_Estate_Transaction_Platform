@@ -38,7 +38,7 @@ const propertyTypeLabels: Record<PropertyType, string> = {
   ROOM: "Phòng trọ",
   VILLA: "Biệt thự",
   OFFICE: "Văn phòng",
-  SHOPHOUSE: "Shophouse / Mặt bằng kinh doanh",
+  SHOPHOUSE: "Mặt bằng",
   WAREHOUSE: "Kho / Xưởng",
 };
 
