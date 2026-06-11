@@ -4,10 +4,11 @@ const SMTP_HOST = process.env.SMTP_HOST;
 const SMTP_PORT = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587;
 const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASS = process.env.SMTP_PASS;
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
 let transporter: nodemailer.Transporter | null = null;
 
-if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
+if (!RESEND_API_KEY && SMTP_HOST && SMTP_USER && SMTP_PASS) {
   transporter = nodemailer.createTransport({
     host: SMTP_HOST,
     port: SMTP_PORT,
@@ -16,10 +17,35 @@ if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
       user: SMTP_USER,
       pass: SMTP_PASS,
     },
+    connectionTimeout: 5000, // 5s timeout to prevent hanging on Render
+    greetingTimeout: 5000,
+    socketTimeout: 5000,
   });
 }
 
-export const isEmailConfigured = Boolean(SMTP_HOST && SMTP_USER && SMTP_PASS);
+export const isEmailConfigured = Boolean(RESEND_API_KEY || (SMTP_HOST && SMTP_USER && SMTP_PASS));
+
+const sendViaResend = async (to: string, subject: string, html: string, from: string) => {
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+    },
+    body: JSON.stringify({
+      from,
+      to: [to],
+      subject,
+      html,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(JSON.stringify(errorData));
+  }
+  console.log(`[Resend API] Đã gửi email thành công tới: ${to}`);
+};
 
 export const sendResetPasswordEmail = async (email: string, fullName: string, code: string) => {
   const mailOptions = {
@@ -42,9 +68,22 @@ export const sendResetPasswordEmail = async (email: string, fullName: string, co
     `,
   };
 
-  if (transporter) {
-    await transporter.sendMail(mailOptions);
-    console.log(`[SMTP] Đã gửi email đặt lại mật khẩu thành công tới: ${email}`);
+  if (RESEND_API_KEY) {
+    try {
+      const from = process.env.EMAIL_FROM || "TrustEstate <onboarding@resend.dev>";
+      await sendViaResend(email, mailOptions.subject, mailOptions.html, from);
+    } catch (error) {
+      console.error("[Resend API Error] Không thể gửi email:", error);
+      throw new Error("Không thể gửi email xác thực qua Resend API.");
+    }
+  } else if (transporter) {
+    try {
+      await transporter.sendMail(mailOptions);
+      console.log(`[SMTP] Đã gửi email đặt lại mật khẩu thành công tới: ${email}`);
+    } catch (smtpError) {
+      console.error("[SMTP ERROR] Không thể gửi email:", smtpError);
+      throw new Error("Không thể gửi email xác thực qua máy chủ SMTP.");
+    }
   } else {
     console.log("=========================================");
     console.log(`[SMTP MOCK] Gửi email đặt lại mật khẩu tới: ${email}`);
@@ -75,9 +114,22 @@ export const sendRegisterVerificationEmail = async (email: string, fullName: str
     `,
   };
 
-  if (transporter) {
-    await transporter.sendMail(mailOptions);
-    console.log(`[SMTP] Đã gửi email xác thực đăng ký thành công tới: ${email}`);
+  if (RESEND_API_KEY) {
+    try {
+      const from = process.env.EMAIL_FROM || "TrustEstate <onboarding@resend.dev>";
+      await sendViaResend(email, mailOptions.subject, mailOptions.html, from);
+    } catch (error) {
+      console.error("[Resend API Error] Không thể gửi email:", error);
+      throw new Error("Không thể gửi email xác thực qua Resend API.");
+    }
+  } else if (transporter) {
+    try {
+      await transporter.sendMail(mailOptions);
+      console.log(`[SMTP] Đã gửi email xác thực đăng ký thành công tới: ${email}`);
+    } catch (smtpError) {
+      console.error("[SMTP ERROR] Không thể gửi email:", smtpError);
+      throw new Error("Không thể gửi email xác thực qua máy chủ SMTP.");
+    }
   } else {
     console.log("=========================================");
     console.log(`[SMTP MOCK] Gửi email xác thực đăng ký tới: ${email}`);
