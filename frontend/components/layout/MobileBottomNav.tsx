@@ -68,12 +68,19 @@ export function MobileBottomNav() {
           <Link
             key={item.label}
             href={item.href}
-            className={`flex flex-col items-center justify-center w-16 gap-1 transition-colors ${
+            className={`relative flex h-full w-16 flex-col items-center justify-center transition-all duration-300 active:scale-90 ${
               item.isActive ? "text-[var(--primary)]" : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
             }`}
           >
-            <item.icon size={22} className={item.isActive ? "fill-[var(--primary)] text-[var(--primary)]" : ""} />
-            <span className="text-[10px] font-medium">{item.label}</span>
+            {/* Lớp nền trong suốt */}
+            <div className={`absolute inset-x-0 inset-y-1.5 rounded-xl bg-[var(--primary)]/15 transition-all duration-300 ${item.isActive ? "scale-100 opacity-100" : "scale-75 opacity-0"}`} />
+            
+            <div className="relative z-10 flex flex-col items-center justify-center">
+              <item.icon size={22} className={`transition-all duration-300 ${item.isActive ? "scale-110 fill-[var(--primary)] text-[var(--primary)]" : "scale-100"}`} />
+              <span className={`mt-1 text-[10px] font-medium transition-all duration-300 ${item.isActive ? "opacity-100" : "opacity-60"}`}>
+                {item.label}
+              </span>
+            </div>
           </Link>
         ))}
 
@@ -91,12 +98,19 @@ export function MobileBottomNav() {
           <Link
             key={item.label}
             href={item.href}
-            className={`flex flex-col items-center justify-center w-16 gap-1 transition-colors ${
+            className={`relative flex h-full w-16 flex-col items-center justify-center transition-all duration-300 active:scale-90 ${
               item.isActive ? "text-[var(--primary)]" : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
             }`}
           >
-            <item.icon size={22} className={item.isActive ? "fill-[var(--primary)] text-[var(--primary)]" : ""} />
-            <span className="text-[10px] font-medium">{item.label}</span>
+            {/* Lớp nền trong suốt */}
+            <div className={`absolute inset-x-0 inset-y-1.5 rounded-xl bg-[var(--primary)]/15 transition-all duration-300 ${item.isActive ? "scale-100 opacity-100" : "scale-75 opacity-0"}`} />
+
+            <div className="relative z-10 flex flex-col items-center justify-center">
+              <item.icon size={22} className={`transition-all duration-300 ${item.isActive ? "scale-110 fill-[var(--primary)] text-[var(--primary)]" : "scale-100"}`} />
+              <span className={`mt-1 text-[10px] font-medium transition-all duration-300 ${item.isActive ? "opacity-100" : "opacity-60"}`}>
+                {item.label}
+              </span>
+            </div>
           </Link>
         ))}
       </div>

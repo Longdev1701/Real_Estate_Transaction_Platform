@@ -140,6 +140,7 @@ export default function CreatePostPage() {
 
   const previewsRef = useRef<ImagePreview[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const isSubmittedRef = useRef(false);
 
   useEffect(() => {
     if (hasHydrated && !accessToken && !user) {
@@ -162,6 +163,7 @@ export default function CreatePostPage() {
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<CreatePostFormInput, unknown, CreatePostFormValues>({
     resolver: zodResolver(createPostSchema),
@@ -285,7 +287,7 @@ export default function CreatePostPage() {
 
   // Save draft when form fields change
   useEffect(() => {
-    if (draftLoaded) {
+    if (draftLoaded && !isSubmittedRef.current) {
       const textFields = { ...watchAllFields };
       localStorage.setItem(DRAFT_KEY, JSON.stringify(textFields));
     }
@@ -657,8 +659,10 @@ export default function CreatePostPage() {
 
       const response = await api.post("/posts", formData);
 
-      // Xóa bản nháp sau khi gửi thành công
+      // Xóa bản nháp sau khi gửi thành công và chặn việc tự động lưu lại
+      isSubmittedRef.current = true;
       localStorage.removeItem(DRAFT_KEY);
+      reset(); // Xóa sạch dữ liệu trên giao diện ngay lập tức
 
       const createdPostId = response.data.data.id as string | undefined;
       router.push(createdPostId ? `/posts/${createdPostId}` : "/posts");
@@ -694,9 +698,41 @@ export default function CreatePostPage() {
             Điền các thông tin mô tả chi tiết, vị trí và tải ảnh lên trực quan.
           </p>
         </div>
-        <span className="theme-badge-info rounded-full px-3 py-1 text-xs font-medium">
-          Tài khoản: {user.fullName}
-        </span>
+        <div>
+          {draftLoaded && (
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.removeItem(DRAFT_KEY);
+                reset({
+                  title: "",
+                  description: "",
+                  price: "" as any,
+                  area: "" as any,
+                  address: "",
+                  city: "",
+                  district: "",
+                  ward: "",
+                  propertyType: "HOUSE",
+                  postType: "SELL",
+                  latitude: "" as any,
+                  longitude: "" as any,
+                });
+                setImagePreviews([]);
+                setAvatarImageId(null);
+                setGeocodeStatus("idle");
+                setSelectedFeatureIds([]);
+                setSelProvinceCode("");
+                setSelDistrictCode("");
+                setWards([]);
+              }}
+              className="bg-[var(--danger)]/10 text-[var(--danger)] hover:bg-[var(--danger)]/20 transition-colors rounded-full px-3 py-1.5 text-xs font-medium flex items-center gap-1.5"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Xóa bản nháp
+            </button>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -706,10 +742,10 @@ export default function CreatePostPage() {
       )}
 
       {/* Grid ngang 2 phần, nằm trọn trên 1 page trên desktop */}
-      <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6 lg:grid-cols-[1.3fr_1fr] min-h-0 flex-1 overflow-hidden">
+      <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6 lg:grid-cols-[1.3fr_1fr] min-w-0 min-h-0 flex-1 w-full lg:overflow-hidden">
 
         {/* CỘT TRÁI: Bảng nhập thông tin */}
-        <div className="theme-post-form-shell flex min-h-0 flex-col p-5 lg:overflow-y-auto custom-scrollbar">
+        <div className="theme-post-form-shell flex min-w-0 min-h-0 flex-col p-4 sm:p-5 lg:overflow-y-auto custom-scrollbar">
           <h2 className="mb-4 shrink-0 border-b border-[var(--border)] pb-2 text-base font-semibold text-[var(--accent)]">Thông tin chi tiết</h2>
 
           <div className="space-y-4 flex-1 pr-1">
@@ -726,7 +762,7 @@ export default function CreatePostPage() {
             </div>
 
             {/* Loại & Nhu cầu */}
-            <div className="grid gap-4 grid-cols-2">
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
               <div>
                 <label className="theme-post-label mb-1 block text-xs font-medium">Loại hình bất động sản</label>
                 <select {...register("propertyType")} className="input-dark py-2 text-sm">
@@ -748,7 +784,7 @@ export default function CreatePostPage() {
             </div>
 
             {/* Giá & Diện tích */}
-            <div className="grid gap-4 grid-cols-2">
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
               <div>
                 <label className="theme-post-label mb-1 block text-xs font-medium">Giá bán / thuê (VND) <span className="text-[var(--danger)]">*</span></label>
                 <div className="relative">
@@ -832,7 +868,7 @@ export default function CreatePostPage() {
             </div>
 
             {/* Khu vực chọn cấp bậc */}
-            <div className="grid gap-3 grid-cols-2">
+            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
               <div>
                 <label className="theme-post-label mb-1 block text-xs font-medium">Tỉnh / Thành phố <span className="text-[var(--danger)]">*</span></label>
                 <select
@@ -883,7 +919,7 @@ export default function CreatePostPage() {
             </div>
 
             {/* Tọa độ Map */}
-            <div className="grid gap-4 grid-cols-[1fr_1fr_auto] items-end">
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
               <div>
                 <label className="theme-post-label mb-1 block text-xs font-medium">Vĩ độ (Lat)</label>
                 <div className="relative">
@@ -990,7 +1026,7 @@ export default function CreatePostPage() {
             {/* Bản đồ xem trước */}
             {latitude && longitude && Number(latitude) !== 0 && Number(longitude) !== 0 ? (
               <>
-                <div className="theme-post-gallery relative mt-2 h-[220px] w-full shrink-0 overflow-hidden rounded-xl">
+                <div className="theme-post-gallery relative z-0 mt-2 h-[180px] sm:h-[220px] w-full shrink-0 overflow-hidden rounded-xl">
                   <CreatePostMap
                     latitude={Number(latitude)}
                     longitude={Number(longitude)}
@@ -1071,7 +1107,7 @@ export default function CreatePostPage() {
                     }}
                   />
                 </div>
-                <p className="theme-badge-warning mt-2 rounded-lg p-2.5 text-[11px] leading-relaxed">
+                <p className="theme-badge-warning relative z-0 mt-2 rounded-lg p-2.5 text-[11px] leading-relaxed">
                   ⚠️ <strong>Lưu ý:</strong> Bạn có thể kéo thả dấu mốc (Marker) hoặc click trực tiếp lên bản đồ trên để điều chỉnh vị trí mong muốn.
                 </p>
               </>
@@ -1136,7 +1172,7 @@ export default function CreatePostPage() {
         </div>
 
         {/* CỘT PHẢI: Upload ảnh nằm ngang và nút đăng bài */}
-        <div className="theme-post-form-shell flex min-h-0 flex-col p-5 lg:overflow-y-auto custom-scrollbar">
+        <div className="theme-post-form-shell flex min-w-0 min-h-0 flex-col p-4 sm:p-5 lg:overflow-y-auto custom-scrollbar pb-24 lg:pb-5">
           <div className="mb-4 flex shrink-0 items-center justify-between border-b border-[var(--border)] pb-2">
             <h2 className="text-base font-semibold text-[var(--accent)]">Hình ảnh bất động sản</h2>
             <span className="theme-badge-info rounded-full px-2 py-0.5 text-xs font-medium">
@@ -1178,11 +1214,11 @@ export default function CreatePostPage() {
             )}
 
             {/* Vùng xem ảnh nằm ngang bên phải */}
-            <div className="flex-1 min-h-0 flex flex-col justify-center">
+            <div className="flex-1 min-w-0 min-h-0 flex flex-col justify-center">
               <span className="theme-post-helper mb-2 block shrink-0 text-xs font-medium">Danh sách ảnh đã tải lên (trượt ngang):</span>
 
               {imagePreviews.length > 0 ? (
-                <div className="flex items-center gap-4 overflow-x-auto pb-4 pt-1 custom-scrollbar min-h-[160px] max-h-[220px]">
+                <div className="flex w-full min-w-0 items-center gap-4 overflow-x-auto pb-4 pt-1 custom-scrollbar min-h-[160px] max-h-[220px]">
                   {imagePreviews.map((image, index) => {
                     const isAvatar = image.id === avatarImageId;
                     return (
@@ -1197,8 +1233,8 @@ export default function CreatePostPage() {
                           className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
 
-                        {/* Overlay đen bóng mờ khi hover */}
-                        <div className="absolute inset-0 flex flex-col justify-between bg-[var(--overlay)] p-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                        {/* Overlay hiển thị nút (Luôn hiện trên mobile, hover trên desktop) */}
+                        <div className="absolute inset-0 flex flex-col justify-between bg-gradient-to-b from-black/50 via-transparent to-black/50 p-2 opacity-100 lg:opacity-0 transition-opacity duration-200 lg:group-hover:opacity-100">
                           <div className="flex justify-end">
                             <button
                               type="button"
@@ -1243,7 +1279,7 @@ export default function CreatePostPage() {
             </div>
 
             {/* Nút gửi bài viết cuối trang */}
-            <div className="shrink-0 border-t border-[var(--border)] pt-4">
+            <div className="fixed bottom-0 left-0 right-0 z-50 bg-[var(--background)] p-4 border-t border-[var(--border)] lg:relative lg:p-0 lg:border-t-0 lg:pt-4 shrink-0 pb-safe shadow-[0_-4px_10px_rgba(0,0,0,0.1)] lg:shadow-none">
               <button
                 type="submit"
                 disabled={isSubmitting}
