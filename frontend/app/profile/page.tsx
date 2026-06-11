@@ -191,50 +191,50 @@ export default function ProfileSettingsPage() {
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 lg:px-8">
       <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[280px_1fr]">
-        <aside className="space-y-1 lg:sticky lg:top-24">
+        <aside className="flex overflow-x-auto gap-2 pb-2 custom-scrollbar lg:block lg:space-y-1 lg:sticky lg:top-24 lg:overflow-visible lg:pb-0 shrink-0 -mx-4 px-4 lg:mx-0 lg:px-0">
           <Link
             href="/profile/posts"
-            className="mb-4 flex w-full items-center gap-3 rounded-xl border border-[var(--info-border)] bg-[var(--info-soft)] px-4 py-3 text-sm font-medium text-[var(--accent)] transition-colors hover:brightness-95"
+            className="flex-shrink-0 flex items-center gap-2 rounded-xl border border-[var(--info-border)] bg-[var(--info-soft)] px-3 py-2.5 lg:mb-4 lg:w-full lg:gap-3 lg:px-4 lg:py-3 text-sm font-medium text-[var(--accent)] transition-colors hover:brightness-95"
           >
-            <List className="h-5 w-5" />
+            <List className="h-4 w-4 lg:h-5 lg:w-5" />
             Bài đăng của tôi
           </Link>
           <button
             onClick={() => setActiveTab("personal")}
-            className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
+            className={`flex-shrink-0 flex items-center gap-2 rounded-xl px-3 py-2.5 lg:w-full lg:gap-3 lg:px-4 lg:py-3 text-sm font-medium transition-all ${
               activeTab === "personal"
                 ? "bg-[var(--accent)] text-[var(--primary-foreground)] shadow-[var(--shadow-glow)]"
                 : "text-[var(--muted-foreground)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
             }`}
           >
-            <UserIcon className="h-5 w-5" />
+            <UserIcon className="h-4 w-4 lg:h-5 lg:w-5" />
             Thông tin cá nhân
           </button>
           <button
             onClick={() => setActiveTab("security")}
-            className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
+            className={`flex-shrink-0 flex items-center gap-2 rounded-xl px-3 py-2.5 lg:w-full lg:gap-3 lg:px-4 lg:py-3 text-sm font-medium transition-all ${
               activeTab === "security"
                 ? "bg-[var(--accent)] text-[var(--primary-foreground)] shadow-[var(--shadow-glow)]"
                 : "text-[var(--muted-foreground)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
             }`}
           >
-            <Lock className="h-5 w-5" />
+            <Lock className="h-4 w-4 lg:h-5 lg:w-5" />
             Bảo mật và mật khẩu
           </button>
           <button
             onClick={() => setActiveTab("notifications")}
-            className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all ${
+            className={`flex-shrink-0 flex items-center gap-2 rounded-xl px-3 py-2.5 lg:w-full lg:gap-3 lg:px-4 lg:py-3 text-sm font-medium transition-all ${
               activeTab === "notifications"
                 ? "bg-[var(--accent)] text-[var(--primary-foreground)] shadow-[var(--shadow-glow)]"
                 : "text-[var(--muted-foreground)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
             }`}
           >
-            <Bell className="h-5 w-5" />
+            <Bell className="h-4 w-4 lg:h-5 lg:w-5" />
             Cài đặt thông báo
           </button>
         </aside>
 
-        <div className="glass-panel min-h-[600px] rounded-2xl p-6 md:p-8">
+        <div className="glass-panel min-h-[600px] rounded-2xl p-4 sm:p-6 lg:p-8">
           {activeTab === "personal" && (
             <div className="animate-in space-y-8 fade-in slide-in-from-bottom-4 duration-500">
               <div className="flex items-center justify-between border-b border-[var(--border)] pb-6">
@@ -252,9 +252,9 @@ export default function ProfileSettingsPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-6">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
                 <div className="group relative shrink-0">
-                  <div className="theme-avatar-ring flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 text-3xl font-bold text-[var(--muted-foreground)]">
+                  <div className="theme-avatar-ring flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center overflow-hidden rounded-full border-2 text-2xl sm:text-3xl font-bold text-[var(--muted-foreground)]">
                     {user.avatarUrl ? (
                       <img
                         src={user.avatarUrl}
@@ -271,11 +271,11 @@ export default function ProfileSettingsPage() {
                     disabled={isUploadingAvatar || isRemovingAvatar}
                     className="theme-overlay-dim absolute inset-0 flex items-center justify-center rounded-full opacity-0 transition-opacity group-hover:opacity-100 disabled:cursor-not-allowed"
                   >
-                    <Camera className="h-6 w-6 text-[var(--foreground)]" />
+                    <Camera className="h-5 w-5 sm:h-6 sm:w-6 text-[var(--foreground)]" />
                   </button>
                 </div>
 
-                <div>
+                <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
                   <input
                     ref={fileInputRef}
                     type="file"
