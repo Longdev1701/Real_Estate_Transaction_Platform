@@ -8,6 +8,7 @@ import { MainContent } from "@/components/layout/MainContent";
 import { AuthSessionProvider } from "@/components/auth/AuthSessionProvider";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
+import { ToastProvider } from "@/components/theme/ToastProvider";
 
 import { ToastContainer } from "@/components/layout/ToastContainer";
 
@@ -56,6 +57,7 @@ export default function RootLayout({
               <MobileBottomNav />
               <ToastContainer />
             </div>
+            <ToastProvider />
           </AuthSessionProvider>
         </ThemeProvider>
       </body>

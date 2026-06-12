@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Scale } from "lucide-react";
 import { type Post } from "@/lib/posts";
+import { toast } from "@/stores/toast.store";
 
 interface CompareButtonProps {
   post: Post;
@@ -42,7 +43,11 @@ export function CompareButton({ post, className = "" }: CompareButtonProps) {
         setIsCompared(false);
       } else {
         if (list.length >= 3) {
-          window.alert("Chỉ có thể so sánh tối đa 3 bất động sản cùng lúc.");
+          toast.warning("Chỉ có thể so sánh tối đa 3 bất động sản cùng lúc.");
+          return;
+        }
+        if (list.length > 0 && list[0].postType !== post.postType) {
+          toast.warning("Không thể so sánh bất động sản Bán với bất động sản Cho thuê. Vui lòng chọn cùng loại giao dịch.");
           return;
         }
         list.push(post);
@@ -67,8 +72,8 @@ export function CompareButton({ post, className = "" }: CompareButtonProps) {
       aria-label="So sánh bất động sản"
       title="So sánh bất động sản"
     >
-        <span className={`pointer-events-none absolute inset-0.5 rounded-full opacity-0 blur-md transition duration-300 group-hover/compare:opacity-100 ${isCompared ? "group-hover/compare:bg-[color:color-mix(in_srgb,var(--info)_28%,transparent)]" : "group-hover/compare:bg-[color:color-mix(in_srgb,var(--info)_18%,transparent)]"}`} />
-        <Scale className="relative h-4.5 w-4.5 transition duration-300 group-hover/compare:scale-110" />
+      <span className={`pointer-events-none absolute inset-0.5 rounded-full opacity-0 blur-md transition duration-300 group-hover/compare:opacity-100 ${isCompared ? "group-hover/compare:bg-[color:color-mix(in_srgb,var(--info)_28%,transparent)]" : "group-hover/compare:bg-[color:color-mix(in_srgb,var(--info)_18%,transparent)]"}`} />
+      <Scale className="relative h-4.5 w-4.5 transition duration-300 group-hover/compare:scale-110" />
     </button>
   );
 }

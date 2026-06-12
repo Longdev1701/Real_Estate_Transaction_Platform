@@ -658,21 +658,24 @@ export default function PostDetailPage() {
               <div className="border-t border-[var(--border)] pt-6 xl:border-l xl:border-t-0 xl:pl-8 xl:pt-0">
                 <h2 className="text-2xl font-semibold text-[var(--foreground)]">Thông tin chi tiết</h2>
                 <dl className="mt-5 grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <dt className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
-                      <Hash className="h-4 w-4" /> Mã tin
-                    </dt>
-                    <dd className="mt-1 flex items-center gap-2 break-all font-medium text-[var(--foreground)]">
-                      #{post.id.slice(-8).toUpperCase()}
-                      <button
-                        onClick={handleCopyId}
-                        className="theme-surface-soft inline-flex h-6 w-6 items-center justify-center rounded text-[var(--muted-foreground)] transition-colors hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
-                        title="Copy mã tin"
-                      >
-                        {isCopied ? <Check className="h-3.5 w-3.5 text-[var(--success-foreground)]" /> : <Copy className="h-3.5 w-3.5" />}
-                      </button>
-                    </dd>
-                  </div>
+                  {isOwnPost && (
+                    <div>
+                      <dt className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
+                        <Hash className="h-4 w-4" /> Mã tin
+                      </dt>
+                      <dd className="mt-1 flex items-center gap-2 break-all font-medium text-[var(--foreground)]">
+                        #{post.id.slice(-8).toUpperCase()}
+                        <button
+                          type="button"
+                          onClick={handleCopyId}
+                          className="theme-surface-soft inline-flex h-6 w-6 items-center justify-center rounded text-[var(--muted-foreground)] transition-colors hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
+                          title="Copy mã tin"
+                        >
+                          {isCopied ? <Check className="h-3.5 w-3.5 text-[var(--success-foreground)]" /> : <Copy className="h-3.5 w-3.5" />}
+                        </button>
+                      </dd>
+                    </div>
+                  )}
                   <div>
                     <dt className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
                       <User className="h-4 w-4" /> Người đăng
@@ -697,16 +700,18 @@ export default function PostDetailPage() {
                     </dt>
                     <dd className="mt-1 break-words font-medium text-[var(--foreground)]">{post.city}</dd>
                   </div>
-                  <div>
-                    <dt className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
-                      <Activity className="h-4 w-4" /> Trạng thái
-                    </dt>
-                    <dd className="mt-1">
-                      <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusColors[post.status] || "border-[var(--border)] bg-[var(--surface-muted)] text-[var(--secondary-foreground)]"}`}>
-                        {statusLabels[post.status] || post.status}
-                      </span>
-                    </dd>
-                  </div>
+                  {isOwnPost && (
+                    <div>
+                      <dt className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
+                        <Activity className="h-4 w-4" /> Trạng thái
+                      </dt>
+                      <dd className="mt-1">
+                        <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusColors[post.status] || "border-[var(--border)] bg-[var(--surface-muted)] text-[var(--secondary-foreground)]"}`}>
+                          {statusLabels[post.status] || post.status}
+                        </span>
+                      </dd>
+                    </div>
+                  )}
                 </dl>
               </div>
             </div>
