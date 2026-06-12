@@ -13,7 +13,7 @@ const REFRESH_TOKEN_COOKIE_PATH = "/api/auth";
 const refreshTokenCookieOptions: CookieOptions = {
   httpOnly: true,
   secure: IS_PRODUCTION,
-  sameSite: COOKIE_SAME_SITE,
+  sameSite: IS_PRODUCTION ? "none" : "lax",
   path: REFRESH_TOKEN_COOKIE_PATH,
   maxAge: REFRESH_TOKEN_MAX_AGE_MS,
   ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}),

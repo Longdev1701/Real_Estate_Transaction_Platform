@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { api, refreshAccessToken } from "@/lib/api";
 import { useAuthStore, type User } from "@/stores/auth.store";
@@ -43,15 +43,15 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
     logout,
   } = useAuthStore();
   const [isSessionVerified, setIsSessionVerified] = useState(false);
-  const [hasChecked, setHasChecked] = useState(false);
+  const hasChecked = useRef(false);
 
   useEffect(() => {
-    if (!hasHydrated || hasChecked) {
+    if (!hasHydrated || hasChecked.current) {
       return;
     }
 
     let isMounted = true;
-    setHasChecked(true);
+    hasChecked.current = true;
 
     const restoreSession = async () => {
       try {
@@ -85,7 +85,7 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
     return () => {
       isMounted = false;
     };
-  }, [hasHydrated, hasChecked, logout, setIsLoadingUser, setTokens, setUser]);
+  }, [hasHydrated, logout, setIsLoadingUser, setTokens, setUser]);
 
   useEffect(() => {
     if (!hasHydrated) {

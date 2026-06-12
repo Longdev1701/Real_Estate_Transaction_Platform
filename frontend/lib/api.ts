@@ -20,7 +20,10 @@ type RetriableRequestConfig = InternalAxiosRequestConfig & {
 
 type RefreshTokenResponse = {
   data: {
-    accessToken: string;
+    user: any;
+    tokens: {
+      accessToken: string;
+    };
   };
 };
 
@@ -52,7 +55,7 @@ export const refreshAccessToken = async () => {
         },
       })
       .then((response) => {
-        const nextAccessToken = response.data.data.accessToken;
+        const nextAccessToken = response.data.data.tokens.accessToken;
         setTokens(nextAccessToken);
         return nextAccessToken;
       })
