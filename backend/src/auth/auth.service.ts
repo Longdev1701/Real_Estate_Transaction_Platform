@@ -43,6 +43,8 @@ type UpdateProfileInput = {
   fullName: string;
   email: string;
   phone?: string;
+  address?: string;
+  bio?: string;
 };
 
 type ChangePasswordInput = {
@@ -62,7 +64,7 @@ type AuthResponse = {
 
 type PublicUser = Pick<
   User,
-  "id" | "email" | "fullName" | "phone" | "role" | "status" | "avatarUrl"
+  "id" | "email" | "fullName" | "phone" | "address" | "bio" | "role" | "status" | "avatarUrl"
 >;
 
 const buildPublicUser = (user: User): PublicUser => ({
@@ -70,6 +72,8 @@ const buildPublicUser = (user: User): PublicUser => ({
   email: user.email,
   fullName: user.fullName,
   phone: user.phone,
+  address: user.address,
+  bio: user.bio,
   role: user.role,
   status: user.status,
   avatarUrl: user.avatarUrl,
@@ -116,31 +120,20 @@ export const register = async (input: RegisterInput) => {
     throw new AppError("Email đã được sử dụng.", 409);
   }
 
-  // Generate 6-digit OTP code
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const ttlSeconds = 600; // 10 minutes
+  const passwordHash = await hashValue(input.password);
 
-  // Store in Redis/Memory
-  const key = `pending-register:${email}`;
-  const registrationData = {
-    ...input,
-    email,
-    code,
-  };
+  const user = await prisma.user.create({
+    data: {
+      email,
+      passwordHash,
+      fullName: input.fullName,
+      phone: input.phone || null,
+      role: UserRole.USER,
+      status: UserStatus.ACTIVE,
+    },
+  });
 
-  if (redisClient?.isOpen) {
-    await redisClient.setEx(key, ttlSeconds, JSON.stringify(registrationData));
-  } else {
-    memoryPendingRegistrations.set(key, { data: registrationData, expiresAt: Date.now() + ttlSeconds * 1000 });
-  }
-
-  // Send email via service
-  await sendRegisterVerificationEmail(email, input.fullName, code);
-
-  return {
-    message: "Mã xác thực đăng ký đã được gửi tới email của bạn.",
-    ...(!isEmailConfigured && process.env.NODE_ENV !== "production" ? { devOtpCode: code } : {}),
-  };
+  return buildAuthResponse(user);
 };
 
 export const confirmRegister = async (input: { email: string; code: string }): Promise<AuthResponse> => {
@@ -378,6 +371,8 @@ export const updateProfile = async (userId: string, input: UpdateProfileInput) =
       fullName: input.fullName.trim(),
       email: normalizedEmail,
       phone: normalizedPhone,
+      address: input.address?.trim() || null,
+      bio: input.bio?.trim() || null,
     },
   });
 
