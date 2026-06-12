@@ -615,7 +615,7 @@ export default function ComparePage() {
                         <th key={post.id} className="theme-table-header sticky top-0 z-10 border-l border-[var(--border)] bg-[var(--surface)] px-3 py-3 text-left align-top md:px-4 md:py-4">
                           <div className="space-y-2">
                             <div className="flex items-start justify-between gap-2">
-                              <span className="theme-badge-info inline-flex h-6 min-w-6 items-center justify-center rounded-full px-2 text-xs font-bold">
+                              <span className="theme-badge-info inline-flex h-6 min-w-6 items-center justify-center rounded-full px-2 text-xs font-bold md:hidden">
                                 {index + 1}
                               </span>
                               <button

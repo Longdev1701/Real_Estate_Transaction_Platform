@@ -247,7 +247,6 @@ export function PostList() {
       sessionStorage.setItem("posts_page_state", JSON.stringify(state));
     } catch {}
   };
-
   useEffect(() => {
     if (!hasRestoredAttempted) {
       return;
@@ -262,6 +261,24 @@ export function PostList() {
     }
 
     fetchPosts(1, false, activeFilter);
+
+    // Reset scroll position to top on filter/category changes
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
+    const mainScroll = document.getElementById("main-scroll-container");
+    if (mainScroll) {
+      mainScroll.scrollTop = 0;
+    }
+
+    try {
+      const saved = sessionStorage.getItem("posts_page_state");
+      if (saved) {
+        const state = JSON.parse(saved);
+        state.scrollTop = 0;
+        sessionStorage.setItem("posts_page_state", JSON.stringify(state));
+      }
+    } catch {}
   }, [activeFilter, fetchPosts, hasRestoredAttempted]);
 
   useEffect(() => {
