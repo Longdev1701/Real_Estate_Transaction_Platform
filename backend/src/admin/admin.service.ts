@@ -8,6 +8,8 @@
   type Prisma,
 } from "@prisma/client";
 
+import { invalidateCachedAuthUser } from "../auth/auth-user-cache.js";
+import { revokeAllUserRefreshTokens } from "../auth/auth.service.js";
 import { prisma } from "../prisma/prisma.service.js";
 
 
@@ -557,7 +559,7 @@ export const updateAdminUser = async (
     throw new Error("No user fields to update.");
   }
 
-  return prisma.user.update({
+  const updatedUser = await prisma.user.update({
     where: { id },
     data,
     select: {
@@ -590,6 +592,14 @@ export const updateAdminUser = async (
       },
     },
   });
+
+  if (input.status === UserStatus.BANNED) {
+    await revokeAllUserRefreshTokens(id);
+  }
+
+  await invalidateCachedAuthUser(id);
+
+  return updatedUser;
 };
 
 export type AdminPostListFilter = {

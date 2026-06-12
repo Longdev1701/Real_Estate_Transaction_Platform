@@ -326,6 +326,9 @@ model RefreshToken {
   createdAt DateTime @default(now())
 
   @@index([userId])
+  @@index([userId, revokedAt])
+  @@index([revokedAt])
+  @@index([expiresAt])
 }
 
 model Comment {
