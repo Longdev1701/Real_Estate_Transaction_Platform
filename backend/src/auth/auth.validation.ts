@@ -22,6 +22,8 @@ export const updateProfileSchema = z.object({
   fullName: z.string().trim().min(2, "Full name must be at least 2 characters long."),
   email: z.string().email("Invalid email format."),
   phone: z.string().trim().min(8).max(20).or(z.literal("")).optional(),
+  address: z.string().trim().max(255).or(z.literal("")).optional(),
+  bio: z.string().trim().max(1000).or(z.literal("")).optional(),
 });
 
 export const changePasswordSchema = z

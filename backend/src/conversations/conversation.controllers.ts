@@ -140,6 +140,31 @@ export const getConversations = async (req: Request, res: Response, next: NextFu
   }
 };
 
+export const getUnreadCount = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user!.id;
+
+    // Count messages that are unread, not sent by this user, and belong to an active conversation
+    const unreadCount = await prisma.message.count({
+      where: {
+        isRead: false,
+        NOT: { senderId: userId },
+        conversation: {
+          OR: [
+            { buyerId: userId },
+            { sellerId: userId }
+          ],
+          NOT: { deletedByIds: { has: userId } }
+        }
+      }
+    });
+
+    sendSuccess(res, { unreadCount }, "Unread message count fetched successfully");
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getConversationMessages = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = req.params.id as string;

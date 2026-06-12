@@ -38,6 +38,7 @@ import {
   type PostImage,
 } from "@/lib/posts";
 import { useAuthStore } from "@/stores/auth.store";
+import { useToastStore } from "@/stores/toast.store";
 
 const editPostSchema = z.object({
   title: z.string().min(5, "Tiêu đề phải từ 5 ký tự trở lên"),
@@ -158,6 +159,7 @@ export default function EditPostPage() {
   const [post, setPost] = useState<Post | null>(null);
   const [images, setImages] = useState<PostImage[]>([]);
   const [newImages, setNewImages] = useState<NewImagePreview[]>([]);
+  const addToast = useToastStore((state) => state.addToast);
   const [error, setError] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -209,7 +211,7 @@ export default function EditPostPage() {
         }
 
         if (user && user.role !== "ADMIN" && user.id !== currentPost.author.id) {
-          setError("Bạn không có quyền chỉnh sửa bài đăng này.");
+          addToast("Bạn không có quyền chỉnh sửa bài đăng này.", "error");
           return;
         }
 
@@ -220,7 +222,7 @@ export default function EditPostPage() {
       } catch (err) {
         const axiosError = err as AxiosError<{ message?: string }>;
         if (isMounted) {
-          setError(axiosError.response?.data?.message ?? "Không thể tải bài đăng.");
+          addToast(axiosError.response?.data?.message ?? "Không thể tải bài đăng.", "error");
         }
       } finally {
         if (isMounted) {
@@ -587,6 +589,7 @@ export default function EditPostPage() {
           }
 
           setGeocodeStatus("success");
+          addToast("Đã lấy tọa độ bản đồ tự động dựa vào địa chỉ của bạn!", "success");
           found = true;
           break;
         }
@@ -594,10 +597,12 @@ export default function EditPostPage() {
 
       if (!found) {
         setGeocodeStatus("failed");
+        addToast("Không tìm thấy tọa độ cụ thể. Hãy kiểm tra lại địa chỉ hoặc tự nhập tay.", "info");
       }
     } catch (err) {
       console.error("Lỗi định vị tọa độ:", err);
       setGeocodeStatus("failed");
+      addToast("Không tìm thấy tọa độ cụ thể. Hãy kiểm tra lại địa chỉ hoặc tự nhập tay.", "info");
     } finally {
       setIsGeocoding(false);
     }
@@ -663,11 +668,10 @@ export default function EditPostPage() {
 
   const onSubmit = async (data: EditPostValues) => {
     try {
-      setError(null);
       await savePost(data);
     } catch (err) {
       const axiosError = err as AxiosError<{ message?: string }>;
-      setError(axiosError.response?.data?.message ?? "Cập nhật bài đăng thất bại.");
+      addToast(axiosError.response?.data?.message ?? "Cập nhật bài đăng thất bại.", "error");
     }
   };
 
@@ -742,11 +746,7 @@ export default function EditPostPage() {
           </div>
         </div>
 
-        {error && (
-          <div className="theme-badge-danger rounded-xl p-3 text-sm">
-            {error}
-          </div>
-        )}
+
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_400px] 2xl:grid-cols-[minmax(0,1fr)_460px]">
           <section className="min-w-0 space-y-0">

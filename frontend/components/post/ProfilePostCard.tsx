@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Bookmark, Expand, MapPin } from "lucide-react";
+import { Bookmark, Expand, MapPin, Trash2 } from "lucide-react";
 
 import {
   formatArea,
@@ -23,7 +23,7 @@ const profileStatusColors: Record<string, string> = {
   BANNED: "theme-badge-danger",
 };
 
-export function ProfilePostCard({ post }: { post: Post }) {
+export function ProfilePostCard({ post, isOwnProfile, onDelete }: { post: Post, isOwnProfile?: boolean, onDelete?: (id: string) => void }) {
   const [imageError, setImageError] = useState(false);
 
   const mainImage = post.images.length > 0 ? post.images[0].imageUrl : imageFallback;
@@ -108,10 +108,22 @@ export function ProfilePostCard({ post }: { post: Post }) {
             <Link
               href={`/posts/${post.id}`}
               onClick={cachePostDetailPreview}
-              className="theme-button-primary inline-flex w-full items-center justify-center rounded-xl py-2 text-sm font-medium transition"
+              className="theme-button-primary inline-flex flex-1 items-center justify-center rounded-xl py-2 text-sm font-medium transition"
             >
               Xem chi tiết
             </Link>
+            {isOwnProfile && onDelete && post.status === "HIDDEN" && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  onDelete(post.id);
+                }}
+                className="theme-button-danger inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2 text-sm font-medium transition"
+              >
+                <Trash2 className="h-4 w-4" />
+                Xoá bài
+              </button>
+            )}
           </div>
         </div>
       </div>

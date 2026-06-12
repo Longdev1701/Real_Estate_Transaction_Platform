@@ -11,6 +11,8 @@ export interface User {
   status?: string;
   avatar?: string;
   avatarUrl?: string | null;
+  address?: string | null;
+  bio?: string | null;
 }
 
 interface AuthState {

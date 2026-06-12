@@ -9,6 +9,8 @@ import { AuthSessionProvider } from "@/components/auth/AuthSessionProvider";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 
+import { ToastContainer } from "@/components/layout/ToastContainer";
+
 const themeInitScript = `
   (() => {
     const storageKey = "theme-preference";
@@ -52,6 +54,7 @@ export default function RootLayout({
               <FloatingCreateButton />
               <FloatingCompareBar />
               <MobileBottomNav />
+              <ToastContainer />
             </div>
           </AuthSessionProvider>
         </ThemeProvider>

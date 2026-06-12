@@ -513,7 +513,9 @@ function CommentItem({
 
   return (
     <div className={`flex gap-4 pt-4 ${index === 0 ? "border-t-0 pt-0" : ""}`}>
-      <Avatar name={getAuthorName(comment.author)} imageUrl={comment.author?.avatarUrl} size="md" />
+      <Link href={`/profile/posts?authorId=${comment.authorId}`} className="shrink-0 transition hover:opacity-80 block">
+        <Avatar name={getAuthorName(comment.author)} imageUrl={comment.author?.avatarUrl} size="md" />
+      </Link>
       <div className="min-w-0 flex-1 space-y-2">
         <CommentHeader
           comment={comment}
@@ -566,7 +568,9 @@ function CommentItem({
 
               return (
                 <div key={reply.id} className="flex gap-3 pt-2">
-                  <Avatar name={getAuthorName(reply.author)} imageUrl={reply.author?.avatarUrl} size="sm" />
+                  <Link href={`/profile/posts?authorId=${reply.authorId}`} className="shrink-0 transition hover:opacity-80 block">
+                    <Avatar name={getAuthorName(reply.author)} imageUrl={reply.author?.avatarUrl} size="sm" />
+                  </Link>
                   <div className="min-w-0 flex-1 space-y-1">
                     <CommentHeader
                       comment={reply}
@@ -631,7 +635,9 @@ function CommentHeader({
   return (
     <div className="flex items-center justify-between gap-2">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span className={`${compact ? "text-xs" : "text-sm"} font-semibold text-[var(--foreground)]`}>{getAuthorName(comment.author)}</span>
+        <Link href={`/profile/posts?authorId=${comment.authorId}`} className={`${compact ? "text-xs" : "text-sm"} font-semibold text-[var(--foreground)] transition hover:text-[var(--accent)]`}>
+          {getAuthorName(comment.author)}
+        </Link>
         {isPostAuthor && (
           <span className={`theme-badge-info ${compact ? "text-[9px]" : "text-[10px]"} rounded-md px-1.5 py-0.5 font-medium`}>
             Chủ bài đăng

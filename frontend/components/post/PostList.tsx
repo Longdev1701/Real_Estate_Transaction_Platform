@@ -506,9 +506,9 @@ export function PostList() {
           ) : (
             <>
               <div className="space-y-5">
-                {posts.map((post) => (
+                {posts.map((post, index) => (
                   <div key={post.id}>
-                    <PostCard post={post} />
+                    <PostCard post={post} isFirstPost={index === 0} />
                   </div>
                 ))}
               </div>

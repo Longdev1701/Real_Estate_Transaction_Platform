@@ -4,11 +4,63 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Home, MessageCircle, Plus, Search, User } from "lucide-react";
 import { useAuthStore } from "@/stores/auth.store";
+import { useSocketStore } from "@/stores/socket.store";
+import { api } from "@/lib/api";
+import { useEffect, useState } from "react";
 
 export function MobileBottomNav() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { user, hasHydrated, isLoadingUser, accessToken } = useAuthStore();
+  const socket = useSocketStore((state) => state.socket);
+  const [unreadMessages, setUnreadMessages] = useState(0);
+
+  useEffect(() => {
+    if (!hasHydrated || isLoadingUser || !user || !accessToken) {
+      setUnreadMessages(0);
+      return;
+    }
+
+    let isMounted = true;
+    api.get<{ data: { unreadCount: number } }>("/conversations/unread-count")
+      .then(res => {
+        if (isMounted) setUnreadMessages(res.data.data.unreadCount);
+      })
+      .catch(() => {
+        if (isMounted) setUnreadMessages(0);
+      });
+
+    return () => { isMounted = false; };
+  }, [accessToken, hasHydrated, isLoadingUser, user]);
+
+  useEffect(() => {
+    if (!socket || !user) return;
+
+    const handleReceiveMessage = (message: any) => {
+      if (message.senderId !== user.id) {
+        setTimeout(() => {
+          api.get<{ data: { unreadCount: number } }>("/conversations/unread-count")
+            .then((res) => setUnreadMessages(res.data.data.unreadCount))
+            .catch(() => {});
+        }, 500);
+      }
+    };
+
+    const handleMessagesRead = (data: { userId: string; count?: number }) => {
+      if (data.userId !== user.id) return;
+      api.get<{ data: { unreadCount: number } }>("/conversations/unread-count")
+        .then((res) => setUnreadMessages(res.data.data.unreadCount))
+        .catch(() => {});
+    };
+
+    socket.on("receive_message", handleReceiveMessage);
+    socket.on("messages_read", handleMessagesRead);
+
+    return () => {
+      socket.off("receive_message", handleReceiveMessage);
+      socket.off("messages_read", handleMessagesRead);
+    };
+  }, [socket, user]);
 
   // Ẩn thanh bottom nav trên một số trang như messages/[id], admin, auth
   if (
@@ -39,7 +91,7 @@ export function MobileBottomNav() {
     {
       href: "/posts",
       icon: Search,
-      label: "Tìm kiếm",
+      label: "Bản tin",
       isActive: pathname === "/posts",
     },
   ];
@@ -52,7 +104,7 @@ export function MobileBottomNav() {
       isActive: pathname?.startsWith("/messages"),
     },
     {
-      href: user ? "/profile" : "/auth/login",
+      href: user ? "/profile/posts" : "/auth/login",
       icon: User,
       label: "Hồ sơ",
       isActive: pathname?.startsWith("/profile"),
@@ -106,7 +158,14 @@ export function MobileBottomNav() {
             <div className={`absolute inset-x-0 inset-y-1.5 rounded-xl bg-[var(--primary)]/15 transition-all duration-300 ${item.isActive ? "scale-100 opacity-100" : "scale-75 opacity-0"}`} />
 
             <div className="relative z-10 flex flex-col items-center justify-center">
-              <item.icon size={22} className={`transition-all duration-300 ${item.isActive ? "scale-110 fill-[var(--primary)] text-[var(--primary)]" : "scale-100"}`} />
+              <div className="relative">
+                <item.icon size={22} className={`transition-all duration-300 ${item.isActive ? "scale-110 fill-[var(--primary)] text-[var(--primary)]" : "scale-100"}`} />
+                {item.label === "Tin nhắn" && unreadMessages > 0 && (
+                  <span className="absolute -right-2 -top-1.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full border-2 border-[var(--header)] bg-[var(--accent)] px-1 text-[10px] font-bold leading-none text-[var(--primary-foreground)] shadow-sm">
+                    {unreadMessages > 9 ? "9+" : unreadMessages}
+                  </span>
+                )}
+              </div>
               <span className={`mt-1 text-[10px] font-medium transition-all duration-300 ${item.isActive ? "opacity-100" : "opacity-60"}`}>
                 {item.label}
               </span>

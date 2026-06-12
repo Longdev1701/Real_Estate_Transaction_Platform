@@ -86,15 +86,17 @@ export default function RegisterPage() {
         ...(phone ? { phone } : {}),
       });
 
-      setEmail(data.email);
-      setSuccessMsg("Mã xác thực đăng ký đã được gửi tới email của bạn.");
+      // OTP verification bypassed, backend now directly returns user & tokens
+      const user = response.data.data.user;
+      const accessToken = response.data.data.tokens.accessToken;
+      const refreshToken = response.data.data.tokens.refreshToken;
       
-      if (response.data?.data?.devOtpCode) {
-        setDevOtp(response.data.data.devOtpCode);
-      }
+      setSuccessMsg("Đăng ký thành công! Đang đăng nhập...");
+      setAuth(normalizeUser(user), accessToken, refreshToken);
       
-      setOtp(Array(6).fill(""));
-      setStep(2);
+      setTimeout(() => {
+        router.push("/");
+      }, 1500);
     } catch (err) {
       const error = err as AxiosError<{ message?: string }>;
       setError(error.response?.data?.message || "Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.");

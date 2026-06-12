@@ -13,6 +13,7 @@ import {
   Sun,
   User as UserIcon,
   LogIn,
+  Settings,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -76,26 +77,19 @@ export function UserMenu() {
       </button>
 
       {isOpen ? (
-        <div className="theme-popover absolute right-0 top-full z-[140] mt-2 w-72 overflow-visible rounded-2xl py-2">
+        <div className="theme-popover absolute right-0 top-full z-[140] mt-2 w-60 flex flex-col overflow-hidden rounded-2xl py-2 shadow-lg">
           <Link
-            href="/profile"
-            className="theme-dropdown-item flex items-center gap-3 px-4 py-2 transition-colors"
+            href="/profile/posts"
+            className="theme-dropdown-item flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-[var(--surface-muted)]"
             onClick={() => setIsOpen(false)}
           >
             <UserIcon size={16} />
             <span>Hồ sơ</span>
           </Link>
-          <Link
-            href="/profile/posts"
-            className="theme-dropdown-item flex items-center gap-3 px-4 py-2 transition-colors"
-            onClick={() => setIsOpen(false)}
-          >
-            <List size={16} />
-            <span>Bài đăng của tôi</span>
-          </Link>
+
           <Link
             href="/profile/saved"
-            className="theme-dropdown-item flex items-center gap-3 px-4 py-2 transition-colors"
+            className="theme-dropdown-item flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-[var(--surface-muted)]"
             onClick={() => setIsOpen(false)}
           >
             <Bookmark size={16} />
@@ -104,7 +98,7 @@ export function UserMenu() {
           {user.role === "ADMIN" ? (
             <Link
               href="/admin"
-              className="theme-dropdown-item flex items-center gap-3 px-4 py-2 text-[var(--accent)] transition-colors"
+              className="theme-dropdown-item flex items-center gap-3 px-4 py-2.5 text-[var(--accent)] transition-colors hover:bg-[var(--surface-muted)]"
               onClick={() => setIsOpen(false)}
             >
               <LayoutDashboard size={16} />
@@ -118,7 +112,7 @@ export function UserMenu() {
             type="button"
             onClick={handleLogout}
             disabled={isLoggingOut}
-            className="flex w-full items-center gap-3 px-4 py-2 text-left text-[var(--badge-danger-text)] transition-colors hover:bg-[var(--badge-danger-bg)]"
+            className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[var(--badge-danger-text)] transition-colors hover:bg-[var(--badge-danger-bg)]"
           >
             <LogOut size={16} />
             <span>{isLoggingOut ? "Đang đăng xuất..." : "Đăng xuất"}</span>

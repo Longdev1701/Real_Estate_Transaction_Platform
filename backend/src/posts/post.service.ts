@@ -731,14 +731,20 @@ export const deletePost = async (id: string, user?: AuthenticatedUser) => {
     throw new AppError("You do not have permission to delete this post.", 403);
   }
 
-  await prisma.propertyPost.update({
+  const postImages = await prisma.propertyImage.findMany({
+    where: { postId: id },
+    select: { imageUrl: true },
+  });
+
+  await prisma.propertyPost.delete({
     where: {
       id,
     },
-    data: {
-      status: PostStatus.HIDDEN,
-    },
   });
+
+  Promise.allSettled(
+    postImages.map((img) => deleteImageByUrl(img.imageUrl)),
+  ).catch(console.error);
 
   invalidateCaches();
 };

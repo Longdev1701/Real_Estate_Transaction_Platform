@@ -14,6 +14,8 @@ type BackendUser = {
   role?: string;
   status?: string;
   avatarUrl?: string | null;
+  address?: string | null;
+  bio?: string | null;
 };
 
 export const normalizeUser = (user: BackendUser): User => ({
@@ -26,6 +28,8 @@ export const normalizeUser = (user: BackendUser): User => ({
   status: user.status,
   avatar: user.avatarUrl ?? undefined,
   avatarUrl: user.avatarUrl,
+  address: user.address,
+  bio: user.bio,
 });
 
 export function AuthSessionProvider({ children }: { children: React.ReactNode }) {

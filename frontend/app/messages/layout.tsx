@@ -105,10 +105,16 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
 
       const { data } = await api.get(`/conversations?page=${pageNum}&limit=20`);
 
+      const activeConversationId = pathname?.split("/messages/")[1];
+      const processConvs = (convs: typeof data.data.conversations) =>
+        convs.map((c: any) =>
+          c.id === activeConversationId ? { ...c, _count: { messages: 0 } } : c
+        );
+
       if (isLoadMore) {
-        setConversations((prev) => [...prev, ...data.data.conversations]);
+        setConversations((prev) => processConvs([...prev, ...data.data.conversations]));
       } else {
-        setConversations(data.data.conversations);
+        setConversations(processConvs(data.data.conversations));
       }
       setHasMore(data.data.pagination?.hasMore ?? false);
     } catch (error) {
@@ -186,14 +192,29 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
       clearConversationTyping(data.conversationId);
     };
 
+    const handleMessagesRead = (data: { conversationId: string; userId: string }) => {
+      // Nếu userId là id của mình, tức là mình (hoặc thiết bị khác của mình) đã đọc tin nhắn
+      if (data.userId === user?.id) {
+        setConversations((prev) =>
+          prev.map((conversation) =>
+            conversation.id === data.conversationId
+              ? { ...conversation, _count: { messages: 0 } }
+              : conversation
+          )
+        );
+      }
+    };
+
     socket.on("receive_message", handleReceiveMessage);
     socket.on("user_typing", handleUserTyping);
     socket.on("user_stop_typing", handleUserStopTyping);
+    socket.on("messages_read", handleMessagesRead);
 
     return () => {
       socket.off("receive_message", handleReceiveMessage);
       socket.off("user_typing", handleUserTyping);
       socket.off("user_stop_typing", handleUserStopTyping);
+      socket.off("messages_read", handleMessagesRead);
     };
   }, [isConnected, pathname, socket, user]);
 
@@ -434,7 +455,7 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
                         });
                       }
                     }}
-                    className={`group relative mb-2.5 block overflow-hidden rounded-[20px] border px-3.5 py-3.5 transition ${isActive
+                    className={`group relative mb-2.5 block rounded-[20px] border px-3.5 py-3.5 transition ${isActive
                         ? "theme-shadow-focus border-[var(--accent-border)] bg-[var(--accent-soft)]"
                         : "border-[var(--border)] bg-[var(--surface-muted)] hover:border-[var(--accent-border)] hover:bg-[var(--surface)]"
                       }`}
@@ -465,12 +486,12 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
                       </div>
 
                       {unreadCount > 0 && (
-                        <span className="absolute bottom-4 right-4 flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-[var(--accent)] px-1.5 text-xs font-semibold text-[var(--primary-foreground)]">
+                        <span className="absolute right-3.5 top-2 z-10 md:right-4 md:top-auto md:bottom-4 md:translate-y-0 flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-[var(--accent)] px-1.5 text-xs font-semibold text-[var(--primary-foreground)]">
                           {unreadCount > 9 ? "9+" : unreadCount}
                         </span>
                       )}
 
-                      <div className="absolute right-3 top-3 opacity-100 transition lg:opacity-0 lg:group-hover:opacity-100">
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 md:top-3 md:translate-y-0 opacity-100 transition lg:opacity-0 lg:group-hover:opacity-100">
                         <button
                           type="button"
                           onClick={(event) => {
