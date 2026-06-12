@@ -371,10 +371,6 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
 
   const scheduleMarkAsRead = () => {
     if (!conversationId) return;
-    const targetMessageId = pendingReadMessageIdRef.current;
-    if (!targetMessageId || targetMessageId === lastMarkedMessageIdRef.current) {
-      return;
-    }
 
     if (markReadTimeoutRef.current) {
       clearTimeout(markReadTimeoutRef.current);
@@ -385,8 +381,10 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
       if (socket && isConnected) {
         socket.emit("mark_read", { conversationId });
       }
-      lastMarkedMessageIdRef.current = targetMessageId;
-      pendingReadMessageIdRef.current = null;
+      if (pendingReadMessageIdRef.current) {
+        lastMarkedMessageIdRef.current = pendingReadMessageIdRef.current;
+        pendingReadMessageIdRef.current = null;
+      }
       unreadPendingReadRef.current = false;
     }, MARK_READ_DEBOUNCE_MS);
   };
@@ -849,9 +847,14 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
     const files = Array.from(event.target.files || []);
     if (files.length === 0) return;
 
-    const validFiles = files.filter((file) => file.size <= 5 * 1024 * 1024);
+    let validFiles = files.filter((file) => file.size <= 5 * 1024 * 1024);
     if (validFiles.length < files.length) {
       window.alert("Một số ảnh bị bỏ qua do vượt quá 5MB.");
+    }
+
+    if (selectedImages.length + validFiles.length > 10) {
+      window.alert("Bạn chỉ có thể chọn gửi tối đa 10 ảnh cùng lúc.");
+      validFiles = validFiles.slice(0, Math.max(0, 10 - selectedImages.length));
     }
 
     if (validFiles.length > 0) {
@@ -941,7 +944,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
     .reverse();
 
   return (
-    <div className="theme-message-surface theme-shadow-lg relative flex h-full min-h-0 flex-1 overflow-hidden overflow-x-hidden rounded-[26px] border border-[var(--border)]">
+    <div className="theme-message-surface theme-shadow-lg relative flex h-full min-h-0 flex-1 overflow-hidden overflow-x-hidden rounded-none border-none md:rounded-[26px] md:border md:border-[var(--border)]">
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-[78px] shrink-0 items-center justify-between border-b border-[var(--border)] bg-[var(--surface-muted)] px-5 lg:px-6">
           <div className="flex min-w-0 items-center gap-3">
@@ -976,12 +979,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
           </div>
 
           <div className="flex items-center gap-2">
-            <button className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface-muted)] text-[var(--secondary-foreground)] transition hover:bg-[var(--surface)] hover:text-[var(--foreground)]">
-              <Phone className="h-5 w-5" />
-            </button>
-            <button className="flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface-muted)] text-[var(--secondary-foreground)] transition hover:bg-[var(--surface)] hover:text-[var(--foreground)]">
-              <Video className="h-5 w-5" />
-            </button>
+
             <button
               type="button"
               onClick={() => setIsDetailsPanelOpen(true)}
@@ -995,7 +993,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
         <div className="relative flex min-h-0 flex-1 flex-col">
           <Virtuoso<{ message: Message; actualIndex: number }>
             ref={virtuosoRef}
-            className="no-scrollbar flex-1 overflow-x-hidden px-3 py-5 sm:px-4 lg:px-5 xl:px-6"
+            className="no-scrollbar flex-1 overflow-x-hidden py-5 sm:px-4 lg:px-5 xl:px-6"
             data={messageItems}
             firstItemIndex={firstItemIndex}
             initialTopMostItemIndex={{ 
@@ -1013,7 +1011,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
             components={{
               Scroller: VirtuosoScroller,
               Header: () => (
-                <div className="w-full">
+                <div className="w-full px-2 sm:px-0">
                   <div className="mb-6 flex items-center gap-4 text-xs font-medium text-[var(--muted-foreground)]">
                     <span className="h-px flex-1 bg-[var(--border)]" />
                     <span>{formatMessageDayLabel(new Date().toISOString())}</span>
@@ -1072,7 +1070,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                 </div>
               ),
               Footer: () => (
-                <div className={`w-full overflow-hidden transition-[height] duration-150 ${otherUserTyping ? "h-[72px]" : "h-0"}`}>
+                <div className={`w-full overflow-hidden transition-[height] px-2 sm:px-0 duration-150 ${otherUserTyping ? "h-[72px]" : "h-0"}`}>
                   <div
                     className={`flex h-full items-end justify-start transition-opacity duration-150 ${otherUserTyping ? "opacity-100" : "opacity-0"
                       }`}
@@ -1116,7 +1114,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                 new Date(nextMessage.createdAt).toDateString() === new Date(message.createdAt).toDateString();
 
               return (
-                <div className="w-full overflow-x-hidden">
+                <div className="w-full overflow-x-hidden px-2 sm:px-0">
                   <MessageBubble
                     message={message}
                     index={actualIndex}
@@ -1189,7 +1187,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
             </div>
           )}
 
-          <div className="shrink-0 border-t border-[var(--border)] bg-[var(--surface-muted)] px-4 py-4 lg:px-5">
+          <div className="shrink-0 border-t border-[var(--border)] bg-[var(--surface-muted)] px-2 py-3 md:px-4 md:py-4 lg:px-5">
             <AnimatePresence>
               {imagePreviewUrls.length > 0 && (
                 <motion.div
@@ -1368,16 +1366,8 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                     <h3 className="mt-5 text-3xl font-semibold text-[var(--foreground)]">{otherUser.fullName}</h3>
                     <p className="mt-2 text-sm text-[var(--muted-foreground)]">Chủ tin đăng</p>
 
-                    <div className="mt-6 grid grid-cols-3 gap-3">
-                      <button className="rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-4 text-center text-xs text-[var(--secondary-foreground)] transition hover:bg-[var(--surface)]">
-                        <Phone className="mx-auto mb-2 h-5 w-5" />
-                        Gọi thoại
-                      </button>
-                      <button className="rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-4 text-center text-xs text-[var(--secondary-foreground)] transition hover:bg-[var(--surface)]">
-                        <Video className="mx-auto mb-2 h-5 w-5" />
-                        Gọi video
-                      </button>
-                      <button className="rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-4 text-center text-xs text-[var(--secondary-foreground)] transition hover:bg-[var(--surface)]">
+                    <div className="mt-6">
+                      <button className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-4 text-center text-xs text-[var(--secondary-foreground)] transition hover:bg-[var(--surface)]">
                         <Info className="mx-auto mb-2 h-5 w-5" />
                         Hồ sơ
                       </button>
@@ -1527,7 +1517,7 @@ const MessageBubble = memo(({
           }`}
       >
         <div className={`flex max-w-[88%] items-end overflow-visible ${isMine ? "flex-row-reverse gap-1 sm:gap-2" : "flex-row gap-0.5"} sm:max-w-[84%] md:max-w-[80%] xl:max-w-[76%]`}>
-          {isMine && <div className="h-10 w-1 shrink-0 sm:w-8" aria-hidden="true" />}
+          {isMine && <div className="hidden sm:block h-10 w-8 shrink-0" aria-hidden="true" />}
 
           {!isMine && (
             <div className="flex h-10 w-10 shrink-0 items-end justify-start">

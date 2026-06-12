@@ -17,30 +17,37 @@ export function Header() {
   const { user, accessToken, hasHydrated, isLoadingUser } = useAuthStore();
   const socket = useSocketStore((state) => state.socket);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const userId = user?.id ?? null;
 
   useEffect(() => {
     if (!hasHydrated || isLoadingUser || !user || !accessToken) {
       setUnreadNotifications(0);
+      setUnreadMessages(0);
       return;
     }
 
     let isMounted = true;
 
-    const fetchUnreadCount = async () => {
+    const fetchCounts = async () => {
       try {
-        const response = await api.get<{ data: NotificationListData }>("/notifications?limit=1");
+        const [notifRes, msgRes] = await Promise.all([
+          api.get<{ data: NotificationListData }>("/notifications?limit=1"),
+          api.get<{ data: { unreadCount: number } }>("/conversations/unread-count"),
+        ]);
         if (isMounted) {
-          setUnreadNotifications(response.data.data.unreadCount);
+          setUnreadNotifications(notifRes.data.data.unreadCount);
+          setUnreadMessages(msgRes.data.data.unreadCount);
         }
       } catch {
         if (isMounted) {
           setUnreadNotifications(0);
+          setUnreadMessages(0);
         }
       }
     };
 
-    fetchUnreadCount();
+    fetchCounts();
 
     return () => {
       isMounted = false;
@@ -70,10 +77,32 @@ export function Header() {
       }
     };
 
+    const handleReceiveMessage = (message: any) => {
+      if (message.senderId !== user.id) {
+        // Debounce or just fetch to get the correct number of unread conversations
+        setTimeout(() => {
+          api.get<{ data: { unreadCount: number } }>("/conversations/unread-count")
+            .then((res) => setUnreadMessages(res.data.data.unreadCount))
+            .catch(() => {});
+        }, 500); // Wait a bit in case the active conversation marks it as read
+      }
+    };
+
+    const handleMessagesRead = (data: { userId: string; count?: number }) => {
+      if (data.userId !== user.id) return;
+      api.get<{ data: { unreadCount: number } }>("/conversations/unread-count")
+        .then((res) => setUnreadMessages(res.data.data.unreadCount))
+        .catch(() => {});
+    };
+
     socket.on("notification_created", handleNotificationCreated);
+    socket.on("receive_message", handleReceiveMessage);
+    socket.on("messages_read", handleMessagesRead);
 
     return () => {
       socket.off("notification_created", handleNotificationCreated);
+      socket.off("receive_message", handleReceiveMessage);
+      socket.off("messages_read", handleMessagesRead);
     };
   }, [socket, user]);
 
@@ -127,10 +156,16 @@ export function Header() {
 
           <Link
             href="/messages"
-            className="relative hidden md:flex rounded-xl p-2 text-[var(--muted-foreground)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--foreground)]"
+            className={`relative hidden md:flex rounded-xl p-2 transition-colors ${pathname === "/messages" ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--muted-foreground)] hover:bg-[var(--accent-soft)] hover:text-[var(--foreground)]"
+              }`}
             aria-label="Tin nhắn"
           >
             <MessageCircle size={20} />
+            {unreadMessages > 0 ? (
+              <span className="theme-header-notification-badge absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-bold">
+                {unreadMessages > 99 ? "99+" : unreadMessages}
+              </span>
+            ) : null}
           </Link>
 
           <Link

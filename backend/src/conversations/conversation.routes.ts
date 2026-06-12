@@ -3,6 +3,7 @@ import { authenticate } from "../middlewares/auth.middleware.js";
 import {
   createOrGetConversation,
   getConversations,
+  getUnreadCount,
   getConversationMessages,
   markMessagesAsRead,
   uploadChatImage,
@@ -18,6 +19,7 @@ conversationRoutes.use(authenticate);
 
 conversationRoutes.post("/", createOrGetConversation);
 conversationRoutes.get("/", getConversations);
+conversationRoutes.get("/unread-count", getUnreadCount);
 conversationRoutes.get("/:id/messages", getConversationMessages);
 conversationRoutes.patch("/:id/read", markMessagesAsRead);
 conversationRoutes.post("/:id/images", postImageUpload.single("image"), uploadChatImage);

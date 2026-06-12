@@ -289,10 +289,14 @@ export function initializeSocket(httpServer: HTTPServer) {
     });
 
     socket.on("mark_read", (data: { conversationId: string }) => {
-      socket.to(data.conversationId).emit("messages_read", {
+      const payload = {
         conversationId: data.conversationId,
         userId: user.id,
-      });
+      };
+      // Emit to the conversation room (for the other user)
+      socket.to(data.conversationId).emit("messages_read", payload);
+      // Emit to the user's own room (for ALL their devices, including the sender)
+      io.to(user.id).emit("messages_read", payload);
     });
 
     socket.on(
