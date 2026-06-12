@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { api } from "@/lib/api";
+import { api, refreshAccessToken } from "@/lib/api";
 import { useAuthStore, type User } from "@/stores/auth.store";
 import { useSocketStore } from "@/stores/socket.store";
 
@@ -41,28 +41,25 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
     setTokens,
     setIsLoadingUser,
     logout,
-  } =
-    useAuthStore();
+  } = useAuthStore();
   const [isSessionVerified, setIsSessionVerified] = useState(false);
-  const userId = user?.id ?? null;
+  const [hasChecked, setHasChecked] = useState(false);
 
   useEffect(() => {
-    if (!hasHydrated) {
+    if (!hasHydrated || hasChecked) {
       return;
     }
 
     let isMounted = true;
+    setHasChecked(true);
 
     const restoreSession = async () => {
       try {
-        setIsLoadingUser(!user);
-        if (!accessToken) {
-          const refreshResponse = await api.post("/auth/refresh-token");
-          const tokens = refreshResponse.data.data as {
-            accessToken: string;
-          };
-          if (!isMounted) return;
-          setTokens(tokens.accessToken);
+        setIsLoadingUser(true);
+
+        let currentToken = useAuthStore.getState().accessToken;
+        if (!currentToken) {
+          currentToken = await refreshAccessToken();
         }
 
         const response = await api.get("/auth/me");
@@ -88,7 +85,7 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
     return () => {
       isMounted = false;
     };
-  }, [accessToken, hasHydrated, logout, setIsLoadingUser, setTokens, setUser, user, userId]);
+  }, [hasHydrated, hasChecked, logout, setIsLoadingUser, setTokens, setUser]);
 
   useEffect(() => {
     if (!hasHydrated) {

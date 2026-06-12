@@ -19,7 +19,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 export function UserMenu() {
-  const { user, logout } = useAuthStore();
+  const { user, logout, hasHydrated, isLoadingUser } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -34,6 +34,12 @@ export function UserMenu() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  if (!hasHydrated || isLoadingUser) {
+    return (
+      <div className="h-9 w-24 animate-pulse rounded-xl bg-[var(--border)]" />
+    );
+  }
 
   if (!user) {
     return (

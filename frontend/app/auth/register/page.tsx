@@ -92,7 +92,7 @@ export default function RegisterPage() {
       const refreshToken = response.data.data.tokens.refreshToken;
       
       setSuccessMsg("Đăng ký thành công! Đang đăng nhập...");
-      setAuth(normalizeUser(user), accessToken, refreshToken);
+      setAuth(normalizeUser(user), accessToken);
       
       setTimeout(() => {
         router.push("/");
