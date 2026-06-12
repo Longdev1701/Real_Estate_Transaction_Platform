@@ -45,8 +45,7 @@ export default function LoginPage() {
       const loginResponse = await api.post("/auth/login", data);
       const user = loginResponse.data.data.user;
       const accessToken = loginResponse.data.data.tokens.accessToken;
-      const refreshToken = loginResponse.data.data.tokens.refreshToken;
-      setAuth(normalizeUser(user), accessToken, refreshToken);
+      setAuth(normalizeUser(user), accessToken);
       router.push(redirectTo);
     } catch (err) {
       const error = err as AxiosError<{ message?: string }>;

@@ -1,5 +1,6 @@
 import express from "express";
 import { UserRole } from "@prisma/client";
+import cookieParser from "cookie-parser";
 
 import { adminRoutes } from "./admin/admin.routes.js";
 import { authRouter } from "./auth/auth.routes.js";
@@ -21,6 +22,7 @@ import { sendSuccess } from "./utils/response.js";
 export const app = express();
 
 app.use(corsMiddleware);
+app.use(cookieParser());
 app.use(express.json());
 
 app.get("/api/health", (_req, res) => {

@@ -2,7 +2,7 @@ import cors from "cors";
 
 import { CLIENT_URL } from "./env.js";
 
-const allowedOrigins = new Set([
+export const allowedOrigins = new Set([
   CLIENT_URL,
   "http://localhost:3000",
   "http://localhost:3001",
@@ -12,15 +12,16 @@ const allowedOrigins = new Set([
   "http://127.0.0.1:3002",
 ]);
 
+export const isAllowedOrigin = (origin?: string | null) =>
+  !origin ||
+  allowedOrigins.has(origin) ||
+  origin.startsWith("http://192.168.") ||
+  origin.startsWith("http://10.");
+
 export const corsMiddleware = cors({
   credentials: true,
   origin(origin, callback) {
-    if (
-      !origin || 
-      allowedOrigins.has(origin) || 
-      origin.startsWith("http://192.168.") || 
-      origin.startsWith("http://10.")
-    ) {
+    if (isAllowedOrigin(origin)) {
       callback(null, true);
       return;
     }

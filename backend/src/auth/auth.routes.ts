@@ -5,6 +5,13 @@ import { avatarImageUpload } from "../middlewares/upload.middleware.js";
 import { validateRequest } from "../middlewares/validate.middleware.js";
 import { sendSuccess } from "../utils/response.js";
 import {
+  forgotPasswordRateLimit,
+  loginRateLimit,
+  refreshTokenRateLimit,
+  registerRateLimit,
+  resetPasswordRateLimit,
+} from "./auth.rate-limit.js";
+import {
   changePasswordController,
   loginController,
   logoutController,
@@ -21,8 +28,6 @@ import {
 import {
   changePasswordSchema,
   loginSchema,
-  logoutSchema,
-  refreshTokenSchema,
   registerSchema,
   updateProfileSchema,
   forgotPasswordSchema,
@@ -35,6 +40,7 @@ export const authRouter = Router();
 
 authRouter.post(
   "/register",
+  registerRateLimit,
   validateRequest({ body: registerSchema }),
   registerController,
 );
@@ -43,24 +49,18 @@ authRouter.post(
   validateRequest({ body: confirmRegisterSchema }),
   confirmRegisterController,
 );
-authRouter.post("/login", validateRequest({ body: loginSchema }), loginController);
-authRouter.post(
-  "/refresh-token",
-  validateRequest({ body: refreshTokenSchema }),
-  refreshTokenController,
-);
-authRouter.post(
-  "/logout",
-  validateRequest({ body: logoutSchema }),
-  logoutController,
-);
+authRouter.post("/login", loginRateLimit, validateRequest({ body: loginSchema }), loginController);
+authRouter.post("/refresh-token", refreshTokenRateLimit, refreshTokenController);
+authRouter.post("/logout", logoutController);
 authRouter.post(
   "/forgot-password",
+  forgotPasswordRateLimit,
   validateRequest({ body: forgotPasswordSchema }),
   forgotPasswordController,
 );
 authRouter.post(
   "/reset-password",
+  resetPasswordRateLimit,
   validateRequest({ body: resetPasswordSchema }),
   resetPasswordController,
 );

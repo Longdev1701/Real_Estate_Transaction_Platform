@@ -35,7 +35,6 @@ export const normalizeUser = (user: BackendUser): User => ({
 export function AuthSessionProvider({ children }: { children: React.ReactNode }) {
   const {
     accessToken,
-    refreshToken,
     hasHydrated,
     user,
     setUser,
@@ -52,30 +51,18 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
       return;
     }
 
-    if (!refreshToken) {
-      setIsSessionVerified(false);
-      setIsLoadingUser(false);
-      if (user) {
-        logout();
-      }
-      return;
-    }
-
     let isMounted = true;
 
     const restoreSession = async () => {
       try {
         setIsLoadingUser(!user);
         if (!accessToken) {
-          const refreshResponse = await api.post("/auth/refresh-token", {
-            refreshToken,
-          });
+          const refreshResponse = await api.post("/auth/refresh-token");
           const tokens = refreshResponse.data.data as {
             accessToken: string;
-            refreshToken: string;
           };
           if (!isMounted) return;
-          setTokens(tokens.accessToken, tokens.refreshToken);
+          setTokens(tokens.accessToken);
         }
 
         const response = await api.get("/auth/me");
@@ -101,7 +88,7 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
     return () => {
       isMounted = false;
     };
-  }, [accessToken, hasHydrated, logout, refreshToken, setIsLoadingUser, setTokens, setUser, userId]);
+  }, [accessToken, hasHydrated, logout, setIsLoadingUser, setTokens, setUser, user, userId]);
 
   useEffect(() => {
     if (!hasHydrated) {

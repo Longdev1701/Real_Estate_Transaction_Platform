@@ -3,6 +3,7 @@ import type { User } from "@prisma/client";
 import { UserRole, UserStatus } from "@prisma/client";
 
 import { AppError } from "../middlewares/error.middleware.js";
+import { invalidateCachedAuthUser } from "./auth-user-cache.js";
 import { prisma } from "../prisma/prisma.service.js";
 import {
   deleteImageByUrl,
@@ -54,12 +55,15 @@ type ChangePasswordInput = {
 
 type AuthTokens = {
   accessToken: string;
-  refreshToken: string;
 };
 
 type AuthResponse = {
   user: Pick<User, "id" | "email" | "fullName" | "phone" | "role" | "status" | "avatarUrl">;
   tokens: AuthTokens;
+};
+
+type AuthSession = AuthResponse & {
+  refreshToken: string;
 };
 
 type PublicUser = Pick<
@@ -85,7 +89,19 @@ const buildUserPayload = (user: User) => ({
   role: user.role,
 });
 
-const buildAuthResponse = async (user: User): Promise<AuthResponse> => {
+export const revokeAllUserRefreshTokens = async (userId: string) => {
+  await prisma.refreshToken.updateMany({
+    where: {
+      userId,
+      revokedAt: null,
+    },
+    data: {
+      revokedAt: new Date(),
+    },
+  });
+};
+
+const buildAuthResponse = async (user: User): Promise<AuthSession> => {
   const payload = buildUserPayload(user);
   const accessToken = signAccessToken(payload);
   const refreshToken = signRefreshToken(payload);
@@ -103,8 +119,8 @@ const buildAuthResponse = async (user: User): Promise<AuthResponse> => {
     user: buildPublicUser(user),
     tokens: {
       accessToken,
-      refreshToken,
     },
+    refreshToken,
   };
 };
 
@@ -136,7 +152,7 @@ export const register = async (input: RegisterInput) => {
   return buildAuthResponse(user);
 };
 
-export const confirmRegister = async (input: { email: string; code: string }): Promise<AuthResponse> => {
+export const confirmRegister = async (input: { email: string; code: string }): Promise<AuthSession> => {
   const email = input.email.trim().toLowerCase();
   const code = input.code.trim();
 
@@ -187,10 +203,11 @@ export const confirmRegister = async (input: { email: string; code: string }): P
 };
 
 
-export const login = async (input: LoginInput): Promise<AuthResponse> => {
+export const login = async (input: LoginInput): Promise<AuthSession> => {
+  const email = input.email.trim().toLowerCase();
   const user = await prisma.user.findUnique({
     where: {
-      email: input.email,
+      email,
     },
   });
 
@@ -213,7 +230,7 @@ export const login = async (input: LoginInput): Promise<AuthResponse> => {
 
 export const refreshAuthToken = async ({
   refreshToken,
-}: RefreshTokenInput): Promise<AuthTokens> => {
+}: RefreshTokenInput): Promise<AuthSession> => {
   let payload;
 
   try {
@@ -230,6 +247,11 @@ export const refreshAuthToken = async ({
 
   if (!user) {
     throw new AppError("User not found.", 404);
+  }
+
+  if (user.status === UserStatus.BANNED) {
+    await revokeAllUserRefreshTokens(user.id);
+    throw new AppError("This account has been banned.", 403);
   }
 
   const tokenHash = sha256(refreshToken);
@@ -250,9 +272,14 @@ export const refreshAuthToken = async ({
   const newRefreshToken = signRefreshToken(buildUserPayload(user));
   const newRefreshTokenHash = sha256(newRefreshToken);
 
-  await prisma.refreshToken.update({
+  const rotatedToken = await prisma.refreshToken.updateMany({
     where: {
       id: matchedToken.id,
+      tokenHash,
+      revokedAt: null,
+      expiresAt: {
+        gt: new Date(),
+      },
     },
     data: {
       tokenHash: newRefreshTokenHash,
@@ -261,8 +288,15 @@ export const refreshAuthToken = async ({
     },
   });
 
+  if (rotatedToken.count !== 1) {
+    throw new AppError("Refresh token not recognized.", 401);
+  }
+
   return {
-    accessToken: newAccessToken,
+    user: buildPublicUser(user),
+    tokens: {
+      accessToken: newAccessToken,
+    },
     refreshToken: newRefreshToken,
   };
 };
@@ -319,6 +353,7 @@ export const updateAvatar = async (userId: string, file: Express.Multer.File) =>
     await deleteImageByUrl(user.avatarUrl).catch(() => null);
   }
 
+  await invalidateCachedAuthUser(userId);
   return buildPublicUser(updatedUser);
 };
 
@@ -340,6 +375,7 @@ export const removeAvatar = async (userId: string) => {
     await deleteImageByUrl(user.avatarUrl).catch(() => null);
   }
 
+  await invalidateCachedAuthUser(userId);
   return buildPublicUser(updatedUser);
 };
 
@@ -376,6 +412,7 @@ export const updateProfile = async (userId: string, input: UpdateProfileInput) =
     },
   });
 
+  await invalidateCachedAuthUser(userId);
   return buildPublicUser(updatedUser);
 };
 
@@ -406,6 +443,9 @@ export const changePassword = async (userId: string, input: ChangePasswordInput)
     where: { id: userId },
     data: { passwordHash },
   });
+
+  await revokeAllUserRefreshTokens(userId);
+  await invalidateCachedAuthUser(userId);
 };
 
 const memoryResetCodes = new Map<string, { code: string; expiresAt: number }>();
@@ -485,6 +525,9 @@ export const resetPassword = async (input: {
     where: { id: user.id },
     data: { passwordHash },
   });
+
+  await revokeAllUserRefreshTokens(user.id);
+  await invalidateCachedAuthUser(user.id);
 
   // Delete stored code
   if (redisClient?.isOpen) {
