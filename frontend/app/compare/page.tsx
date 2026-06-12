@@ -262,11 +262,15 @@ export default function ComparePage() {
           setSavedPosts(items);
           writeSessionCache(cacheKey, items);
 
-          // If comparedPosts is empty, initialize it with first 3 saved posts
+          // If comparedPosts is empty, initialize it with first 3 saved posts of the same postType
           const stored = localStorage.getItem("compared_posts");
           const parsed = stored ? JSON.parse(stored) : [];
           if (parsed.length === 0 && items.length > 0) {
-            const initialCompared = items.slice(0, maxCompareItems).map((item) => item.post);
+            const firstPost = items[0].post;
+            const initialCompared = items
+              .filter((item) => item.post.postType === firstPost.postType)
+              .slice(0, maxCompareItems)
+              .map((item) => item.post);
             setComparedPosts(initialCompared);
             localStorage.setItem("compared_posts", JSON.stringify(initialCompared));
             window.dispatchEvent(new Event("compare_list_updated"));
@@ -332,6 +336,10 @@ export default function ComparePage() {
       }
       const post = savedPostMap.get(postId)?.post;
       if (post) {
+        if (comparedPosts.length > 0 && comparedPosts[0].postType !== post.postType) {
+          setActionError("Không thể so sánh bất động sản Bán với bất động sản Cho thuê. Vui lòng chọn cùng loại giao dịch.");
+          return;
+        }
         const next = [...comparedPosts, post];
         setComparedPosts(next);
         localStorage.setItem("compared_posts", JSON.stringify(next));

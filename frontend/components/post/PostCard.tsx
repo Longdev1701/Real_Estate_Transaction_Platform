@@ -230,7 +230,6 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
     window.addEventListener("compare_list_updated", handleCompareUpdate);
     return () => window.removeEventListener("compare_list_updated", handleCompareUpdate);
   }, [post.id]);
-
   const handleCompareClick = () => {
     try {
       const stored = localStorage.getItem("compared_posts");
@@ -243,7 +242,15 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
         setIsCompared(false);
       } else {
         if (list.length >= 3) {
-          window.alert("Chỉ có thể so sánh tối đa 3 bất động sản cùng lúc.");
+          import("@/stores/toast.store").then(({ toast }) => {
+            toast.warning("Chỉ có thể so sánh tối đa 3 bất động sản cùng lúc.");
+          });
+          return;
+        }
+        if (list.length > 0 && list[0].postType !== post.postType) {
+          import("@/stores/toast.store").then(({ toast }) => {
+            toast.warning("Không thể so sánh bất động sản Bán với bất động sản Cho thuê. Vui lòng chọn cùng loại giao dịch.");
+          });
           return;
         }
         list.push(post);
