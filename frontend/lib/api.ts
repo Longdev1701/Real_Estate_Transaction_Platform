@@ -41,7 +41,7 @@ const isAuthEndpoint = (url?: string) =>
     url.includes("/auth/refresh-token") ||
     url.includes("/auth/logout"));
 
-const refreshAccessToken = async () => {
+export const refreshAccessToken = async () => {
   const { setTokens, logout } = useAuthStore.getState();
 
   if (!refreshPromise) {

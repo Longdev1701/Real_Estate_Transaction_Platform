@@ -137,52 +137,64 @@ export function Header() {
         <div className="flex items-center gap-4">
           <ThemeToggle />
 
-          <Link
-            href={user ? "/notifications" : "/auth/login"}
-            className={`relative rounded-xl p-2 transition-colors ${pathname === "/notifications" ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--muted-foreground)] hover:bg-[var(--accent-soft)] hover:text-[var(--foreground)]"
-              }`}
-            aria-label="Thông báo"
-          >
-            <Bell size={20} />
-            {unreadNotifications > 0 ? (
-              <span className="theme-header-notification-badge absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-bold">
-                {unreadNotifications > 99 ? "99+" : unreadNotifications}
-              </span>
-            ) : null}
-            {pathname === "/notifications" ? (
-              <span className="theme-header-active-indicator absolute inset-x-1 -bottom-5 h-1 rounded-full" />
-            ) : null}
-          </Link>
-
-          <Link
-            href="/messages"
-            className={`relative hidden md:flex rounded-xl p-2 transition-colors ${pathname === "/messages" ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--muted-foreground)] hover:bg-[var(--accent-soft)] hover:text-[var(--foreground)]"
-              }`}
-            aria-label="Tin nhắn"
-          >
-            <MessageCircle size={20} />
-            {unreadMessages > 0 ? (
-              <span className="theme-header-notification-badge absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-bold">
-                {unreadMessages > 99 ? "99+" : unreadMessages}
-              </span>
-            ) : null}
-          </Link>
-
-          <Link
-            href={user ? "/profile/saved" : "/auth/login"}
-            className="hidden md:flex rounded-xl p-2 text-[var(--muted-foreground)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--foreground)]"
-            aria-label="Bài đăng đã lưu"
-          >
-            <Bookmark size={20} />
-          </Link>
-
           <Link href="/posts/create" className="btn-primary ml-2 hidden sm:block">
             + Đăng bài
           </Link>
 
-          <div className="mx-2 hidden h-8 w-px bg-[var(--border)] md:block" />
+          {!hasHydrated || isLoadingUser ? (
+            <div className="flex items-center gap-2">
+              <div className="h-9 w-9 animate-pulse rounded-xl bg-[var(--border)]" />
+              <div className="h-9 w-9 animate-pulse rounded-xl bg-[var(--border)] hidden md:block" />
+              <div className="h-9 w-9 animate-pulse rounded-xl bg-[var(--border)] hidden md:block" />
+              <div className="mx-2 hidden h-8 w-px bg-[var(--border)] md:block" />
+              <div className="h-9 w-24 animate-pulse rounded-xl bg-[var(--border)]" />
+            </div>
+          ) : (
+            <>
+              <Link
+                href={user ? "/notifications" : "/auth/login"}
+                className={`relative rounded-xl p-2 transition-colors ${pathname === "/notifications" ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--muted-foreground)] hover:bg-[var(--accent-soft)] hover:text-[var(--foreground)]"
+                  }`}
+                aria-label="Thông báo"
+              >
+                <Bell size={20} />
+                {unreadNotifications > 0 ? (
+                  <span className="theme-header-notification-badge absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-bold">
+                    {unreadNotifications > 99 ? "99+" : unreadNotifications}
+                  </span>
+                ) : null}
+                {pathname === "/notifications" ? (
+                  <span className="theme-header-active-indicator absolute inset-x-1 -bottom-5 h-1 rounded-full" />
+                ) : null}
+              </Link>
 
-          <UserMenu />
+              <Link
+                href="/messages"
+                className={`relative hidden md:flex rounded-xl p-2 transition-colors ${pathname === "/messages" ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--muted-foreground)] hover:bg-[var(--accent-soft)] hover:text-[var(--foreground)]"
+                  }`}
+                aria-label="Tin nhắn"
+              >
+                <MessageCircle size={20} />
+                {unreadMessages > 0 ? (
+                  <span className="theme-header-notification-badge absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-bold">
+                    {unreadMessages > 99 ? "99+" : unreadMessages}
+                  </span>
+                ) : null}
+              </Link>
+
+              <Link
+                href={user ? "/profile/saved" : "/auth/login"}
+                className="hidden md:flex rounded-xl p-2 text-[var(--muted-foreground)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--foreground)]"
+                aria-label="Bài đăng đã lưu"
+              >
+                <Bookmark size={20} />
+              </Link>
+
+              <div className="mx-2 hidden h-8 w-px bg-[var(--border)] md:block" />
+
+              <UserMenu />
+            </>
+          )}
         </div>
       </div>
     </header>

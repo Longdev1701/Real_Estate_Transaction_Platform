@@ -269,10 +269,8 @@ export const refreshAuthToken = async ({
   }
 
   const newAccessToken = signAccessToken(buildUserPayload(user));
-  const newRefreshToken = signRefreshToken(buildUserPayload(user));
-  const newRefreshTokenHash = sha256(newRefreshToken);
 
-  const rotatedToken = await prisma.refreshToken.updateMany({
+  const updatedToken = await prisma.refreshToken.updateMany({
     where: {
       id: matchedToken.id,
       tokenHash,
@@ -282,13 +280,11 @@ export const refreshAuthToken = async ({
       },
     },
     data: {
-      tokenHash: newRefreshTokenHash,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      revokedAt: null,
     },
   });
 
-  if (rotatedToken.count !== 1) {
+  if (updatedToken.count !== 1) {
     throw new AppError("Refresh token not recognized.", 401);
   }
 
@@ -297,7 +293,7 @@ export const refreshAuthToken = async ({
     tokens: {
       accessToken: newAccessToken,
     },
-    refreshToken: newRefreshToken,
+    refreshToken,
   };
 };
 
