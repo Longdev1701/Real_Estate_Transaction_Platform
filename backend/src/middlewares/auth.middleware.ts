@@ -1,7 +1,9 @@
 import { UserStatus } from "@prisma/client";
 import type { RequestHandler } from "express";
 
-import { prisma } from "../prisma/prisma.service.js";
+import { getCachedAuthUser } from "../auth/auth-user-cache.js";
+import { recordAuthMetric } from "../auth/auth.observability.js";
+import { revokeAllUserRefreshTokens } from "../auth/auth.service.js";
 import { verifyAccessToken } from "../utils/jwt.js";
 import { AppError } from "./error.middleware.js";
 
@@ -28,26 +30,18 @@ export const authenticate: RequestHandler = async (req, _res, next) => {
     }
 
     const payload = verifyAccessToken(token);
-    const user = await prisma.user.findUnique({
-      where: {
-        id: payload.sub,
-      },
-      select: {
-        id: true,
-        email: true,
-        fullName: true,
-        phone: true,
-        role: true,
-        status: true,
-        avatarUrl: true,
-      },
-    });
+    const user = await getCachedAuthUser(payload.sub);
 
     if (!user) {
       throw new AppError("User not found.", 401);
     }
 
     if (user.status === UserStatus.BANNED) {
+      await revokeAllUserRefreshTokens(user.id);
+      recordAuthMetric("banned_access_attempt", {
+        source: "http",
+        userId: user.id,
+      });
       throw new AppError("This account has been banned.", 403);
     }
 

@@ -19,7 +19,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 export function UserMenu() {
-  const { user, refreshToken, logout } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -47,9 +47,7 @@ export function UserMenu() {
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true);
-      if (refreshToken) {
-        await api.post("/auth/logout", { refreshToken });
-      }
+      await api.post("/auth/logout");
     } catch {
       // Always clear local auth state even if revoke fails.
     } finally {

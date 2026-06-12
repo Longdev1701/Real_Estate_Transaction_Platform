@@ -1,5 +1,7 @@
 import type { RequestHandler } from "express";
 
+import { clearRefreshTokenCookie, getRefreshTokenFromCookie, setRefreshTokenCookie } from "./auth.cookie.js";
+import { recordAuthMetric } from "./auth.observability.js";
 import { AppError } from "../middlewares/error.middleware.js";
 import { sendSuccess } from "../utils/response.js";
 import { createSystemLog } from "../utils/system-log.helper.js";
@@ -18,6 +20,24 @@ import {
   confirmRegister,
 } from "./auth.service.js";
 
+const toClientAuthResponse = (result: {
+  user: {
+    id: string;
+    email: string;
+    fullName: string;
+    phone: string | null;
+    role: string;
+    status: string;
+    avatarUrl: string | null;
+  };
+  tokens: {
+    accessToken: string;
+  };
+}) => ({
+  user: result.user,
+  tokens: result.tokens,
+});
+
 export const registerController: RequestHandler = async (req, res, next) => {
   try {
     const result = await register(req.body);
@@ -30,6 +50,7 @@ export const registerController: RequestHandler = async (req, res, next) => {
 export const confirmRegisterController: RequestHandler = async (req, res, next) => {
   try {
     const result = await confirmRegister(req.body);
+    setRefreshTokenCookie(res, result.refreshToken);
 
     await createSystemLog({
       module: "AUTH",
@@ -47,7 +68,7 @@ export const confirmRegisterController: RequestHandler = async (req, res, next) 
       },
     });
 
-    sendSuccess(res, result, "Register verified successfully.", 201);
+    sendSuccess(res, toClientAuthResponse(result), "Register verified successfully.", 201);
   } catch (error) {
     next(error);
   }
@@ -56,6 +77,7 @@ export const confirmRegisterController: RequestHandler = async (req, res, next) 
 export const loginController: RequestHandler = async (req, res, next) => {
   try {
     const result = await login(req.body);
+    setRefreshTokenCookie(res, result.refreshToken);
 
     await createSystemLog({
       module: "AUTH",
@@ -73,7 +95,8 @@ export const loginController: RequestHandler = async (req, res, next) => {
       },
     });
 
-    sendSuccess(res, result, "Login successful.");
+    recordAuthMetric("login_success", { userId: result.user.id });
+    sendSuccess(res, toClientAuthResponse(result), "Login successful.");
   } catch (error) {
     await createSystemLog({
       module: "AUTH",
@@ -87,23 +110,43 @@ export const loginController: RequestHandler = async (req, res, next) => {
         email: req.body?.email ?? null,
       },
     });
+    recordAuthMetric("login_failed", { email: req.body?.email ?? null });
     next(error);
   }
 };
 
 export const refreshTokenController: RequestHandler = async (req, res, next) => {
   try {
-    const result = await refreshAuthToken(req.body);
+    const refreshToken = getRefreshTokenFromCookie(req);
 
-    sendSuccess(res, result, "Token refreshed successfully.");
+    if (!refreshToken) {
+      throw new AppError("Refresh token is required.", 401);
+    }
+
+    const result = await refreshAuthToken({ refreshToken });
+    setRefreshTokenCookie(res, result.refreshToken);
+
+    recordAuthMetric("refresh_success", { userId: result.user.id });
+    sendSuccess(res, toClientAuthResponse(result), "Token refreshed successfully.");
   } catch (error) {
+    recordAuthMetric("refresh_failed");
+    clearRefreshTokenCookie(res);
     next(error);
   }
 };
 
 export const logoutController: RequestHandler = async (req, res, next) => {
   try {
-    const result = await logout(req.body);
+    const refreshToken = getRefreshTokenFromCookie(req);
+
+    clearRefreshTokenCookie(res);
+
+    if (!refreshToken) {
+      sendSuccess(res, null, "Logout successful.");
+      return;
+    }
+
+    const result = await logout({ refreshToken });
 
     await createSystemLog({
       module: "AUTH",
@@ -119,6 +162,7 @@ export const logoutController: RequestHandler = async (req, res, next) => {
 
     sendSuccess(res, null, "Logout successful.");
   } catch (error) {
+    clearRefreshTokenCookie(res);
     next(error);
   }
 };
@@ -248,6 +292,10 @@ export const forgotPasswordController: RequestHandler = async (req, res, next) =
       },
     });
 
+    recordAuthMetric("password_reset_request", {
+      email: req.body?.email ?? null,
+      source: "forgot-password",
+    });
     sendSuccess(res, result, "Verification code sent successfully.");
   } catch (error) {
     await createSystemLog({

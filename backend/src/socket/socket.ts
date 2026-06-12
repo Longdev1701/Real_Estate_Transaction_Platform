@@ -1,5 +1,11 @@
 import { Server as SocketIOServer, Socket } from "socket.io";
 import { Server as HTTPServer } from "http";
+import { UserStatus } from "@prisma/client";
+
+import { getCachedAuthUser } from "../auth/auth-user-cache.js";
+import { recordAuthMetric } from "../auth/auth.observability.js";
+import { revokeAllUserRefreshTokens } from "../auth/auth.service.js";
+import { isAllowedOrigin } from "../config/cors.js";
 import { verifyAccessToken } from "../utils/jwt.js";
 import { prisma } from "../prisma/prisma.service.js";
 import { createAdapter } from "@socket.io/redis-adapter";
@@ -80,7 +86,14 @@ const setCachedConversationAuth = async (conversationId: string, buyerId: string
 export function initializeSocket(httpServer: HTTPServer) {
   const io = new SocketIOServer(httpServer, {
     cors: {
-      origin: "*",
+      origin(origin, callback) {
+        if (isAllowedOrigin(origin)) {
+          callback(null, true);
+          return;
+        }
+
+        callback(new Error("Not allowed by CORS"));
+      },
       methods: ["GET", "POST"],
     },
     ...(pubClient?.isOpen && subClient?.isOpen
@@ -98,16 +111,27 @@ export function initializeSocket(httpServer: HTTPServer) {
       }
 
       const payload = verifyAccessToken(token);
-      const user = await prisma.user.findUnique({
-        where: { id: payload.sub },
-        select: { id: true, email: true, fullName: true, avatarUrl: true },
-      });
+      const user = await getCachedAuthUser(payload.sub);
 
       if (!user) {
         return next(new Error("Authentication error: User not found"));
       }
 
-      socket.user = user;
+      if (user.status === UserStatus.BANNED) {
+        await revokeAllUserRefreshTokens(user.id);
+        recordAuthMetric("banned_access_attempt", {
+          source: "socket",
+          userId: user.id,
+        });
+        return next(new Error("Authentication error: Account banned"));
+      }
+
+      socket.user = {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        avatarUrl: user.avatarUrl,
+      };
       next();
     } catch {
       next(new Error("Authentication error: Invalid token"));

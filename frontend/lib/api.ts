@@ -21,12 +21,12 @@ type RetriableRequestConfig = InternalAxiosRequestConfig & {
 type RefreshTokenResponse = {
   data: {
     accessToken: string;
-    refreshToken: string;
   };
 };
 
 export const api = axios.create({
   baseURL,
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
@@ -42,28 +42,18 @@ const isAuthEndpoint = (url?: string) =>
     url.includes("/auth/logout"));
 
 const refreshAccessToken = async () => {
-  const { refreshToken, setTokens, logout } = useAuthStore.getState();
-
-  if (!refreshToken) {
-    logout();
-    throw new Error("Missing refresh token.");
-  }
+  const { setTokens, logout } = useAuthStore.getState();
 
   if (!refreshPromise) {
     refreshPromise = api
-      .post<RefreshTokenResponse>(
-        "/auth/refresh-token",
-        { refreshToken },
-        {
-          headers: {
-            Authorization: undefined,
-          },
+      .post<RefreshTokenResponse>("/auth/refresh-token", undefined, {
+        headers: {
+          Authorization: undefined,
         },
-      )
+      })
       .then((response) => {
         const nextAccessToken = response.data.data.accessToken;
-        const nextRefreshToken = response.data.data.refreshToken;
-        setTokens(nextAccessToken, nextRefreshToken);
+        setTokens(nextAccessToken);
         return nextAccessToken;
       })
       .catch((error) => {
