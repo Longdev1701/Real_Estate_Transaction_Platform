@@ -15,6 +15,7 @@ export const allowedOrigins = new Set([
 export const isAllowedOrigin = (origin?: string | null) =>
   !origin ||
   allowedOrigins.has(origin) ||
+  origin.endsWith(".vercel.app") ||
   origin.startsWith("http://192.168.") ||
   origin.startsWith("http://10.");
 
