@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
-  BadgeCheck,
+
   Bookmark,
   Building2,
   ChevronLeft,
@@ -98,7 +98,7 @@ const getGalleryGridClassName = (imageCount: number) => {
   return "grid-cols-1 md:grid-cols-3 gap-1";
 };
 
-export function PostCard({ post }: { post: Post }) {
+export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuthStore();
@@ -147,6 +147,58 @@ export function PostCard({ post }: { post: Post }) {
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  useEffect(() => {
+    if (!isFirstPost || post.images.length <= 1) return;
+    const isMobile = window.matchMedia("(max-width: 767px)").matches;
+    if (!isMobile) return;
+
+    let timeout1: NodeJS.Timeout;
+    let timeout2: NodeJS.Timeout;
+
+    const playSwipeHint = () => {
+      if (!galleryRef.current || galleryRef.current.scrollLeft > 0) return;
+      
+      // Lấy tất cả các ảnh bên trong để dịch chuyển thay vì cuộn (tạo độ mượt 60fps nhờ GPU)
+      const children = Array.from(galleryRef.current.children) as HTMLElement[];
+      
+      children.forEach(child => {
+        // Kéo mượt mà ra (easeOutQuint)
+        child.style.transition = "transform 0.6s cubic-bezier(0.22, 1, 0.36, 1)";
+        child.style.transform = "translateX(-110px)";
+      });
+      
+      timeout2 = setTimeout(() => {
+        children.forEach(child => {
+          // Nẩy nhẹ về vị trí cũ (spring)
+          child.style.transition = "transform 0.5s cubic-bezier(0.34, 1.2, 0.64, 1)";
+          child.style.transform = "translateX(0)";
+        });
+        
+        setTimeout(() => {
+          children.forEach(child => {
+            child.style.transition = "";
+            child.style.transform = "";
+          });
+        }, 500);
+      }, 750);
+    };
+
+    // Delay một chút trước khi chạy hiệu ứng
+    timeout1 = setTimeout(playSwipeHint, 1200);
+
+    return () => {
+      clearTimeout(timeout1);
+      clearTimeout(timeout2);
+      if (galleryRef.current) {
+        const children = Array.from(galleryRef.current.children) as HTMLElement[];
+        children.forEach(child => {
+          child.style.transition = "";
+          child.style.transform = "";
+        });
+      }
+    };
+  }, [isFirstPost, post.images.length]);
 
   useEffect(() => {
     if (!isClient) return;
@@ -344,7 +396,6 @@ export function PostCard({ post }: { post: Post }) {
                 >
                   {post.author.fullName}
                 </Link>
-                <BadgeCheck className="h-4 w-4 shrink-0 fill-[var(--primary)] text-[var(--background)]" />
               </div>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[var(--muted-foreground)]">
                 <span>{getRelativeTime(post.createdAt)}</span>
@@ -491,11 +542,7 @@ export function PostCard({ post }: { post: Post }) {
                       className="h-full w-full object-cover transition-transform duration-[800ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-105"
                       onError={() => setImageError(true)}
                     />
-                    {index === 0 && (
-                      <div className="theme-button-primary absolute left-3 top-3 rounded-md px-2.5 py-1 text-xs font-semibold shadow-sm">
-                        {propertyTypeLabels[post.propertyType]}
-                      </div>
-                    )}
+
                     {remainingImages > 0 && index === 2 && (
                       <div className="theme-overlay-strong absolute inset-0 hidden md:flex items-center justify-center text-2xl font-bold text-[var(--foreground)] backdrop-blur-[1px]">
                         +{remainingImages}
@@ -733,7 +780,6 @@ export function PostCard({ post }: { post: Post }) {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="truncate font-semibold text-[var(--foreground)]">{post.author.fullName}</p>
-                    <BadgeCheck className="h-4 w-4 shrink-0 fill-[var(--primary)] text-[var(--background)]" />
                   </div>
                   <p className="mt-1 text-xs text-[var(--muted-foreground)]">
                     {getRelativeTime(post.createdAt)} · {propertyTypeLabels[post.propertyType]}

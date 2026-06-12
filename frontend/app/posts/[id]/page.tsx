@@ -784,7 +784,7 @@ export default function PostDetailPage() {
                 <div className="pointer-events-none absolute left-0 top-0 h-24 w-full bg-gradient-to-b from-[var(--accent-soft)] to-transparent" />
                 <h2 className="relative text-xl font-semibold text-[var(--foreground)]">Liên hệ người bán</h2>
                 <div className="relative mt-5 flex items-center gap-4">
-                  <div className="relative shrink-0">
+                  <Link href={`/profile/posts?authorId=${post.author.id}`} className="relative shrink-0 transition hover:opacity-80 block">
                     <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border-2 border-[var(--accent-border)] bg-[var(--accent-soft)] text-xl font-semibold text-[var(--accent)]">
                       {post.author.avatarUrl ? (
                         <img src={post.author.avatarUrl} alt={post.author.fullName} className="h-full w-full object-cover" />
@@ -795,9 +795,11 @@ export default function PostDetailPage() {
                     <div className="absolute -bottom-1 -right-1 rounded-full bg-[var(--surface)] p-1">
                       <BadgeCheck className="h-4 w-4 text-[var(--accent)]" />
                     </div>
-                  </div>
+                  </Link>
                   <div className="min-w-0">
-                    <p className="line-clamp-1 text-lg font-bold text-[var(--foreground)]">{post.author.fullName}</p>
+                    <Link href={`/profile/posts?authorId=${post.author.id}`} className="line-clamp-1 text-lg font-bold text-[var(--foreground)] transition hover:text-[var(--accent)] block">
+                      {post.author.fullName}
+                    </Link>
                     <p className="mt-1 text-sm text-[var(--muted-foreground)]">Hoạt động gần đây</p>
                   </div>
                 </div>

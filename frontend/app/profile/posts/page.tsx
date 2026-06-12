@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { AxiosError } from "axios";
-import { BadgeCheck, LoaderCircle, Star, Mail, Phone, CalendarDays, MessageCircle } from "lucide-react";
+import { BadgeCheck, LoaderCircle, Star, Mail, Phone, CalendarDays, MessageCircle, MapPin } from "lucide-react";
 
 import { ProfilePostCard } from "@/components/post/ProfilePostCard";
 import { buildPostQuery, defaultPostFilter, type Post, type PostListData } from "@/lib/posts";
@@ -195,6 +195,18 @@ export default function ProfilePostsPage() {
     }
   };
 
+  const handleDeletePost = async (postId: string) => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa bài đăng này không?")) return;
+    try {
+      await api.delete(`/posts/${postId}`);
+      setPosts((prev) => prev.filter((p) => p.id !== postId));
+    } catch (err) {
+      console.error("Failed to delete post:", err);
+      const axiosError = err as AxiosError<{ message?: string }>;
+      alert(axiosError.response?.data?.message ?? "Không thể xóa bài đăng. Vui lòng thử lại.");
+    }
+  };
+
   if (!hasHydrated || isLoadingUser) {
     return (
       <div className="container mx-auto max-w-7xl px-4 py-8 lg:px-8">
@@ -260,6 +272,8 @@ export default function ProfilePostsPage() {
   const profileMeta = isOwnProfile ? `@${(user?.email ?? "user").split("@")[0]}` : "Hồ sơ công khai";
 
   const listTitle = isOwnProfile ? "Bài đăng của tôi" : `Bài đăng của ${displayName}`;
+  const bio = (targetAuthor as any)?.bio ?? (user as any)?.bio ?? null;
+  const address = (targetAuthor as any)?.address ?? (user as any)?.address ?? null;
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 lg:px-8">
@@ -290,26 +304,34 @@ export default function ProfilePostsPage() {
                 <h1 className="text-2xl font-bold text-[var(--foreground)] md:text-3xl">{displayName}</h1>
                 <BadgeCheck className="h-6 w-6 text-[var(--accent)]" />
               </div>
-              <p className="mt-1 text-[var(--muted-foreground)]">{profileMeta}</p>
-              {isOwnProfile ? (
-                <p className="mt-3 max-w-2xl text-sm text-[var(--secondary-foreground)]">
-                  Chào mừng bạn đến với trang quản lý cá nhân. Tại đây bạn có thể dễ dàng theo dõi và quản lý các bài đăng bất động sản của mình.
-                </p>
-              ) : null}
+              <div className="mt-3 max-w-2xl space-y-2">
+                {bio ? (
+                  <p className="text-sm text-[var(--secondary-foreground)] whitespace-pre-wrap">{bio}</p>
+                ) : isOwnProfile ? (
+                  <p className="text-sm text-[var(--secondary-foreground)]">
+                    Chào mừng bạn đến với trang quản lý cá nhân. Tại đây bạn có thể dễ dàng theo dõi và quản lý các bài đăng bất động sản của mình.
+                  </p>
+                ) : null}
+                {address && (
+                  <div className="flex items-center gap-1.5 text-sm text-[var(--muted-foreground)]">
+                    <MapPin className="h-4 w-4 shrink-0" />
+                    <span>{address}</span>
+                  </div>
+                )}
+              </div>
 
-              <div className="mt-5 flex items-center gap-6 md:gap-10">
-                <div>
+              <div className="mt-5 flex items-center w-full justify-between gap-2 md:w-auto md:justify-start md:gap-10">
+                <div className="flex-1 text-center md:flex-none md:text-left">
                   <div className="text-xl font-bold text-[var(--foreground)]">{myPosts.length}</div>
-                  <div className="mt-1 text-xs uppercase tracking-wider text-[var(--muted-foreground)]">Bài đăng</div>
+                  <div className="mt-1 text-[10px] sm:text-xs uppercase tracking-wider text-[var(--muted-foreground)] whitespace-nowrap">Bài đăng</div>
                 </div>
-
-                <div>
+                <div className="flex-1 text-center md:flex-none md:text-left">
                   <div className="text-xl font-bold text-[var(--foreground)]">{saleCount}</div>
-                  <div className="mt-1 text-xs uppercase tracking-wider text-[var(--muted-foreground)]">Đang bán</div>
+                  <div className="mt-1 text-[10px] sm:text-xs uppercase tracking-wider text-[var(--muted-foreground)] whitespace-nowrap">Đang bán</div>
                 </div>
-                <div>
+                <div className="flex-1 text-center md:flex-none md:text-left">
                   <div className="text-xl font-bold text-[var(--foreground)]">{rentCount}</div>
-                  <div className="mt-1 text-xs uppercase tracking-wider text-[var(--muted-foreground)]">Cho thuê</div>
+                  <div className="mt-1 text-[10px] sm:text-xs uppercase tracking-wider text-[var(--muted-foreground)] whitespace-nowrap">Cho thuê</div>
                 </div>
               </div>
             </div>
@@ -342,10 +364,10 @@ export default function ProfilePostsPage() {
       </div>
 
       <div className="glass-panel mb-8 overflow-hidden rounded-2xl">
-        <div className="flex overflow-x-auto hide-scrollbar">
+        <div className="flex w-full hide-scrollbar">
           <button
             onClick={() => setMainTab("posts")}
-            className={`whitespace-nowrap border-b-2 px-6 py-4 font-medium transition-colors ${
+            className={`flex-1 md:flex-none whitespace-nowrap border-b-2 px-2 py-3.5 sm:px-6 sm:py-4 text-sm sm:text-base font-medium transition-colors ${
               mainTab === "posts"
                 ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]"
                 : "border-transparent text-[var(--muted-foreground)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
@@ -355,7 +377,7 @@ export default function ProfilePostsPage() {
           </button>
           <button
             onClick={() => setMainTab("about")}
-            className={`whitespace-nowrap border-b-2 px-6 py-4 font-medium transition-colors ${
+            className={`flex-1 md:flex-none whitespace-nowrap border-b-2 px-2 py-3.5 sm:px-6 sm:py-4 text-sm sm:text-base font-medium transition-colors ${
               mainTab === "about"
                 ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]"
                 : "border-transparent text-[var(--muted-foreground)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
@@ -364,7 +386,7 @@ export default function ProfilePostsPage() {
             Giới thiệu
           </button>
           {isOwnProfile ? (
-            <button className="whitespace-nowrap border-b-2 border-transparent px-6 py-4 font-medium text-[var(--muted-foreground)] transition-colors hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]">
+            <button className="flex-1 md:flex-none whitespace-nowrap border-b-2 border-transparent px-2 py-3.5 sm:px-6 sm:py-4 text-sm sm:text-base font-medium text-[var(--muted-foreground)] transition-colors hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]">
               Lịch sử xem
             </button>
           ) : null}
@@ -373,38 +395,39 @@ export default function ProfilePostsPage() {
 
       {mainTab === "posts" && (
         <div className="glass-card p-6 md:p-8">
-          <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-            <h2 className="text-2xl font-bold text-[var(--foreground)]">{listTitle}</h2>
-          {isOwnProfile ? (
-            <Link href="/posts/create" className="btn-primary inline-flex items-center justify-center gap-2">
-              <span>+</span> Đăng bài mới
-            </Link>
-          ) : null}
-          </div>
+          <div className="mb-8 flex flex-col gap-6 md:flex-row-reverse md:items-center md:justify-between">
+            {isOwnProfile ? (
+              <div className="flex shrink-0">
+                <Link href="/posts/create" className="btn-primary inline-flex w-full items-center justify-center gap-2 md:w-auto">
+                  <span>+</span> Đăng bài mới
+                </Link>
+              </div>
+            ) : null}
 
-          <div className="mb-8 flex gap-3 overflow-x-auto pb-2 hide-scrollbar">
-            {[
-              { key: "ALL" as const, label: "Tất cả", count: myPosts.length },
-              { key: "SELL" as const, label: "Đang bán", count: saleCount },
-              { key: "RENT" as const, label: "Đang cho thuê", count: rentCount },
-              { key: "SOLD" as const, label: "Đã bán/cho thuê", count: soldCount },
-              ...(isOwnProfile ? [{ key: "BANNED" as const, label: "Bị khóa", count: bannedCount }] : []),
-            ].map((tab) => {
-              const isActive = activeTab === tab.key;
-              return (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
-                  className={`whitespace-nowrap rounded-full border px-5 py-2 text-sm font-medium transition-colors ${
-                    isActive
-                      ? "border-[var(--accent-border)] bg-[var(--accent-soft)] text-[var(--foreground)]"
-                      : "border-[var(--border)] bg-transparent text-[var(--muted-foreground)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
-                  }`}
-                >
-                  {tab.label} ({tab.count})
-                </button>
-              );
-            })}
+            <div className="flex w-full gap-3 overflow-x-auto pb-2 hide-scrollbar md:pb-0">
+              {[
+                { key: "ALL" as const, label: "Tất cả", count: myPosts.length },
+                { key: "SELL" as const, label: "Đang bán", count: saleCount },
+                { key: "RENT" as const, label: "Đang cho thuê", count: rentCount },
+                { key: "SOLD" as const, label: "Đã bán/cho thuê", count: soldCount },
+                ...(isOwnProfile ? [{ key: "BANNED" as const, label: "Bị khóa", count: bannedCount }] : []),
+              ].map((tab) => {
+                const isActive = activeTab === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key)}
+                    className={`whitespace-nowrap rounded-full border px-5 py-2 text-sm font-medium transition-colors ${
+                      isActive
+                        ? "border-[var(--accent-border)] bg-[var(--accent-soft)] text-[var(--foreground)]"
+                        : "border-[var(--border)] bg-transparent text-[var(--muted-foreground)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
+                    }`}
+                  >
+                    {tab.label} ({tab.count})
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {error ? (
@@ -427,7 +450,12 @@ export default function ProfilePostsPage() {
           ) : (
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
               {visiblePosts.map((post) => (
-                <ProfilePostCard key={post.id} post={post} />
+                <ProfilePostCard 
+                  key={post.id} 
+                  post={post} 
+                  isOwnProfile={isOwnProfile}
+                  onDelete={isOwnProfile ? handleDeletePost : undefined}
+                />
               ))}
             </div>
           )}
@@ -436,14 +464,12 @@ export default function ProfilePostsPage() {
 
       {mainTab === "about" && (
         <div className="glass-card p-6 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <h2 className="mb-6 text-2xl font-bold text-[var(--foreground)]">Giới thiệu về {displayName}</h2>
           <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
             <div className="space-y-6 md:col-span-2">
               <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
                 <h3 className="mb-3 text-lg font-semibold text-[var(--foreground)]">Thông tin mô tả</h3>
-                <p className="leading-relaxed text-sm text-[var(--secondary-foreground)]">
-                  Hiện tại {displayName} chưa cập nhật thông tin giới thiệu chi tiết. 
-                  Hãy theo dõi để cập nhật thêm thông tin về người đăng này trong tương lai.
+                <p className="leading-relaxed text-sm text-[var(--secondary-foreground)] whitespace-pre-wrap">
+                  {bio || `Hiện tại ${displayName} chưa cập nhật thông tin giới thiệu chi tiết. Hãy theo dõi để cập nhật thêm thông tin về người đăng này trong tương lai.`}
                 </p>
               </div>
             </div>
@@ -457,7 +483,7 @@ export default function ProfilePostsPage() {
                     </div>
                     <div>
                       <p className="text-xs text-[var(--muted-foreground)]">Email</p>
-                      <p className="font-medium text-[var(--foreground)]">{targetAuthor?.email || "Đang cập nhật"}</p>
+                      <p className="font-medium text-[var(--foreground)]">{targetAuthor?.email || user?.email || "Đang cập nhật"}</p>
                     </div>
                   </li>
                   <li className="flex items-center gap-3 text-sm">
@@ -466,7 +492,7 @@ export default function ProfilePostsPage() {
                     </div>
                     <div>
                       <p className="text-xs text-[var(--muted-foreground)]">Số điện thoại</p>
-                      <p className="font-medium text-[var(--foreground)]">{targetAuthor?.phone || "Đang cập nhật"}</p>
+                      <p className="font-medium text-[var(--foreground)]">{targetAuthor?.phone || user?.phone || "Đang cập nhật"}</p>
                     </div>
                   </li>
                   <li className="flex items-center gap-3 text-sm">
@@ -487,3 +513,4 @@ export default function ProfilePostsPage() {
     </div>
   );
 }
+

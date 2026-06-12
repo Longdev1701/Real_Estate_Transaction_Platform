@@ -6,6 +6,7 @@ import { AlertTriangle, FileText, LoaderCircle, ShieldCheck, X } from "lucide-re
 
 import { submitReportAppeal } from "@/lib/reports";
 import type { PostBanContext } from "@/lib/posts";
+import { useToastStore } from "@/stores/toast.store";
 
 export function AppealBanDialog({
   open,
@@ -22,17 +23,14 @@ export function AppealBanDialog({
 }) {
   const [message, setMessage] = useState("");
   const [evidence, setEvidence] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const addToast = useToastStore((state) => state.addToast);
 
   useEffect(() => {
     if (!open) return;
     setMessage("");
     setEvidence("");
-    setError(null);
     setIsSubmitting(false);
-    setIsSuccess(false);
   }, [open]);
 
   if (!open) return null;
@@ -42,17 +40,17 @@ export function AppealBanDialog({
 
     try {
       setIsSubmitting(true);
-      setError(null);
       await submitReportAppeal({
         reportId: banContext.reportId,
         message,
         evidence,
       });
-      setIsSuccess(true);
+      addToast("Khiếu nại đã được gửi tới quản trị viên.", "success");
       onSubmitted?.();
+      onClose();
     } catch (err) {
       const axiosError = err as AxiosError<{ message?: string }>;
-      setError(axiosError.response?.data?.message ?? "Không thể gửi khiếu nại. Vui lòng thử lại.");
+      addToast(axiosError.response?.data?.message ?? "Không thể gửi khiếu nại. Vui lòng thử lại.", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -78,96 +76,66 @@ export function AppealBanDialog({
           </button>
         </div>
 
-        {isSuccess ? (
-          <div className="space-y-5 px-5 py-6 md:px-6">
-            <div className="rounded-2xl border border-[var(--success-border)] bg-[var(--success-soft)] p-4 text-sm leading-6 text-[var(--success-foreground)]">
-              <div className="mb-2 flex items-center gap-2 font-semibold text-[var(--foreground)]">
-                <ShieldCheck className="h-5 w-5 text-[var(--success)]" />
-                Khiếu nại đã được gửi
-              </div>
-              <p>
-                Yêu cầu khiếu nại của bạn đã được chuyển tới quản trị viên trong mục báo cáo.
-                Vui lòng chờ phản hồi sau khi admin kiểm tra bằng chứng bạn cung cấp.
-              </p>
-            </div>
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={onClose}
-                className="btn-primary inline-flex items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold"
-              >
-                Đóng
-              </button>
-            </div>
+        <form onSubmit={handleSubmit} className="space-y-5 px-5 py-6 md:px-6">
+          <div className="rounded-2xl border border-[var(--danger-border)] bg-[var(--danger-soft)] p-4 text-sm leading-6 text-[var(--danger-foreground)]">
+            <p className="font-semibold text-[var(--foreground)]">Lý do bài đăng bị khóa</p>
+            <p className="mt-2">{banContext.reason}</p>
+            <p className="mt-2 text-[var(--secondary-foreground)]">
+              {banContext.description || "Quản trị viên xác định bài đăng có dấu hiệu vi phạm chính sách hiển thị nội dung."}
+            </p>
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-5 px-5 py-6 md:px-6">
-            <div className="rounded-2xl border border-[var(--danger-border)] bg-[var(--danger-soft)] p-4 text-sm leading-6 text-[var(--danger-foreground)]">
-              <p className="font-semibold text-[var(--foreground)]">Lý do bài đăng bị khóa</p>
-              <p className="mt-2">{banContext.reason}</p>
-              <p className="mt-2 text-[var(--secondary-foreground)]">
-                {banContext.description || "Quản trị viên xác định bài đăng có dấu hiệu vi phạm chính sách hiển thị nội dung."}
-              </p>
-            </div>
 
-            <div className="rounded-2xl border border-[var(--info-border)] bg-[var(--info-soft)] p-4 text-sm leading-6 text-[var(--info-foreground)]">
-              <div className="mb-2 flex items-center gap-2 font-semibold text-[var(--foreground)]">
-                <FileText className="h-4 w-4 text-[var(--accent)]" />
-                Hướng dẫn khiếu nại
-              </div>
-              <p>
-                Nếu bạn cho rằng việc khóa bài là chưa chính xác, hãy trình bày rõ bối cảnh,
-                nguồn thông tin, giấy tờ liên quan và mọi bằng chứng giúp admin đối chiếu lại.
-              </p>
+          <div className="rounded-2xl border border-[var(--info-border)] bg-[var(--info-soft)] p-4 text-sm leading-6 text-[var(--info-foreground)]">
+            <div className="mb-2 flex items-center gap-2 font-semibold text-[var(--foreground)]">
+              <FileText className="h-4 w-4 text-[var(--accent)]" />
+              Hướng dẫn khiếu nại
             </div>
+            <p>
+              Nếu bạn cho rằng việc khóa bài là chưa chính xác, hãy trình bày rõ bối cảnh,
+              nguồn thông tin, giấy tờ liên quan và mọi bằng chứng giúp admin đối chiếu lại.
+            </p>
+          </div>
 
-            <div>
-              <label className="mb-2 block text-sm font-medium text-[var(--foreground)]">Nội dung khiếu nại</label>
-              <textarea
-                rows={5}
-                value={message}
-                onChange={(event) => setMessage(event.target.value)}
-                placeholder="Trình bày vì sao bạn cho rằng quyết định khóa bài là chưa chính xác."
-                className="theme-public-input w-full resize-none rounded-2xl px-4 py-3 text-sm leading-6"
-              />
-            </div>
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[var(--foreground)]">Nội dung khiếu nại</label>
+            <textarea
+              rows={5}
+              value={message}
+              onChange={(event) => setMessage(event.target.value)}
+              placeholder="Trình bày vì sao bạn cho rằng quyết định khóa bài là chưa chính xác."
+              className="theme-public-input w-full resize-none rounded-2xl px-4 py-3 text-sm leading-6"
+            />
+          </div>
 
-            <div>
-              <label className="mb-2 block text-sm font-medium text-[var(--foreground)]">Bằng chứng bổ sung</label>
-              <textarea
-                rows={5}
-                value={evidence}
-                onChange={(event) => setEvidence(event.target.value)}
-                placeholder="Đính kèm mô tả giấy tờ, đường link, ảnh chụp hoặc các thông tin chứng minh khác."
-                className="theme-public-input w-full resize-none rounded-2xl px-4 py-3 text-sm leading-6"
-              />
-            </div>
+          <div>
+            <label className="mb-2 block text-sm font-medium text-[var(--foreground)]">Bằng chứng bổ sung</label>
+            <textarea
+              rows={5}
+              value={evidence}
+              onChange={(event) => setEvidence(event.target.value)}
+              placeholder="Đính kèm mô tả giấy tờ, đường link, ảnh chụp hoặc các thông tin chứng minh khác."
+              className="theme-public-input w-full resize-none rounded-2xl px-4 py-3 text-sm leading-6"
+            />
+          </div>
 
-            {error ? (
-              <div className="theme-badge-danger rounded-2xl px-4 py-3 text-sm">
-                {error}
-              </div>
-            ) : null}
-
-            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={onClose}
-                className="theme-button-secondary inline-flex items-center justify-center rounded-xl px-4 py-3 text-sm font-medium"
-              >
-                Hủy
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="theme-button-danger-solid inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                {isSubmitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <AlertTriangle className="h-4 w-4" />}
-                {isSubmitting ? "Đang gửi..." : "Gửi khiếu nại"}
-              </button>
-            </div>
-          </form>
-        )}
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end mt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="theme-button-secondary inline-flex items-center justify-center rounded-xl px-4 py-3 text-sm font-medium"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="theme-button-danger-solid inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {isSubmitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <AlertTriangle className="h-4 w-4" />}
+              {isSubmitting ? "Đang gửi..." : "Gửi khiếu nại"}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

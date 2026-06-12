@@ -23,6 +23,7 @@ import { FeatureIcon } from "@/lib/feature-icons";
 import { compressPropertyImage } from "@/lib/image-compression";
 import { PROPERTY_TYPES, propertyTypeLabels } from "@/lib/posts";
 import { useAuthStore } from "@/stores/auth.store";
+import { useToastStore } from "@/stores/toast.store";
 
 const createPostSchema = z.object({
   title: z.string().min(5, "Tiêu đề phải từ 5 ký tự trở lên"),
@@ -115,8 +116,8 @@ const CreatePostMap = dynamic(() => import("@/components/map/CreatePostMap"), {
 export default function CreatePostPage() {
   const { user, accessToken, hasHydrated, isLoadingUser } = useAuthStore();
   const router = useRouter();
+  const addToast = useToastStore((state) => state.addToast);
 
-  const [error, setError] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [imagePreviews, setImagePreviews] = useState<ImagePreview[]>([]);
   const [fileInputKey, setFileInputKey] = useState(0);
@@ -414,6 +415,7 @@ export default function CreatePostPage() {
           }
 
           setGeocodeStatus("success");
+          addToast("Đã lấy tọa độ bản đồ tự động dựa vào địa chỉ của bạn!", "success");
           found = true;
           break; // Dừng lại ngay khi tìm thấy mức độ khớp đầu tiên
         }
@@ -421,10 +423,12 @@ export default function CreatePostPage() {
 
       if (!found) {
         setGeocodeStatus("failed");
+        addToast("Không tìm thấy tọa độ cụ thể. Hãy kiểm tra lại địa chỉ hoặc tự nhập tay.", "info");
       }
     } catch (err) {
       console.error("Lỗi định vị tọa độ:", err);
       setGeocodeStatus("failed");
+      addToast("Không tìm thấy tọa độ cụ thể. Hãy kiểm tra lại địa chỉ hoặc tự nhập tay.", "info");
     } finally {
       setIsGeocoding(false);
     }
@@ -625,10 +629,8 @@ export default function CreatePostPage() {
 
   const onSubmit = async (data: CreatePostFormValues) => {
     try {
-      setError(null);
-
       if (selectedImages.length === 0) {
-        setError("Vui lòng chọn ít nhất một hình ảnh hợp lệ (JPG, PNG, WEBP và tối đa 5MB mỗi ảnh).");
+        addToast("Vui lòng chọn ít nhất một hình ảnh hợp lệ (JPG, PNG, WEBP và tối đa 5MB mỗi ảnh).", "error");
         return;
       }
 
@@ -668,7 +670,7 @@ export default function CreatePostPage() {
       router.push(createdPostId ? `/posts/${createdPostId}` : "/posts");
     } catch (err) {
       const axiosError = err as AxiosError<{ message?: string }>;
-      setError(axiosError.response?.data?.message ?? "Đăng bài thất bại. Vui lòng kiểm tra lại thông tin.");
+      addToast(axiosError.response?.data?.message ?? "Đăng bài thất bại. Vui lòng kiểm tra lại thông tin.", "error");
     }
   };
 
@@ -735,11 +737,6 @@ export default function CreatePostPage() {
         </div>
       </div>
 
-      {error && (
-        <div className="theme-badge-danger mb-4 shrink-0 rounded-xl p-3 text-xs">
-          {error}
-        </div>
-      )}
 
       {/* Grid ngang 2 phần, nằm trọn trên 1 page trên desktop */}
       <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6 lg:grid-cols-[1.3fr_1fr] min-w-0 min-h-0 flex-1 w-full lg:overflow-hidden">
@@ -1011,17 +1008,6 @@ export default function CreatePostPage() {
               </button>
             </div>
 
-            {/* Trạng thái định vị */}
-            {geocodeStatus === "success" && (
-              <p className="mt-[-8px] flex items-center gap-1 text-xs text-[var(--success-foreground)]">
-                <Check className="h-3.5 w-3.5" /> Đã lấy tọa độ bản đồ tự động dựa vào địa chỉ của bạn!
-              </p>
-            )}
-            {geocodeStatus === "failed" && (
-              <p className="mt-[-8px] text-xs text-[var(--warning-foreground)]">
-                Không tìm thấy tọa độ cụ thể. Hãy kiểm tra lại địa chỉ hoặc tự nhập tay.
-              </p>
-            )}
 
             {/* Bản đồ xem trước */}
             {latitude && longitude && Number(latitude) !== 0 && Number(longitude) !== 0 ? (

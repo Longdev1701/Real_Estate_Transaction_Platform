@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  ArrowLeft,
   Bell,
   Camera,
   CheckCircle2,
@@ -13,11 +14,14 @@ import {
   Phone,
   ShieldCheck,
   User as UserIcon,
+  X,
+  Image as ImageIcon,
 } from "lucide-react";
 
 import { normalizeUser } from "@/components/auth/AuthSessionProvider";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth.store";
+import { useToastStore } from "@/stores/toast.store";
 
 export default function ProfileSettingsPage() {
   const { user, accessToken, hasHydrated, isLoadingUser, setUser } = useAuthStore();
@@ -25,26 +29,41 @@ export default function ProfileSettingsPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [activeTab, setActiveTab] = useState("personal");
-  const [avatarError, setAvatarError] = useState<string | null>(null);
-  const [avatarSuccess, setAvatarSuccess] = useState<string | null>(null);
+
+  const handleTabClick = (tab: string, e: React.MouseEvent<HTMLButtonElement>) => {
+    setActiveTab(tab);
+    e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  };
+  
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  const [isRemovingAvatar, setIsRemovingAvatar] = useState(false);
-  const [profileError, setProfileError] = useState<string | null>(null);
-  const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
+  const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
+  const avatarMenuRef = useRef<HTMLDivElement>(null);
+  const addToast = useToastStore((state) => state.addToast);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (avatarMenuRef.current && !avatarMenuRef.current.contains(event.target as Node)) {
+        setIsAvatarMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
-  const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     phone: "",
     address: "",
+    bio: "",
   });
 
   useEffect(() => {
@@ -59,27 +78,22 @@ export default function ProfileSettingsPage() {
         fullName: user.fullName || "",
         email: user.email || "",
         phone: user.phone || "",
-        address: "",
+        address: (user as any).address || "",
+        bio: (user as any).bio || "",
       });
     }
   }, [user]);
 
-  const resetAvatarMessages = () => {
-    setAvatarError(null);
-    setAvatarSuccess(null);
-  };
-
   const handleAvatarFileChange = async (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
+    setIsAvatarMenuOpen(false);
     const file = event.target.files?.[0];
     event.target.value = "";
 
     if (!file) {
       return;
     }
-
-    resetAvatarMessages();
 
     const acceptedMimeTypes = new Set([
       "image/jpeg",
@@ -91,12 +105,12 @@ export default function ProfileSettingsPage() {
     const maxFileSizeInBytes = 5 * 1024 * 1024;
 
     if (!acceptedMimeTypes.has(file.type)) {
-      setAvatarError("Chỉ hỗ trợ ảnh JPG, PNG hoặc WEBP.");
+      addToast("Chỉ hỗ trợ ảnh JPG, PNG hoặc WEBP.", "error");
       return;
     }
 
     if (file.size > maxFileSizeInBytes) {
-      setAvatarError("Kích thước ảnh phải nhỏ hơn hoặc bằng 5MB.");
+      addToast("Kích thước ảnh phải nhỏ hơn hoặc bằng 5MB.", "error");
       return;
     }
 
@@ -107,42 +121,18 @@ export default function ProfileSettingsPage() {
 
       const response = await api.put("/auth/avatar", payload);
       setUser(normalizeUser(response.data.data));
-      setAvatarSuccess("Đã cập nhật ảnh đại diện.");
+      addToast("Đã cập nhật ảnh đại diện.", "success");
     } catch (error: any) {
-      setAvatarError(
-        error?.response?.data?.message || "Không thể cập nhật ảnh đại diện.",
+      addToast(
+        error?.response?.data?.message || "Không thể cập nhật ảnh đại diện.", "error"
       );
     } finally {
       setIsUploadingAvatar(false);
     }
   };
 
-  const handleRemoveAvatar = async () => {
-    resetAvatarMessages();
-
-    if (!user?.avatarUrl) {
-      setAvatarSuccess("Ảnh đại diện hiện đã được xóa.");
-      return;
-    }
-
-    try {
-      setIsRemovingAvatar(true);
-      const response = await api.delete("/auth/avatar");
-      setUser(normalizeUser(response.data.data));
-      setAvatarSuccess("Đã xóa ảnh đại diện.");
-    } catch (error: any) {
-      setAvatarError(
-        error?.response?.data?.message || "Không thể xóa ảnh đại diện.",
-      );
-    } finally {
-      setIsRemovingAvatar(false);
-    }
-  };
-
   const handleProfileSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setProfileError(null);
-    setProfileSuccess(null);
 
     try {
       setIsSavingProfile(true);
@@ -150,12 +140,14 @@ export default function ProfileSettingsPage() {
         fullName: formData.fullName,
         email: formData.email,
         phone: formData.phone,
+        address: formData.address,
+        bio: formData.bio,
       });
       setUser(normalizeUser(response.data.data));
-      setProfileSuccess("Đã lưu thông tin cá nhân.");
+      addToast("Đã lưu thông tin cá nhân.", "success");
     } catch (error: any) {
-      setProfileError(
-        error?.response?.data?.message || "Không thể cập nhật thông tin cá nhân.",
+      addToast(
+        error?.response?.data?.message || "Không thể cập nhật thông tin cá nhân.", "error"
       );
     } finally {
       setIsSavingProfile(false);
@@ -164,21 +156,19 @@ export default function ProfileSettingsPage() {
 
   const handlePasswordSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setPasswordError(null);
-    setPasswordSuccess(null);
 
     try {
       setIsChangingPassword(true);
       await api.patch("/auth/change-password", passwordForm);
-      setPasswordSuccess("Đã cập nhật mật khẩu.");
+      addToast("Đã cập nhật mật khẩu.", "success");
       setPasswordForm({
         currentPassword: "",
         newPassword: "",
         confirmPassword: "",
       });
     } catch (error: any) {
-      setPasswordError(
-        error?.response?.data?.message || "Không thể cập nhật mật khẩu.",
+      addToast(
+        error?.response?.data?.message || "Không thể cập nhật mật khẩu.", "error"
       );
     } finally {
       setIsChangingPassword(false);
@@ -191,16 +181,18 @@ export default function ProfileSettingsPage() {
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 lg:px-8">
       <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[280px_1fr]">
-        <aside className="flex overflow-x-auto gap-2 pb-2 custom-scrollbar lg:block lg:space-y-1 lg:sticky lg:top-24 lg:overflow-visible lg:pb-0 shrink-0 -mx-4 px-4 lg:mx-0 lg:px-0">
+        <aside className="flex items-center gap-2 pb-2 lg:block lg:space-y-1 lg:sticky lg:top-24 lg:pb-0 shrink-0 -mx-4 px-4 lg:mx-0 lg:px-0">
           <Link
             href="/profile/posts"
-            className="flex-shrink-0 flex items-center gap-2 rounded-xl border border-[var(--info-border)] bg-[var(--info-soft)] px-3 py-2.5 lg:mb-4 lg:w-full lg:gap-3 lg:px-4 lg:py-3 text-sm font-medium text-[var(--accent)] transition-colors hover:brightness-95"
+            className="flex-shrink-0 flex items-center justify-center rounded-xl bg-[var(--accent)] p-2.5 text-[var(--primary-foreground)] shadow-[var(--shadow-glow)] transition-all hover:brightness-110 lg:mb-4 lg:w-full lg:justify-start lg:gap-3 lg:px-4 lg:py-3"
+            title="Quay lại"
           >
-            <List className="h-4 w-4 lg:h-5 lg:w-5" />
-            Bài đăng của tôi
+            <ArrowLeft className="h-5 w-5" />
+            <span className="hidden text-sm font-medium lg:inline">Quay lại</span>
           </Link>
-          <button
-            onClick={() => setActiveTab("personal")}
+          <div className="flex flex-1 overflow-x-auto gap-2 no-scrollbar lg:block lg:space-y-1 lg:overflow-visible">
+            <button
+              onClick={(e) => handleTabClick("personal", e)}
             className={`flex-shrink-0 flex items-center gap-2 rounded-xl px-3 py-2.5 lg:w-full lg:gap-3 lg:px-4 lg:py-3 text-sm font-medium transition-all ${
               activeTab === "personal"
                 ? "bg-[var(--accent)] text-[var(--primary-foreground)] shadow-[var(--shadow-glow)]"
@@ -211,7 +203,7 @@ export default function ProfileSettingsPage() {
             Thông tin cá nhân
           </button>
           <button
-            onClick={() => setActiveTab("security")}
+            onClick={(e) => handleTabClick("security", e)}
             className={`flex-shrink-0 flex items-center gap-2 rounded-xl px-3 py-2.5 lg:w-full lg:gap-3 lg:px-4 lg:py-3 text-sm font-medium transition-all ${
               activeTab === "security"
                 ? "bg-[var(--accent)] text-[var(--primary-foreground)] shadow-[var(--shadow-glow)]"
@@ -219,19 +211,20 @@ export default function ProfileSettingsPage() {
             }`}
           >
             <Lock className="h-4 w-4 lg:h-5 lg:w-5" />
-            Bảo mật và mật khẩu
+            Đổi mật khẩu
           </button>
           <button
-            onClick={() => setActiveTab("notifications")}
+            onClick={(e) => handleTabClick("notifications", e)}
             className={`flex-shrink-0 flex items-center gap-2 rounded-xl px-3 py-2.5 lg:w-full lg:gap-3 lg:px-4 lg:py-3 text-sm font-medium transition-all ${
               activeTab === "notifications"
                 ? "bg-[var(--accent)] text-[var(--primary-foreground)] shadow-[var(--shadow-glow)]"
                 : "text-[var(--muted-foreground)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
             }`}
           >
-            <Bell className="h-4 w-4 lg:h-5 lg:w-5" />
-            Cài đặt thông báo
-          </button>
+              <Bell className="h-4 w-4 lg:h-5 lg:w-5" />
+              Cài đặt thông báo
+            </button>
+          </div>
         </aside>
 
         <div className="glass-panel min-h-[600px] rounded-2xl p-4 sm:p-6 lg:p-8">
@@ -246,205 +239,189 @@ export default function ProfileSettingsPage() {
                     Cập nhật ảnh đại diện và thông tin cơ bản.
                   </p>
                 </div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-[var(--success-border)] bg-[var(--success-soft)] px-3 py-1.5 text-xs font-medium text-[var(--success-foreground)]">
-                  <ShieldCheck className="h-4 w-4" />
-                  Đã xác thực
-                </div>
+
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
-                <div className="group relative shrink-0">
-                  <div className="theme-avatar-ring flex h-20 w-20 sm:h-24 sm:w-24 items-center justify-center overflow-hidden rounded-full border-2 text-2xl sm:text-3xl font-bold text-[var(--muted-foreground)]">
-                    {user.avatarUrl ? (
-                      <img
-                        src={user.avatarUrl}
-                        alt="Avatar"
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      (user.fullName || user.name || "U").charAt(0).toUpperCase()
+              <form className="space-y-6" onSubmit={handleProfileSubmit}>
+                {/* Khối Header: Avatar + Form Cơ bản */}
+                <div className="flex flex-col sm:flex-row items-center sm:items-center gap-8 sm:gap-10 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 sm:p-8 shadow-sm">
+                  {/* Left: Avatar */}
+                  <div className="relative shrink-0" ref={avatarMenuRef}>
+                    <button
+                      type="button"
+                      onClick={() => setIsAvatarMenuOpen(!isAvatarMenuOpen)}
+                      className="group relative flex h-28 w-28 sm:h-32 sm:w-32 items-center justify-center overflow-hidden rounded-full border-4 border-[var(--surface-muted)] text-3xl sm:text-4xl font-bold text-[var(--muted-foreground)] focus:outline-none focus:ring-4 focus:ring-[var(--accent-soft)] shadow-md transition-all hover:border-[var(--accent-soft)] hover:scale-[1.02]"
+                    >
+                      {user.avatarUrl ? (
+                        <img
+                          src={user.avatarUrl}
+                          alt="Avatar"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        (user.fullName || user.name || "U").charAt(0).toUpperCase()
+                      )}
+                      <div className="theme-overlay-dim absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100 bg-black/40 backdrop-blur-[2px]">
+                        <Camera className="h-8 w-8 text-white drop-shadow-md" />
+                      </div>
+                    </button>
+                    
+                    {isAvatarMenuOpen && (
+                      <div className="absolute left-1/2 mt-3 w-48 -translate-x-1/2 sm:left-0 sm:translate-x-0 rounded-xl border border-[var(--border)] bg-[var(--popover)] p-1.5 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-200">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsAvatarMenuOpen(false);
+                            setShowAvatarModal(true);
+                          }}
+                          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface-muted)]"
+                        >
+                          <ImageIcon className="h-4.5 w-4.5 text-[var(--muted-foreground)]" />
+                          Xem ảnh
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface-muted)]"
+                        >
+                          <Camera className="h-4.5 w-4.5 text-[var(--muted-foreground)]" />
+                          Thay đổi ảnh
+                        </button>
+                      </div>
+                    )}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/jpg"
+                      className="hidden"
+                      onChange={handleAvatarFileChange}
+                    />
+                    {isUploadingAvatar && (
+                      <p className="absolute -bottom-8 left-1/2 w-max -translate-x-1/2 text-xs font-medium text-[var(--accent)] animate-pulse">
+                        Đang tải lên...
+                      </p>
                     )}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploadingAvatar || isRemovingAvatar}
-                    className="theme-overlay-dim absolute inset-0 flex items-center justify-center rounded-full opacity-0 transition-opacity group-hover:opacity-100 disabled:cursor-not-allowed"
-                  >
-                    <Camera className="h-5 w-5 sm:h-6 sm:w-6 text-[var(--foreground)]" />
-                  </button>
-                </div>
 
-                <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/jpg"
-                    className="hidden"
-                    onChange={handleAvatarFileChange}
-                  />
-                  <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={isUploadingAvatar || isRemovingAvatar}
-                      className="theme-surface-soft rounded-lg border px-4 py-2 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-70"
-                    >
-                      {isUploadingAvatar ? "Đang tải lên..." : "Thay đổi ảnh"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleRemoveAvatar}
-                      disabled={isUploadingAvatar || isRemovingAvatar}
-                      className="rounded-lg px-4 py-2 text-sm font-medium text-[var(--muted-foreground)] transition-colors hover:text-[var(--danger)] disabled:cursor-not-allowed disabled:opacity-70"
-                    >
-                      {isRemovingAvatar ? "Đang xóa..." : "Xóa"}
-                    </button>
-                  </div>
-                  <p className="mt-2 text-xs text-[var(--muted-foreground)]">
-                    Định dạng JPG, PNG hoặc WEBP. Tối đa 5MB.
-                  </p>
-                  {avatarError ? (
-                    <p className="mt-2 text-xs text-[var(--danger-foreground)]">
-                      {avatarError}
-                    </p>
-                  ) : null}
-                  {avatarSuccess ? (
-                    <p className="mt-2 text-xs text-[var(--success-foreground)]">
-                      {avatarSuccess}
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-
-              <form className="space-y-5" onSubmit={handleProfileSubmit}>
-                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <label className="theme-input-label text-sm font-medium">
-                      Họ và tên
-                    </label>
-                    <div className="relative">
-                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                        <UserIcon className="h-5 w-5 text-[var(--muted-foreground)]" />
+                  {/* Right: Core Fields */}
+                  <div className="flex-1 w-full space-y-5">
+                    <div className="space-y-2">
+                      <label className="theme-input-label text-sm font-medium text-[var(--foreground)]">
+                        Họ và tên
+                      </label>
+                      <div className="relative">
+                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                          <UserIcon className="h-5 w-5 text-[var(--muted-foreground)]" />
+                        </div>
+                        <input
+                          type="text"
+                          value={formData.fullName}
+                          onChange={(event) =>
+                            setFormData({
+                              ...formData,
+                              fullName: event.target.value,
+                            })
+                          }
+                          className="input-dark w-full pl-10"
+                          placeholder="Nhập họ và tên"
+                        />
                       </div>
-                      <input
-                        type="text"
-                        value={formData.fullName}
-                        onChange={(event) =>
-                          setFormData({
-                            ...formData,
-                            fullName: event.target.value,
-                          })
-                        }
-                        className="input-dark w-full pl-10"
-                        placeholder="Nhập họ và tên"
-                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <label className="theme-input-label text-sm font-medium text-[var(--foreground)]">
+                          Email liên hệ
+                        </label>
+                        <div className="relative">
+                          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                            <Mail className="h-5 w-5 text-[var(--muted-foreground)]" />
+                          </div>
+                          <input
+                            type="email"
+                            value={formData.email}
+                            onChange={(event) =>
+                              setFormData({
+                                ...formData,
+                                email: event.target.value,
+                              })
+                            }
+                            className="input-dark w-full pl-10"
+                            placeholder="example@email.com"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="theme-input-label text-sm font-medium text-[var(--foreground)]">
+                          Số điện thoại
+                        </label>
+                        <div className="relative">
+                          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                            <Phone className="h-5 w-5 text-[var(--muted-foreground)]" />
+                          </div>
+                          <input
+                            type="tel"
+                            value={formData.phone}
+                            onChange={(event) =>
+                              setFormData({
+                                ...formData,
+                                phone: event.target.value,
+                              })
+                            }
+                            className="input-dark w-full pl-10"
+                            placeholder="+84 987 654 321"
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
+                </div>
 
+                {/* Khối Additional Information */}
+                <div className="space-y-5 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 sm:p-8 shadow-sm mt-6">
+                  <h3 className="text-lg font-semibold text-[var(--foreground)] border-b border-[var(--border)] pb-4 mb-2">
+                    Thông tin bổ sung
+                  </h3>
+                  
                   <div className="space-y-2">
                     <label className="theme-input-label text-sm font-medium">
-                      Vai trò
+                      Địa chỉ
                     </label>
                     <input
                       type="text"
-                      value={user.role === "ADMIN" ? "Quản trị viên" : "Người dùng"}
-                      disabled
-                      className="input-dark w-full cursor-not-allowed border-transparent bg-[var(--surface-muted)] text-[var(--muted-foreground)]"
+                      value={formData.address}
+                      onChange={(event) =>
+                        setFormData({
+                          ...formData,
+                          address: event.target.value,
+                        })
+                      }
+                      className="input-dark w-full"
+                      placeholder="Nhập địa chỉ của bạn"
                     />
                   </div>
 
                   <div className="space-y-2">
                     <label className="theme-input-label text-sm font-medium">
-                      Email liên hệ
+                      Giới thiệu bản thân (Bio)
                     </label>
-                    <div className="relative">
-                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                        <Mail className="h-5 w-5 text-[var(--muted-foreground)]" />
-                      </div>
-                      <input
-                        type="email"
-                        value={formData.email}
-                        onChange={(event) =>
-                          setFormData({
-                            ...formData,
-                            email: event.target.value,
-                          })
-                        }
-                        className="input-dark w-full pl-10"
-                        placeholder="example@email.com"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="theme-input-label text-sm font-medium">
-                      Số điện thoại
-                    </label>
-                    <div className="relative">
-                      <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                        <Phone className="h-5 w-5 text-[var(--muted-foreground)]" />
-                      </div>
-                      <input
-                        type="tel"
-                        value={formData.phone}
-                        onChange={(event) =>
-                          setFormData({
-                            ...formData,
-                            phone: event.target.value,
-                          })
-                        }
-                        className="input-dark w-full pl-10"
-                        placeholder="+84 987 654 321"
-                      />
-                    </div>
+                    <textarea
+                      value={formData.bio}
+                      onChange={(event) =>
+                        setFormData({
+                          ...formData,
+                          bio: event.target.value,
+                        })
+                      }
+                      className="input-dark w-full resize-none"
+                      placeholder="Viết một chút về bản thân bạn..."
+                    />
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="theme-input-label text-sm font-medium">
-                    Địa chỉ
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.address}
-                    onChange={(event) =>
-                      setFormData({
-                        ...formData,
-                        address: event.target.value,
-                      })
-                    }
-                    className="input-dark w-full cursor-not-allowed opacity-70"
-                    placeholder="Chưa có trường lưu địa chỉ trong backend"
-                    disabled
-                  />
-                </div>
 
-                <div className="space-y-2">
-                  <label className="theme-input-label text-sm font-medium">
-                    Giới thiệu bản thân (Bio)
-                  </label>
-                  <textarea
-                    rows={4}
-                    className="input-dark w-full cursor-not-allowed opacity-70"
-                    placeholder="Chưa có trường lưu bio trong backend"
-                    disabled
-                  />
-                </div>
 
-                {profileError ? (
-                  <p className="text-sm text-[var(--danger-foreground)]">
-                    {profileError}
-                  </p>
-                ) : null}
-                {profileSuccess ? (
-                  <p className="text-sm text-[var(--success-foreground)]">
-                    {profileSuccess}
-                  </p>
-                ) : null}
-                <p className="text-xs text-[var(--muted-foreground)]">
-                  Hiện backend chỉ lưu được họ tên, email, số điện thoại và avatar.
-                </p>
 
                 <div className="mt-6 flex justify-end gap-3 border-t border-[var(--border)] pt-4">
                   <button
@@ -454,7 +431,8 @@ export default function ProfileSettingsPage() {
                         fullName: user.fullName || "",
                         email: user.email || "",
                         phone: user.phone || "",
-                        address: "",
+                        address: (user as any).address || "",
+                        bio: (user as any).bio || "",
                       })
                     }
                     className="theme-button-secondary mt-4 rounded-xl px-5 py-2.5 font-medium transition-colors"
@@ -538,16 +516,7 @@ export default function ProfileSettingsPage() {
                     }
                   />
                 </div>
-                {passwordError ? (
-                  <p className="text-sm text-[var(--danger-foreground)]">
-                    {passwordError}
-                  </p>
-                ) : null}
-                {passwordSuccess ? (
-                  <p className="text-sm text-[var(--success-foreground)]">
-                    {passwordSuccess}
-                  </p>
-                ) : null}
+
                 <div className="pt-2">
                   <button
                     type="submit"
@@ -614,6 +583,28 @@ export default function ProfileSettingsPage() {
           )}
         </div>
       </div>
+
+      {showAvatarModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setShowAvatarModal(false)}>
+          <button
+            className="absolute top-4 right-4 text-white hover:opacity-70 transition-opacity"
+            onClick={() => setShowAvatarModal(false)}
+          >
+            <X className="h-8 w-8" />
+          </button>
+          <div className="relative max-w-2xl max-h-[80vh] w-full flex items-center justify-center" onClick={e => e.stopPropagation()}>
+             {user?.avatarUrl ? (
+                <img src={user.avatarUrl} alt="Avatar" className="w-auto max-h-[80vh] object-contain rounded-lg shadow-2xl" />
+             ) : (
+                <div className="flex h-64 w-64 items-center justify-center rounded-full bg-[var(--surface-muted)] text-7xl font-bold text-[var(--muted-foreground)] shadow-2xl">
+                   {(user?.fullName || user?.name || "U").charAt(0).toUpperCase()}
+                </div>
+             )}
+          </div>
+        </div>
+      )}
+
+
     </div>
   );
 }
