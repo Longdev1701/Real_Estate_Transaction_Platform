@@ -5,10 +5,12 @@ const SMTP_PORT = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587;
 const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASS = process.env.SMTP_PASS;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
+const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "no-reply@trustestate.com";
 
 let transporter: nodemailer.Transporter | null = null;
 
-if (!RESEND_API_KEY && SMTP_HOST && SMTP_USER && SMTP_PASS) {
+if (!BREVO_API_KEY && !RESEND_API_KEY && SMTP_HOST && SMTP_USER && SMTP_PASS) {
   transporter = nodemailer.createTransport({
     host: SMTP_HOST,
     port: SMTP_PORT,
@@ -23,14 +25,38 @@ if (!RESEND_API_KEY && SMTP_HOST && SMTP_USER && SMTP_PASS) {
   });
 }
 
-export const isEmailConfigured = Boolean(RESEND_API_KEY || (SMTP_HOST && SMTP_USER && SMTP_PASS));
+export const isEmailConfigured = Boolean(
+  BREVO_API_KEY || RESEND_API_KEY || (SMTP_HOST && SMTP_USER && SMTP_PASS)
+);
+
+const sendViaBrevo = async (to: string, subject: string, html: string, fromEmail: string) => {
+  const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "api-key": BREVO_API_KEY || "",
+    },
+    body: JSON.stringify({
+      sender: { name: "TrustEstate Support", email: fromEmail },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(JSON.stringify(errorData));
+  }
+  console.log(`[Brevo API] Đã gửi email thành công tới: ${to}`);
+};
 
 const sendViaResend = async (to: string, subject: string, html: string, from: string) => {
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${RESEND_API_KEY}`,
+      "Authorization": `Bearer ${RESEND_API_KEY}`,
     },
     body: JSON.stringify({
       from,
@@ -49,7 +75,7 @@ const sendViaResend = async (to: string, subject: string, html: string, from: st
 
 export const sendResetPasswordEmail = async (email: string, fullName: string, code: string) => {
   const mailOptions = {
-    from: `"TrustEstate Support" <${SMTP_USER || "no-reply@trustestate.com"}>`,
+    from: `"TrustEstate Support" <${BREVO_SENDER_EMAIL || SMTP_USER || "no-reply@trustestate.com"}>`,
     to: email,
     subject: "Mã xác thực đặt lại mật khẩu - TrustEstate",
     html: `
@@ -68,7 +94,14 @@ export const sendResetPasswordEmail = async (email: string, fullName: string, co
     `,
   };
 
-  if (RESEND_API_KEY) {
+  if (BREVO_API_KEY) {
+    try {
+      await sendViaBrevo(email, mailOptions.subject, mailOptions.html, BREVO_SENDER_EMAIL);
+    } catch (error) {
+      console.error("[Brevo API Error] Không thể gửi email đặt lại mật khẩu:", error);
+      throw new Error("Không thể gửi email xác thực qua Brevo API.");
+    }
+  } else if (RESEND_API_KEY) {
     try {
       const from = process.env.EMAIL_FROM || "TrustEstate <onboarding@resend.dev>";
       await sendViaResend(email, mailOptions.subject, mailOptions.html, from);
@@ -95,7 +128,7 @@ export const sendResetPasswordEmail = async (email: string, fullName: string, co
 
 export const sendRegisterVerificationEmail = async (email: string, fullName: string, code: string) => {
   const mailOptions = {
-    from: `"TrustEstate Support" <${SMTP_USER || "no-reply@trustestate.com"}>`,
+    from: `"TrustEstate Support" <${BREVO_SENDER_EMAIL || SMTP_USER || "no-reply@trustestate.com"}>`,
     to: email,
     subject: "Xác thực đăng ký tài khoản - TrustEstate",
     html: `
@@ -114,7 +147,14 @@ export const sendRegisterVerificationEmail = async (email: string, fullName: str
     `,
   };
 
-  if (RESEND_API_KEY) {
+  if (BREVO_API_KEY) {
+    try {
+      await sendViaBrevo(email, mailOptions.subject, mailOptions.html, BREVO_SENDER_EMAIL);
+    } catch (error) {
+      console.error("[Brevo API Error] Không thể gửi email xác thực đăng ký:", error);
+      throw new Error("Không thể gửi email xác thực qua Brevo API.");
+    }
+  } else if (RESEND_API_KEY) {
     try {
       const from = process.env.EMAIL_FROM || "TrustEstate <onboarding@resend.dev>";
       await sendViaResend(email, mailOptions.subject, mailOptions.html, from);
