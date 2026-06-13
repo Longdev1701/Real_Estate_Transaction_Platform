@@ -58,8 +58,3 @@ export const verifyResetCodeSchema = z.object({
   code: z.string().length(6, "Verification code must be 6 digits."),
 });
 
-export const confirmRegisterSchema = z.object({
-  email: z.string().email("Invalid email format."),
-  code: z.string().length(6, "Verification code must be 6 digits."),
-});
-

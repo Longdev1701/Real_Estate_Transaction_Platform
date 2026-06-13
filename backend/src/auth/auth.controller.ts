@@ -7,17 +7,16 @@ import { sendSuccess } from "../utils/response.js";
 import { createSystemLog } from "../utils/system-log.helper.js";
 import {
   changePassword,
+  forgotPassword,
   login,
   logout,
-  removeAvatar,
   refreshAuthToken,
   register,
-  updateProfile,
-  updateAvatar,
-  forgotPassword,
+  removeAvatar,
   resetPassword,
+  updateAvatar,
+  updateProfile,
   verifyResetCode,
-  confirmRegister,
 } from "./auth.service.js";
 
 const toClientAuthResponse = (result: {
@@ -29,6 +28,8 @@ const toClientAuthResponse = (result: {
     role: string;
     status: string;
     avatarUrl: string | null;
+    address?: string | null;
+    bio?: string | null;
   };
   tokens: {
     accessToken: string;
@@ -41,15 +42,6 @@ const toClientAuthResponse = (result: {
 export const registerController: RequestHandler = async (req, res, next) => {
   try {
     const result = await register(req.body);
-    sendSuccess(res, result, "Register verification code sent.", 200);
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const confirmRegisterController: RequestHandler = async (req, res, next) => {
-  try {
-    const result = await confirmRegister(req.body);
     setRefreshTokenCookie(res, result.refreshToken);
 
     await createSystemLog({
@@ -58,7 +50,7 @@ export const confirmRegisterController: RequestHandler = async (req, res, next) 
       action: "REGISTER",
       targetType: "User",
       targetId: result.user.id,
-      description: `Tài khoản ${result.user.email} đã đăng ký và xác thực thành công.`,
+      description: `Tài khoản ${result.user.email} đã đăng ký thành công.`,
       severity: "INFO",
       status: "SUCCESS",
       request: req,
@@ -68,7 +60,7 @@ export const confirmRegisterController: RequestHandler = async (req, res, next) 
       },
     });
 
-    sendSuccess(res, toClientAuthResponse(result), "Register verified successfully.", 201);
+    sendSuccess(res, toClientAuthResponse(result), "Register successful.", 201);
   } catch (error) {
     next(error);
   }
@@ -359,4 +351,3 @@ export const verifyResetCodeController: RequestHandler = async (req, res, next) 
     next(error);
   }
 };
-

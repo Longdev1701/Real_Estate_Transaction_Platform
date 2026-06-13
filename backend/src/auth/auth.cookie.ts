@@ -9,11 +9,12 @@ import {
 
 const REFRESH_TOKEN_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const REFRESH_TOKEN_COOKIE_PATH = "/api/auth";
+const COOKIE_SECURE = IS_PRODUCTION || COOKIE_SAME_SITE === "none";
 
 const refreshTokenCookieOptions: CookieOptions = {
   httpOnly: true,
-  secure: IS_PRODUCTION,
-  sameSite: IS_PRODUCTION ? "none" : "lax",
+  secure: COOKIE_SECURE,
+  sameSite: COOKIE_SAME_SITE,
   path: REFRESH_TOKEN_COOKIE_PATH,
   maxAge: REFRESH_TOKEN_MAX_AGE_MS,
   ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}),
