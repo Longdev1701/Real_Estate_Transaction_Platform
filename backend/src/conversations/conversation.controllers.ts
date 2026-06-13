@@ -4,6 +4,7 @@ import { prisma } from "../prisma/prisma.service.js";
 import { sendSuccess } from "../utils/response.js";
 import { AppError } from "../middlewares/error.middleware.js";
 import { uploadChatImage as uploadChatImageService } from "../services/upload.service.js";
+import { emitToUser } from "../utils/realtime.helper.js";
 
 const createConversationSchema = z.object({
   postId: z.string(),
@@ -55,6 +56,9 @@ export const createOrGetConversation = async (req: Request, res: Response, next:
             post: { select: { id: true, title: true, price: true, area: true, propertyType: true, city: true, images: { take: 1, select: { imageUrl: true } } } }
           }
         });
+
+        // Notify the seller that a new conversation has been initiated
+        emitToUser(sellerId, "conversation_created", { conversation });
       } catch (error: any) {
         // Handle race condition: if another request created the same conversation
         if (error?.code === "P2002") {
