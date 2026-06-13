@@ -38,7 +38,16 @@ export const useSocket = () => {
       });
 
       socketInstance.on("connect_error", (error) => {
-        console.error("Socket connection error:", error);
+        if (error.message.includes("Authentication error") || error.message.includes("Invalid token")) {
+          socketInstance.disconnect();
+          socketRef.current = null;
+          setSocket(null);
+          setIsConnected(false);
+          useAuthStore.getState().logout();
+          return;
+        }
+
+        console.warn("Socket connection error:", error.message);
       });
 
       socketRef.current = socketInstance;
