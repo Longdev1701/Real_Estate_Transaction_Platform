@@ -138,7 +138,13 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
     const handleReceiveMessage = (message: any) => {
       setConversations((prev) => {
         const index = prev.findIndex((c) => c.id === message.conversationId);
-        if (index === -1) return prev; // Optionally fetch if not found
+        if (index === -1) {
+          // New conversation created, fetch from backend to update sidebar list
+          setTimeout(() => {
+            fetchConversations(1, false);
+          }, 0);
+          return prev;
+        }
 
         const conversation = prev[index];
         const isIncoming = message.senderId !== user?.id;
@@ -231,6 +237,12 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
     const conversationId = pathname.split("/messages/")[1];
     if (!conversationId) return;
 
+    // If the conversation is not in the list yet (e.g. just created), refresh the list
+    const hasConversation = conversations.some((c) => c.id === conversationId);
+    if (!hasConversation && !loading) {
+      fetchConversations(1, false);
+    }
+
     setConversations((prev) =>
       prev.map((conversation) =>
         conversation.id === conversationId && conversation._count.messages > 0
@@ -238,7 +250,7 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
           : conversation,
       ),
     );
-  }, [pathname]);
+  }, [pathname, conversations, loading]);
 
   const filteredConversations = useMemo(() => {
     if (!user) return [];
