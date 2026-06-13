@@ -87,6 +87,8 @@ export type AdminUsersFilter = {
   keyword: string;
   role: "" | AdminUserRole;
   status: "" | AdminUserStatus;
+  dateFrom: string;
+  dateTo: string;
 };
 
 export type AdminUsersData = {
@@ -289,6 +291,14 @@ export const getAdminUsers = async (filter: AdminUsersFilter) => {
 
   if (filter.status) {
     params.set("status", filter.status);
+  }
+
+  if (filter.dateFrom) {
+    params.set("dateFrom", filter.dateFrom);
+  }
+
+  if (filter.dateTo) {
+    params.set("dateTo", filter.dateTo);
   }
 
   const response = await api.get<{ data: AdminUsersData }>(`/admin/users?${params.toString()}`);

@@ -367,6 +367,29 @@ export type AdminUserListFilter = {
   keyword?: string;
   role?: UserRole;
   status?: UserStatus;
+  dateFrom?: string;
+  dateTo?: string;
+};
+
+const buildDateRange = (
+  dateFrom?: string,
+  dateTo?: string,
+): Prisma.DateTimeFilter | undefined => {
+  if (!dateFrom && !dateTo) {
+    return undefined;
+  }
+
+  if (dateFrom && dateTo && dateFrom >= dateTo) {
+    return {
+      gte: new Date(`${dateFrom}T00:00:00.000+07:00`),
+      lte: new Date(`${dateFrom}T00:00:00.000+07:00`),
+    };
+  }
+
+  return {
+    ...(dateFrom ? { gte: new Date(`${dateFrom}T00:00:00.000+07:00`) } : {}),
+    ...(dateTo ? { lte: new Date(`${dateTo}T23:59:59.999+07:00`) } : {}),
+  };
 };
 
 const buildAdminUserStats = async () => {
@@ -423,6 +446,8 @@ export const getAdminUsers = async ({
   keyword,
   role,
   status,
+  dateFrom,
+  dateTo,
 }: AdminUserListFilter) => {
   const where: Prisma.UserWhereInput = {};
 
@@ -455,6 +480,11 @@ export const getAdminUsers = async ({
 
   if (status) {
     where.status = status;
+  }
+
+  const createdAt = buildDateRange(dateFrom, dateTo);
+  if (createdAt) {
+    where.createdAt = createdAt;
   }
 
   const skip = (page - 1) * limit;

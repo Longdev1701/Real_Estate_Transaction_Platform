@@ -175,6 +175,10 @@ export const getAdminUsersController: RequestHandler = async (
     const limit = toPositiveNumber(req.query.limit, 10, { max: 50 });
     const keyword =
       typeof req.query.keyword === "string" ? req.query.keyword.trim() : "";
+    const dateFrom =
+      typeof req.query.dateFrom === "string" ? req.query.dateFrom.trim() : "";
+    const dateTo =
+      typeof req.query.dateTo === "string" ? req.query.dateTo.trim() : "";
 
     const result = await getAdminUsers({
       page,
@@ -182,6 +186,8 @@ export const getAdminUsersController: RequestHandler = async (
       keyword: keyword || undefined,
       role: parseUserRole(req.query.role),
       status: parseUserStatus(req.query.status),
+      dateFrom: dateFrom || undefined,
+      dateTo: dateTo || undefined,
     });
 
     sendSuccess(res, result);

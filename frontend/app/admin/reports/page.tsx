@@ -112,11 +112,14 @@ type ReportTab = "ALL" | AdminReportStatus;
 
 export default function AdminReportsPage() {
   const queryClient = useQueryClient();
-  const [filter, setFilter] = useState<AdminReportsFilter>({
+  const defaultFilter: AdminReportsFilter = {
     page: 1,
     limit: 8,
     keyword: "",
     status: "",
+  };
+  const [filter, setFilter] = useState<AdminReportsFilter>({
+    ...defaultFilter,
   });
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -162,6 +165,7 @@ export default function AdminReportsPage() {
   const data = reportsQuery.data;
   const stats = reportStatsQuery.data;
   const isLoading = reportsQuery.isLoading || reportStatsQuery.isLoading;
+  const isRefreshing = reportsQuery.isFetching || reportStatsQuery.isFetching;
   const error = mutationError || reportsQuery.error || reportStatsQuery.error;
   const selectedReport =
     (data?.items ?? []).find((report) => report.id === selectedReportId) ??
@@ -187,6 +191,12 @@ export default function AdminReportsPage() {
       page: 1,
       status: tab === "ALL" ? "" : tab,
     }));
+  };
+
+  const resetFilters = () => {
+    setKeywordInput("");
+    setActiveTab("ALL");
+    setFilter(defaultFilter);
   };
 
   const openDetail = (reportId: string) => {
@@ -358,13 +368,10 @@ export default function AdminReportsPage() {
 
             <button
               className="theme-admin-toolbar-button inline-flex h-10 items-center justify-center gap-2 rounded-xl px-3 text-sm font-medium transition disabled:opacity-60"
-              disabled={isLoading}
-              onClick={() => {
-                reportsQuery.reload();
-                reportStatsQuery.reload();
-              }}
+              disabled={isRefreshing}
+              onClick={resetFilters}
             >
-              <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
               Làm mới
             </button>
           </div>

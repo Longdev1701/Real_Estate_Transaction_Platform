@@ -38,6 +38,13 @@ const buildDateRange = (dateFrom?: string, dateTo?: string) => {
     return undefined;
   }
 
+  if (dateFrom && dateTo && dateFrom >= dateTo) {
+    return {
+      gte: new Date(`${dateFrom}T00:00:00.000+07:00`),
+      lte: new Date(`${dateFrom}T00:00:00.000+07:00`),
+    };
+  }
+
   return {
     ...(dateFrom ? { gte: new Date(`${dateFrom}T00:00:00.000+07:00`) } : {}),
     ...(dateTo ? { lte: new Date(`${dateTo}T23:59:59.999+07:00`) } : {}),

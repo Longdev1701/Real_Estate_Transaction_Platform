@@ -93,6 +93,20 @@ const getTodayInput = () => {
   return `${year}-${month}-${day}`;
 };
 
+const shiftDate = (value: string, days: number) => {
+  if (!value) {
+    return "";
+  }
+
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) {
+    return "";
+  }
+
+  const shifted = new Date(Date.UTC(year, month - 1, day + days));
+  return shifted.toISOString().slice(0, 10);
+};
+
 const getInitial = (name: string) => name.trim().charAt(0).toUpperCase() || "A";
 
 const readMetadataValue = (metadata: AdminSystemLog["metadata"], key: string) => {
@@ -214,7 +228,8 @@ const buildViewLog = (log: AdminSystemLog): ViewLog => ({
 
 export default function AdminLogsPage() {
   const todayInput = getTodayInput();
-  const [filter, setFilter] = useState<AdminSystemLogsFilter>({
+  const defaultDateFrom = shiftDate(todayInput, -6);
+  const defaultFilter: AdminSystemLogsFilter = {
     page: 1,
     limit: 10,
     keyword: "",
@@ -222,9 +237,10 @@ export default function AdminLogsPage() {
     module: "",
     severity: "",
     status: "",
-    dateFrom: todayInput,
+    dateFrom: defaultDateFrom,
     dateTo: todayInput,
-  });
+  };
+  const [filter, setFilter] = useState<AdminSystemLogsFilter>(defaultFilter);
   const [keywordInput, setKeywordInput] = useState("");
   const [category, setCategory] = useState<LogCategory>("ALL");
   const [selectedLog, setSelectedLog] = useState<ViewLog | null>(null);
@@ -289,6 +305,7 @@ export default function AdminLogsPage() {
   const data = logsQuery.data;
   const statsData = logStatsQuery.data;
   const isLoading = logsQuery.isLoading || logStatsQuery.isLoading;
+  const isRefreshing = logsQuery.isFetching || logStatsQuery.isFetching;
   const error = logsQuery.error || logStatsQuery.error;
 
   const mappedLogs = useMemo(() => (data?.items ?? []).map(buildViewLog), [data]);
@@ -331,18 +348,40 @@ export default function AdminLogsPage() {
   const resetFilters = () => {
     setKeywordInput("");
     setCategory("ALL");
-    setFilter({
-      page: 1,
-      limit: 10,
-      keyword: "",
-      category: "ALL",
-      module: "",
-      severity: "",
-      status: "",
-      dateFrom: todayInput,
-      dateTo: todayInput,
-    });
+    setFilter(defaultFilter);
     setSelectedLog(null);
+  };
+
+  const handleDateFromChange = (value: string) => {
+    setFilter((current) => {
+      const nextFilter: AdminSystemLogsFilter = {
+        ...current,
+        page: 1,
+        dateFrom: value,
+      };
+
+      if (value && current.dateTo && value >= current.dateTo) {
+        nextFilter.dateTo = "";
+      }
+
+      return nextFilter;
+    });
+  };
+
+  const handleDateToChange = (value: string) => {
+    setFilter((current) => {
+      const nextFilter: AdminSystemLogsFilter = {
+        ...current,
+        page: 1,
+        dateTo: value,
+      };
+
+      if (value && current.dateFrom && value <= current.dateFrom) {
+        nextFilter.dateFrom = "";
+      }
+
+      return nextFilter;
+    });
   };
 
   return (
@@ -440,40 +479,26 @@ export default function AdminLogsPage() {
               ]}
             />
 
-            <input
-              type="date"
-              className="theme-admin-select h-10 rounded-xl px-3 text-sm outline-none [color-scheme:inherit]"
+            <DateInput
+              ariaLabel="Log date from"
               value={filter.dateFrom}
-              onChange={(event) =>
-                setFilter((current) => ({
-                  ...current,
-                  page: 1,
-                  dateFrom: event.target.value,
-                }))
-              }
+              max={filter.dateTo ? shiftDate(filter.dateTo, -1) : undefined}
+              onChange={handleDateFromChange}
             />
 
-            <input
-              type="date"
-              className="theme-admin-select h-10 rounded-xl px-3 text-sm outline-none [color-scheme:inherit]"
+            <DateInput
+              ariaLabel="Log date to"
               value={filter.dateTo}
-              onChange={(event) =>
-                setFilter((current) => ({
-                  ...current,
-                  page: 1,
-                  dateTo: event.target.value,
-                }))
-              }
+              min={filter.dateFrom ? shiftDate(filter.dateFrom, 1) : undefined}
+              onChange={handleDateToChange}
             />
 
             <button
               className="theme-admin-toolbar-button inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-sm font-medium transition"
-              onClick={() => {
-                logsQuery.reload();
-                logStatsQuery.reload();
-              }}
+              disabled={isRefreshing}
+              onClick={resetFilters}
             >
-              <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
               Làm mới
             </button>
           </div>
@@ -724,6 +749,35 @@ function SelectBox({
         </option>
       ))}
     </select>
+  );
+}
+
+function DateInput({
+  value,
+  onChange,
+  ariaLabel,
+  min,
+  max,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  ariaLabel: string;
+  min?: string;
+  max?: string;
+}) {
+  return (
+    <label className="theme-admin-select relative flex h-10 items-center rounded-xl px-3">
+      <input
+        type="date"
+        aria-label={ariaLabel}
+        value={value}
+        min={min}
+        max={max}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-full w-full bg-transparent pr-8 text-sm outline-none [color-scheme:inherit] [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-0 [&::-webkit-calendar-picker-indicator]:h-10 [&::-webkit-calendar-picker-indicator]:w-10 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-0"
+      />
+      <CalendarDays className="pointer-events-none absolute right-3 h-4 w-4 text-[var(--muted-foreground)]" />
+    </label>
   );
 }
 
