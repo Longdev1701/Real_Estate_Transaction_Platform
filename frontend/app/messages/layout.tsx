@@ -139,10 +139,28 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
       setConversations((prev) => {
         const index = prev.findIndex((c) => c.id === message.conversationId);
         if (index === -1) {
-          // New conversation created, fetch from backend to update sidebar list
-          setTimeout(() => {
-            fetchConversations(1, false);
-          }, 0);
+          // Fetch this single new conversation in the background and prepend it
+          api.get(`/conversations/${message.conversationId}/messages?limit=1`)
+            .then(({ data }) => {
+              const newConv = data.data.conversation;
+              const isIncoming = message.senderId !== user?.id;
+              const isActiveConversation = pathname === `/messages/${message.conversationId}`;
+              
+              const conversationItem: ConversationListItem = {
+                ...newConv,
+                messages: [message],
+                _count: {
+                  messages: isActiveConversation ? 0 : isIncoming ? 1 : 0
+                }
+              };
+
+              setConversations((currentList) => {
+                if (currentList.some((c) => c.id === message.conversationId)) return currentList;
+                return [conversationItem, ...currentList];
+              });
+            })
+            .catch(console.error);
+
           return prev;
         }
 
@@ -238,12 +256,23 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
     if (!conversationId) return;
 
     setConversations((prev) => {
-      // If the conversation is not in the list yet (e.g. just created), refresh the list
+      // If the conversation is not in the list yet (e.g. just created), fetch it in the background
       const hasConversation = prev.some((c) => c.id === conversationId);
       if (!hasConversation && !loading) {
-        setTimeout(() => {
-          fetchConversations(1, false);
-        }, 0);
+        api.get(`/conversations/${conversationId}/messages?limit=1`)
+          .then(({ data }) => {
+            const newConv = data.data.conversation;
+            const conversationItem: ConversationListItem = {
+              ...newConv,
+              messages: data.data.messages.slice(-1),
+              _count: { messages: 0 }
+            };
+            setConversations((currentList) => {
+              if (currentList.some((c) => c.id === conversationId)) return currentList;
+              return [conversationItem, ...currentList];
+            });
+          })
+          .catch(console.error);
       }
 
       return prev.map((conversation) =>
