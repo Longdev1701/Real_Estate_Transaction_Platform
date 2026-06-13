@@ -8,7 +8,8 @@ export function Footer() {
   if (
     pathname?.startsWith("/messages") ||
     pathname?.startsWith("/admin") ||
-    pathname?.startsWith("/posts")
+    pathname?.startsWith("/posts") ||
+    pathname?.startsWith("/notifications")
   ) {
     return null;
   }

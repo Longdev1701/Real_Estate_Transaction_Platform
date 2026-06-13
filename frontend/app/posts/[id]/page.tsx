@@ -365,7 +365,7 @@ export default function PostDetailPage() {
   if (isBannedOwnerView) {
     return (
       <div className="container mx-auto space-y-6 px-4 pt-8 pb-20 lg:px-8 lg:py-10">
-        <div className="flex flex-wrap items-center gap-2 text-sm text-[var(--muted-foreground)]">
+        <div className="hidden md:flex flex-wrap items-center gap-2 text-sm text-[var(--muted-foreground)]">
           <Link href="/" className="transition hover:text-[var(--foreground)]">
             Trang chủ
           </Link>
@@ -453,7 +453,7 @@ export default function PostDetailPage() {
 
   return (
     <div className="container mx-auto space-y-5 px-4 pt-5 pb-28 lg:space-y-6 lg:px-8 lg:py-10">
-      <div className="flex flex-wrap items-center gap-2 text-sm leading-6 text-[var(--muted-foreground)]">
+      <div className="hidden md:flex flex-wrap items-center gap-2 text-sm leading-6 text-[var(--muted-foreground)]">
         <Link href="/" className="transition hover:text-[var(--foreground)]">
           Trang chủ
         </Link>
@@ -471,7 +471,7 @@ export default function PostDetailPage() {
         </div>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_360px]">
         <section className="space-y-6 min-w-0">
           <div className="glass-card overflow-hidden p-0">
             <div className={`grid gap-1 overflow-hidden ${images.length === 1 ? 'grid-cols-1' :
@@ -570,7 +570,7 @@ export default function PostDetailPage() {
 
           <div className="glass-card relative p-4 sm:p-5 md:p-7">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-              <div className="min-w-0 flex-1 xl:pr-[23rem]">
+              <div className="min-w-0 flex-1">
                 <div className="mb-3 flex flex-wrap items-center gap-3">
                   <h1 className="break-words text-[2rem] font-bold leading-tight tracking-tight text-[var(--foreground)] sm:text-[2.5rem]">{post.title}</h1>
                 </div>
@@ -593,7 +593,7 @@ export default function PostDetailPage() {
                 </div>
               </div>
 
-              <div className="grid shrink-0 grid-cols-2 gap-2 self-start sm:flex sm:flex-wrap sm:gap-3 lg:absolute lg:right-7 lg:top-7 lg:grid-cols-none lg:justify-end">
+              <div className="hidden lg:flex shrink-0 flex-wrap gap-2 self-start sm:gap-3 lg:justify-end">
                 <button
                   type="button"
                   onClick={handleSaveToggle}
@@ -626,36 +626,84 @@ export default function PostDetailPage() {
             </div>
 
             <div className="mt-6 border-b border-[var(--border)] pb-6">
-              <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-[1.45fr_1fr_1fr_1fr] xl:gap-x-12">
+              <div className="grid gap-4 sm:gap-6 grid-cols-2 md:grid-cols-4 lg:gap-x-8 xl:gap-x-12">
                 <div className="min-w-0 grid content-start gap-1">
-                  <p className="text-3xl font-semibold leading-tight text-[var(--accent)] sm:text-4xl xl:whitespace-nowrap">{formatPrice(post.price)}</p>
-                  <p className="text-sm text-[var(--muted-foreground)]">{post.postType === "SELL" ? "Giá bán" : "Giá thuê"}</p>
+                  <p className="break-words text-2xl font-semibold leading-tight text-[var(--accent)] sm:text-3xl xl:whitespace-nowrap">{formatPrice(post.price)}</p>
+                  <p className="text-xs text-[var(--muted-foreground)] sm:text-sm">{post.postType === "SELL" ? "Giá bán" : "Giá thuê"}</p>
                 </div>
                 <div className="min-w-0 grid content-start gap-1">
-                  <p className="inline-flex items-start gap-2 break-words text-2xl font-semibold leading-tight text-[var(--foreground)]">
-                    <Expand className="mt-1 h-5 w-5 shrink-0 text-[var(--accent)]" />
+                  <p className="inline-flex items-center gap-1.5 break-words text-xl font-semibold leading-tight text-[var(--foreground)] sm:text-2xl">
+                    <Expand className="h-4 w-4 shrink-0 text-[var(--accent)] sm:h-5 sm:w-5" />
                     {formatArea(post.area)}
                   </p>
-                  <p className="text-sm text-[var(--muted-foreground)]">Diện tích</p>
+                  <p className="text-xs text-[var(--muted-foreground)] sm:text-sm">Diện tích</p>
                 </div>
                 <div className="min-w-0 grid content-start gap-1">
-                  <p className="break-words text-2xl font-semibold leading-tight text-[var(--foreground)]">{propertyTypeLabels[post.propertyType]}</p>
-                  <p className="text-sm text-[var(--muted-foreground)]">Loại hình</p>
+                  <p className="break-words text-xl font-semibold leading-tight text-[var(--foreground)] sm:text-2xl">{propertyTypeLabels[post.propertyType]}</p>
+                  <p className="text-xs text-[var(--muted-foreground)] sm:text-sm">Loại hình</p>
                 </div>
                 <div className="min-w-0 grid content-start gap-1">
-                  <p className="break-words text-2xl font-semibold leading-tight text-[var(--foreground)]">{post.city.replace(/^(Tỉnh|Thành phố)\s+/i, "")}</p>
-                  <p className="text-sm text-[var(--muted-foreground)]">Khu vực</p>
+                  <p className="break-words text-xl font-semibold leading-tight text-[var(--foreground)] sm:text-2xl">{post.city.replace(/^(Tỉnh|Thành phố)\s+/i, "")}</p>
+                  <p className="text-xs text-[var(--muted-foreground)] sm:text-sm">Khu vực</p>
                 </div>
               </div>
             </div>
 
-            <div className="mt-6 grid gap-8 2xl:grid-cols-[minmax(0,1fr)_420px]">
+            {/* BẢN SAO: Liên hệ người bán - Hiển thị riêng trên Mobile ngay sau giá bán */}
+            <div className="lg:hidden mt-6">
+              {canManagePost ? (
+                <div className="glass-card relative overflow-hidden border-t-4 border-t-[var(--accent)] p-5">
+                  <div className="pointer-events-none absolute left-0 top-0 h-24 w-full bg-gradient-to-b from-[var(--accent-soft)] to-transparent" />
+                  <h2 className="relative text-lg font-semibold text-[var(--foreground)]">Quản lý bài đăng</h2>
+                  <p className="relative mt-1 text-sm text-[var(--muted-foreground)]">Bạn là người sở hữu bài đăng này. Bạn có quyền chỉnh sửa hoặc xoá.</p>
+                  <div className="mt-4 grid gap-2 sm:grid-cols-2 relative">
+                    <Link href={`/posts/${post.id}/edit`} className="theme-surface-soft inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-medium text-[var(--foreground)] transition hover:bg-[var(--surface-muted)]">
+                      <Pencil className="h-4 w-4" /> Chỉnh sửa
+                    </Link>
+                    <button type="button" onClick={handleDelete} disabled={isDeleting} className="inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--danger-border)] bg-[var(--danger-soft)] px-4 py-2.5 font-medium text-[var(--danger-foreground)] transition hover:brightness-95 disabled:opacity-60">
+                      <Trash2 className="h-4 w-4" /> {isDeleting ? "Đang xoá..." : "Xoá bài"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="glass-card relative overflow-hidden border-t-4 border-t-[var(--accent)] p-5">
+                  <div className="pointer-events-none absolute left-0 top-0 h-24 w-full bg-gradient-to-b from-[var(--accent-soft)] to-transparent" />
+                  <h2 className="relative text-lg font-semibold text-[var(--foreground)]">Thông tin người đăng</h2>
+                  <div className="relative mt-4 flex items-center gap-4">
+                    <Link href={`/profile/posts?authorId=${post.author.id}`} className="relative shrink-0 transition hover:opacity-80 block">
+                      <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-2 border-[var(--accent-border)] bg-[var(--accent-soft)] text-lg font-semibold text-[var(--accent)]">
+                        {post.author.avatarUrl ? (
+                          <img src={post.author.avatarUrl} alt={post.author.fullName} className="h-full w-full object-cover" />
+                        ) : post.author.fullName.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="absolute -bottom-1 -right-1 rounded-full bg-[var(--surface)] p-0.5">
+                        <BadgeCheck className="h-3.5 w-3.5 text-[var(--accent)]" />
+                      </div>
+                    </Link>
+                    <div className="min-w-0">
+                      <Link href={`/profile/posts?authorId=${post.author.id}`} className="line-clamp-1 font-bold text-[var(--foreground)] transition hover:text-[var(--accent)] block">
+                        {post.author.fullName}
+                      </Link>
+                      <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">Đã xác thực</p>
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <button type="button" onClick={handleMessageClick} disabled={isStartingConversation} className="theme-button-primary flex w-full items-center justify-center gap-2 rounded-xl py-2.5 font-semibold transition disabled:opacity-60">
+                      <MessageCircle className="h-4 w-4 text-[var(--primary-foreground)]" /> {isStartingConversation ? "Đang kết nối..." : "Nhắn tin trao đổi"}
+                    </button>
+                    {conversationError && <p className="mt-2 rounded-xl border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-2 text-xs text-[var(--danger-foreground)]">{conversationError}</p>}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_420px]">
               <div>
                 <h2 className="text-2xl font-semibold text-[var(--foreground)]">Mô tả chi tiết</h2>
                 <p className="mt-4 whitespace-pre-line break-words leading-8 text-[var(--secondary-foreground)]">{post.description}</p>
               </div>
 
-              <div className="border-t border-[var(--border)] pt-6 xl:border-l xl:border-t-0 xl:pl-8 xl:pt-0">
+              <div className="border-t border-[var(--border)] pt-6 lg:border-l lg:border-t-0 lg:pl-6 xl:pl-8 lg:pt-0">
                 <h2 className="text-2xl font-semibold text-[var(--foreground)]">Thông tin chi tiết</h2>
                 <dl className="mt-5 grid gap-4 sm:grid-cols-2">
                   {isOwnPost && (
@@ -720,7 +768,7 @@ export default function PostDetailPage() {
           {post.features && post.features.length > 0 && (
             <div className="glass-card p-6">
               <h2 className="text-2xl font-semibold text-[var(--foreground)]">Tiện ích & Đặc trưng</h2>
-              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
                 {post.features.map((feature) => (
                   <div
                     key={feature.id}
@@ -751,21 +799,21 @@ export default function PostDetailPage() {
           <CommentSection postId={post.id} postAuthorId={post.author.id} />
         </section>
 
-        <aside className="space-y-5">
-          <div className="xl:sticky xl:top-24 space-y-5">
+        <aside className="space-y-5 min-w-0">
+          <div className="lg:sticky lg:top-24 space-y-5">
             {canManagePost ? (
-<div className="glass-card relative overflow-hidden border-t-4 border-t-[var(--accent)] p-6">
-  <div className="pointer-events-none absolute left-0 top-0 h-24 w-full bg-gradient-to-b from-[var(--accent-soft)] to-transparent" />
+              <div className="hidden lg:block glass-card relative overflow-hidden border-t-4 border-t-[var(--accent)] p-6">
+                <div className="pointer-events-none absolute left-0 top-0 h-24 w-full bg-gradient-to-b from-[var(--accent-soft)] to-transparent" />
 
-  <h2 className="relative text-xl font-semibold text-[var(--foreground)]">
-    Quản lý bài đăng
-  </h2>
+                <h2 className="relative text-xl font-semibold text-[var(--foreground)]">
+                  Quản lý bài đăng
+                </h2>
 
-  <p className="relative mt-2 text-sm text-[var(--muted-foreground)]">
-    Bạn là người sở hữu bài đăng này. Bạn có quyền chỉnh sửa thông tin hoặc xoá bài viết.
-  </p>
+                <p className="relative mt-2 text-sm text-[var(--muted-foreground)]">
+                  Bạn là người sở hữu bài đăng này. Bạn có quyền chỉnh sửa thông tin hoặc xoá bài viết.
+                </p>
 
-  <div className="mt-6 grid gap-3 sm:grid-cols-2 relative">
+                <div className="mt-6 grid gap-3 sm:grid-cols-2 relative">
                   <Link
                     href={`/posts/${post.id}/edit`}
                     className="theme-surface-soft inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 font-medium text-[var(--foreground)] transition hover:bg-[var(--surface-muted)]"
@@ -785,7 +833,7 @@ export default function PostDetailPage() {
                 </div>
               </div>
             ) : (
-              <div className="glass-card relative overflow-hidden border-t-4 border-t-[var(--accent)] p-5 sm:p-6">
+              <div className="hidden lg:block glass-card relative overflow-hidden border-t-4 border-t-[var(--accent)] p-5 sm:p-6">
                 <div className="pointer-events-none absolute left-0 top-0 h-24 w-full bg-gradient-to-b from-[var(--accent-soft)] to-transparent" />
                 <h2 className="relative text-xl font-semibold text-[var(--foreground)]">Liên hệ người bán</h2>
                 <div className="relative mt-5 flex items-center gap-4">
@@ -848,7 +896,7 @@ export default function PostDetailPage() {
                 </Link>
               </div>
 
-              <div className="space-y-4">
+              <div className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory sm:grid sm:grid-cols-1 sm:overflow-visible sm:pb-0 sm:snap-none scrollbar-hidden -mx-5 px-5 sm:mx-0 sm:px-0">
                 {relatedPosts.length === 0 ? (
                   <div className="flex min-h-[200px] items-center justify-center rounded-2xl border border-dashed border-[var(--border)]">
                     <p className="text-sm text-[var(--muted-foreground)]">Chưa có bài đăng tương tự.</p>
@@ -857,20 +905,22 @@ export default function PostDetailPage() {
                     <Link
                       key={item.id}
                       href={`/posts/${item.id}`}
-                      className="flex flex-col gap-3 rounded-2xl border border-transparent p-1 transition hover:border-[var(--accent-border)] hover:bg-[var(--surface-muted)] sm:flex-row"
+                      className="flex w-[240px] shrink-0 snap-center flex-col gap-3 rounded-2xl border border-transparent bg-[var(--surface-muted)] sm:bg-transparent p-2 transition hover:border-[var(--accent-border)] hover:bg-[var(--surface-muted)] sm:w-auto sm:flex-row sm:p-1"
                     >
                       <img
                         src={item.images[0]?.imageUrl || imageFallback}
                         alt={item.title}
                         loading="lazy"
-                        className="h-40 w-full rounded-2xl object-cover sm:h-24 sm:w-28"
+                        className="h-36 w-full rounded-xl object-cover sm:h-24 sm:w-28"
                       />
-                      <div className="min-w-0 flex-1">
-                        <p className="line-clamp-2 font-medium text-[var(--foreground)]">{item.title}</p>
-                        <p className="mt-1 text-sm text-[var(--muted-foreground)]">{formatLocation(item)}</p>
-                        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1 flex flex-col justify-between">
+                        <div>
+                          <p className="line-clamp-2 text-sm font-medium text-[var(--foreground)] sm:text-base">{item.title}</p>
+                          <p className="mt-1 text-xs text-[var(--muted-foreground)] sm:text-sm">{formatLocation(item)}</p>
+                        </div>
+                        <div className="mt-2 flex flex-wrap items-center justify-between gap-1">
                           <span className="font-semibold text-[var(--accent)]">{formatPrice(item.price)}</span>
-                          <span className="text-sm text-[var(--muted-foreground)]">{formatArea(item.area)}</span>
+                          <span className="text-xs text-[var(--muted-foreground)] sm:text-sm">{formatArea(item.area)}</span>
                         </div>
                       </div>
                     </Link>

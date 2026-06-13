@@ -427,7 +427,7 @@ export function PostList() {
         className="no-scrollbar min-w-0 xl:h-full xl:max-h-[calc(100vh-100px)] xl:overflow-y-auto xl:pr-1"
       >
         <div className="space-y-5">
-          <section className="flex flex-wrap items-center gap-2 text-sm text-[var(--muted-foreground)]">
+          <section className="hidden md:flex flex-wrap items-center gap-2 text-sm text-[var(--muted-foreground)]">
             <span>Trang chủ</span>
             <span>/</span>
             <span className="text-[var(--foreground)]">Bài đăng</span>

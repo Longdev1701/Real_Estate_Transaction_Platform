@@ -832,25 +832,21 @@ export default function EditPostPage() {
                       )}
                     </Field>
                     <div className="lg:col-span-12">
-                      <div className="grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
-                        <Field label="Vĩ độ (Lat)" required error={errors.latitude?.message}>
-                          <input type="number" step="any" {...register("latitude")} className="input-dark theme-post-input" />
-                        </Field>
-                        <Field label="Kinh độ (Lng)" required error={errors.longitude?.message}>
-                          <input type="number" step="any" {...register("longitude")} className="input-dark theme-post-input" />
-                        </Field>
+                      <div className="flex items-center gap-4">
+                        <input type="hidden" {...register("latitude")} />
+                        <input type="hidden" {...register("longitude")} />
                         <button
                           type="button"
                           onClick={handleGeocode}
                           disabled={isGeocoding || !address || !city}
-                          className="btn-primary inline-flex h-[46px] items-center justify-center gap-2 rounded-2xl px-5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                          className="theme-button-secondary w-full inline-flex h-[46px] items-center justify-center gap-2 rounded-2xl px-5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {isGeocoding ? (
                             <LoaderCircle className="h-4 w-4 animate-spin" />
                           ) : (
                             <MapPin className="h-4 w-4" />
                           )}
-                          <span>Tìm vị trí</span>
+                          <span>Định vị trên bản đồ</span>
                         </button>
                       </div>
 
