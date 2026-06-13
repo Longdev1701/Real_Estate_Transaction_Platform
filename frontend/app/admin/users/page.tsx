@@ -66,6 +66,20 @@ const formatDate = (value: string) => {
   });
 };
 
+const shiftDate = (value: string, days: number) => {
+  if (!value) {
+    return "";
+  }
+
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) {
+    return "";
+  }
+
+  const shifted = new Date(Date.UTC(year, month - 1, day + days));
+  return shifted.toISOString().slice(0, 10);
+};
+
 const getInitial = (name: string) => name.trim().charAt(0).toUpperCase() || "U";
 
 const makeUserCode = (id: string) => `USR-${id.slice(-6).toUpperCase()}`;
@@ -99,12 +113,17 @@ const getActivity = (user: Pick<AdminUserListItem, "updatedAt">) => {
 
 export default function AdminUsersPage() {
   const queryClient = useQueryClient();
-  const [filter, setFilter] = useState<AdminUsersFilter>({
+  const defaultFilter: AdminUsersFilter = {
     page: 1,
     limit: 10,
     keyword: "",
     role: "",
     status: "",
+    dateFrom: "",
+    dateTo: "",
+  };
+  const [filter, setFilter] = useState<AdminUsersFilter>({
+    ...defaultFilter,
   });
   const [keywordInput, setKeywordInput] = useState("");
   const [quickTab, setQuickTab] = useState<UserQuickTab>("ALL");
@@ -152,6 +171,8 @@ export default function AdminUsersPage() {
   const stats = userStatsQuery.data;
   const selectedUser = selectedUserQuery.data;
   const isLoading = usersQuery.isLoading;
+  const isRefreshing =
+    usersQuery.isFetching || userStatsQuery.isFetching || selectedUserQuery.isFetching;
   const isLoadingStats = userStatsQuery.isLoading;
   const isLoadingSelectedUser = selectedUserQuery.isLoading;
   const error =
@@ -187,6 +208,44 @@ export default function AdminUsersPage() {
       role: tab === "ADMIN" || tab === "USER" ? tab : "",
       status: tab === "ACTIVE" || tab === "BANNED" ? tab : "",
     }));
+  };
+
+  const resetFilters = () => {
+    setKeywordInput("");
+    setQuickTab("ALL");
+    setFilter(defaultFilter);
+  };
+
+  const handleDateFromChange = (value: string) => {
+    setFilter((current) => {
+      const nextFilter: AdminUsersFilter = {
+        ...current,
+        page: 1,
+        dateFrom: value,
+      };
+
+      if (value && current.dateTo && value >= current.dateTo) {
+        nextFilter.dateTo = "";
+      }
+
+      return nextFilter;
+    });
+  };
+
+  const handleDateToChange = (value: string) => {
+    setFilter((current) => {
+      const nextFilter: AdminUsersFilter = {
+        ...current,
+        page: 1,
+        dateTo: value,
+      };
+
+      if (value && current.dateFrom && value <= current.dateFrom) {
+        nextFilter.dateFrom = "";
+      }
+
+      return nextFilter;
+    });
   };
 
   const handleUpdateUser = async (
@@ -291,7 +350,7 @@ export default function AdminUsersPage() {
         </section>
 
         <NeonCard className="p-3">
-          <div className="grid items-center gap-2 xl:grid-cols-[minmax(260px,1.45fr)_170px_170px_170px_auto]">
+          <div className="grid items-center gap-2 xl:grid-cols-[minmax(260px,1.45fr)_170px_170px_170px_170px_auto]">
             <label className="theme-admin-input flex h-10 items-center gap-2 rounded-xl px-3 text-[var(--muted-foreground)]">
               <Search className="h-4 w-4" />
               <input
@@ -337,22 +396,28 @@ export default function AdminUsersPage() {
             <input
               type="date"
               className="theme-admin-input h-10 rounded-xl px-3 text-sm text-[var(--foreground)] outline-none"
-              aria-label="Registration Date"
+              aria-label="Registration Date From"
+              value={filter.dateFrom}
+              max={filter.dateTo ? shiftDate(filter.dateTo, -1) : undefined}
+              onChange={(event) => handleDateFromChange(event.target.value)}
+            />
+
+            <input
+              type="date"
+              className="theme-admin-input h-10 rounded-xl px-3 text-sm text-[var(--foreground)] outline-none"
+              aria-label="Registration Date To"
+              value={filter.dateTo}
+              min={filter.dateFrom ? shiftDate(filter.dateFrom, 1) : undefined}
+              onChange={(event) => handleDateToChange(event.target.value)}
             />
 
             <button
               className="theme-admin-toolbar-button inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-3 text-sm font-medium transition disabled:opacity-60"
-              disabled={isLoading}
-              onClick={() => {
-                usersQuery.reload();
-                userStatsQuery.reload();
-                if (selectedUserId) {
-                  selectedUserQuery.reload();
-                }
-              }}
+              disabled={isRefreshing}
+              onClick={resetFilters}
             >
               <RefreshCw
-                className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
+                className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
               />
               Làm mới
             </button>

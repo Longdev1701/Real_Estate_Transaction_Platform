@@ -108,7 +108,7 @@ type StatusTab = "ALL" | "ACTIVE" | "BANNED" | "HIDDEN";
 
 export default function AdminPostsPage() {
   const queryClient = useQueryClient();
-  const [filter, setFilter] = useState<AdminPostsFilter>({
+  const defaultFilter: AdminPostsFilter = {
     page: 1,
     limit: 10,
     keyword: "",
@@ -117,6 +117,9 @@ export default function AdminPostsPage() {
     postType: "",
     minPrice: "",
     maxPrice: "",
+  };
+  const [filter, setFilter] = useState<AdminPostsFilter>({
+    ...defaultFilter,
   });
   const [keywordInput, setKeywordInput] = useState("");
   const [activeTab, setActiveTab] = useState<StatusTab>("ALL");
@@ -157,6 +160,7 @@ export default function AdminPostsPage() {
   const data = postsQuery.data;
   const stats = postStatsQuery.data;
   const isLoading = postsQuery.isLoading;
+  const isRefreshing = postsQuery.isFetching || postStatsQuery.isFetching;
   const isLoadingStats = postStatsQuery.isLoading;
   const error = mutationError || postsQuery.error || postStatsQuery.error;
 
@@ -186,6 +190,12 @@ export default function AdminPostsPage() {
       page: 1,
       status: tab === "ALL" ? "" : tab,
     }));
+  };
+
+  const resetFilters = () => {
+    setKeywordInput("");
+    setActiveTab("ALL");
+    setFilter(defaultFilter);
   };
 
   const syncPost = (patchedPost: AdminPost) => {
@@ -386,13 +396,10 @@ export default function AdminPostsPage() {
 
             <button
               className="theme-admin-toolbar-button inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl px-3 text-sm font-medium transition disabled:opacity-60"
-              disabled={isLoading}
-              onClick={() => {
-                postsQuery.reload();
-                postStatsQuery.reload();
-              }}
+              disabled={isRefreshing}
+              onClick={resetFilters}
             >
-              <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
               Làm mới
             </button>
           </div>

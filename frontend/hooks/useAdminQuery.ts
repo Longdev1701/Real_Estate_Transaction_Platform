@@ -50,8 +50,12 @@ export function useAdminQuery<T>({
       );
     },
     isLoading: canRun ? query.isLoading : false,
+    isFetching: canRun ? query.isFetching : false,
     error: query.isError ? errorMessage : "",
     clearError: () => queryClient.resetQueries({ queryKey, exact: true }),
-    reload: () => query.refetch(),
+    reload: async () => {
+      await queryClient.invalidateQueries({ queryKey, exact: true });
+      return query.refetch();
+    },
   };
 }
