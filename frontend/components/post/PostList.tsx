@@ -20,6 +20,7 @@ import {
 
 import { api } from "@/lib/api";
 import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
+import { useAuthStore } from "@/stores/auth.store";
 import {
   buildPostQuery,
   defaultPostFilter,
@@ -39,6 +40,7 @@ import { PostFilter } from "./PostFilter";
 
 const PAGE_SIZE = 15;
 const POST_LIST_CACHE_TTL_MS = 2 * 60 * 1000;
+const getPostListStateKey = (scope: string) => `posts_page_state:${scope}`;
 
 const leftNavItems = [
   { icon: Newspaper, label: "Bảng tin", active: true },
@@ -97,6 +99,7 @@ const getInitialFilter = (searchParams: URLSearchParams): PostFilterValue => {
 
 export function PostList() {
   const searchParams = useSearchParams();
+  const { user, hasHydrated, isLoadingUser } = useAuthStore();
   const searchParamString = searchParams.toString();
   const initialFilter = useMemo(
     () => getInitialFilter(new URLSearchParams(searchParamString)),
@@ -119,6 +122,9 @@ export function PostList() {
   const [hasRestoredAttempted, setHasRestoredAttempted] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const isFirstMountRef = useRef(true);
+  const canUsePostListCache = hasHydrated && !isLoadingUser;
+  const postListCacheScope = user?.id ? `user:${user.id}` : "guest";
+  const postListStateKey = getPostListStateKey(postListCacheScope);
 
   const fetchPosts = useCallback(
     async (nextPage: number, append: boolean, filter: PostFilterValue) => {
@@ -136,8 +142,8 @@ export function PostList() {
 
       try {
         const query = buildPostQuery(filter, nextPage, PAGE_SIZE);
-        const cacheKey = `posts:list:${query}`;
-        if (!append) {
+        const cacheKey = `posts:list:${postListCacheScope}:${query}`;
+        if (!append && canUsePostListCache) {
           const cachedPayload = readSessionCache<PostListData>(cacheKey);
           if (cachedPayload) {
             setPosts(cachedPayload.items);
@@ -159,7 +165,7 @@ export function PostList() {
         setPage(payload.meta.page);
         setHasMore(payload.meta.hasMore);
         setTotal(payload.meta.total ?? payload.items.length);
-        if (!append) {
+        if (!append && canUsePostListCache) {
           writeSessionCache(cacheKey, payload, { ttlMs: POST_LIST_CACHE_TTL_MS });
         }
       } catch (err) {
@@ -178,13 +184,17 @@ export function PostList() {
         }
       }
     },
-    [],
+    [canUsePostListCache, postListCacheScope],
   );
 
   // Restore state on mount matching search params
   useEffect(() => {
+    if (!hasHydrated || isLoadingUser) {
+      return;
+    }
+
     try {
-      const saved = sessionStorage.getItem("posts_page_state");
+      const saved = sessionStorage.getItem(postListStateKey);
       if (saved) {
         const state = JSON.parse(saved);
         const stateSearchParams = new URLSearchParams(state.searchParamString);
@@ -219,13 +229,13 @@ export function PostList() {
     } finally {
       setHasRestoredAttempted(true);
     }
-  }, [searchParamString]);
+  }, [canUsePostListCache, hasHydrated, isLoadingUser, postListStateKey, searchParamString]);
 
   // Save state on updates
   useEffect(() => {
-    if (isLoading || !hasRestoredAttempted) return;
+    if (isLoading || !hasRestoredAttempted || !canUsePostListCache) return;
     try {
-      const saved = sessionStorage.getItem("posts_page_state");
+      const saved = sessionStorage.getItem(postListStateKey);
       const state = saved ? JSON.parse(saved) : {};
       state.posts = posts;
       state.page = page;
@@ -234,20 +244,26 @@ export function PostList() {
       state.activeFilter = activeFilter;
       state.draftFilter = draftFilter;
       state.searchParamString = searchParamString;
-      sessionStorage.setItem("posts_page_state", JSON.stringify(state));
+      sessionStorage.setItem(postListStateKey, JSON.stringify(state));
     } catch {}
-  }, [posts, page, hasMore, total, activeFilter, draftFilter, searchParamString, isLoading, hasRestoredAttempted]);
+  }, [posts, page, hasMore, total, activeFilter, draftFilter, searchParamString, isLoading, hasRestoredAttempted, canUsePostListCache, postListStateKey]);
 
   const handleScroll = (e: React.UIEvent<HTMLElement>) => {
+    if (!canUsePostListCache) return;
+
     const target = e.currentTarget;
     try {
-      const saved = sessionStorage.getItem("posts_page_state");
+      const saved = sessionStorage.getItem(postListStateKey);
       const state = saved ? JSON.parse(saved) : {};
       state.scrollTop = target.scrollTop;
-      sessionStorage.setItem("posts_page_state", JSON.stringify(state));
+      sessionStorage.setItem(postListStateKey, JSON.stringify(state));
     } catch {}
   };
   useEffect(() => {
+    if (!hasHydrated || isLoadingUser) {
+      return;
+    }
+
     if (!hasRestoredAttempted) {
       return;
     }
@@ -272,14 +288,14 @@ export function PostList() {
     }
 
     try {
-      const saved = sessionStorage.getItem("posts_page_state");
+      const saved = sessionStorage.getItem(postListStateKey);
       if (saved) {
         const state = JSON.parse(saved);
         state.scrollTop = 0;
-        sessionStorage.setItem("posts_page_state", JSON.stringify(state));
+        sessionStorage.setItem(postListStateKey, JSON.stringify(state));
       }
     } catch {}
-  }, [activeFilter, fetchPosts, hasRestoredAttempted]);
+  }, [activeFilter, fetchPosts, hasHydrated, isLoadingUser, hasRestoredAttempted, postListStateKey]);
 
   useEffect(() => {
     if (isFirstMountRef.current) return;
