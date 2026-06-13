@@ -592,6 +592,12 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
       }
     };
 
+    const handleConversationUpdated = (data: { conversation: ConversationData }) => {
+      if (data.conversation.id === conversationId) {
+        setConversation(data.conversation);
+      }
+    };
+
     const handleSocketError = (error: { message?: string; tempId?: string }) => {
       if (!error.tempId) return;
 
@@ -612,6 +618,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
     socket.on("message_edited", handleMessageEdited);
     socket.on("message_deleted", handleMessageDeleted);
     socket.on("conversation_deleted", handleConversationDeleted);
+    socket.on("conversation_updated", handleConversationUpdated);
     socket.on("error", handleSocketError);
 
     return () => {
@@ -625,6 +632,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
       socket.off("message_edited", handleMessageEdited);
       socket.off("message_deleted", handleMessageDeleted);
       socket.off("conversation_deleted", handleConversationDeleted);
+      socket.off("conversation_updated", handleConversationUpdated);
       socket.off("error", handleSocketError);
     };
   }, [conversation, conversationId, isConnected, playDing, router, socket, user]);

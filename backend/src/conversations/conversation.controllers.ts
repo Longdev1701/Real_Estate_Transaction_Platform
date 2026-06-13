@@ -11,6 +11,22 @@ const createConversationSchema = z.object({
   sellerId: z.string()
 });
 
+const conversationInclude = {
+  buyer: { select: { id: true, fullName: true, avatarUrl: true } },
+  seller: { select: { id: true, fullName: true, avatarUrl: true } },
+  post: {
+    select: {
+      id: true,
+      title: true,
+      price: true,
+      area: true,
+      propertyType: true,
+      city: true,
+      images: { take: 1, select: { imageUrl: true } }
+    }
+  }
+} as const;
+
 export const createOrGetConversation = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const buyerId = req.user!.id;
@@ -20,29 +36,32 @@ export const createOrGetConversation = async (req: Request, res: Response, next:
       throw new AppError("You cannot message yourself.", 400);
     }
 
-    // Check if conversation already exists
-    let conversation = await prisma.conversation.findFirst({
-      where: {
-        postId,
-        buyerId,
-        sellerId
-      },
-      include: {
-        buyer: { select: { id: true, fullName: true, avatarUrl: true } },
-        seller: { select: { id: true, fullName: true, avatarUrl: true } },
-        post: { select: { id: true, title: true, price: true, area: true, propertyType: true, city: true, images: { take: 1, select: { imageUrl: true } } } }
+    const post = await prisma.propertyPost.findUnique({
+      where: { id: postId },
+      select: {
+        id: true,
+        authorId: true
       }
     });
 
-    if (!conversation) {
-      // Check if post exists
-      const post = await prisma.propertyPost.findUnique({
-        where: { id: postId }
-      });
-      if (!post) {
-        throw new AppError("Property post not found.", 404);
-      }
+    if (!post) {
+      throw new AppError("Property post not found.", 404);
+    }
 
+    if (post.authorId !== sellerId) {
+      throw new AppError("Seller does not own this property post.", 400);
+    }
+
+    // Reuse the existing conversation for this buyer/seller pair.
+    let conversation = await prisma.conversation.findFirst({
+      where: {
+        buyerId,
+        sellerId
+      },
+      include: conversationInclude
+    });
+
+    if (!conversation) {
       try {
         conversation = await prisma.conversation.create({
           data: {
@@ -50,11 +69,7 @@ export const createOrGetConversation = async (req: Request, res: Response, next:
             buyerId,
             sellerId
           },
-          include: {
-            buyer: { select: { id: true, fullName: true, avatarUrl: true } },
-            seller: { select: { id: true, fullName: true, avatarUrl: true } },
-            post: { select: { id: true, title: true, price: true, area: true, propertyType: true, city: true, images: { take: 1, select: { imageUrl: true } } } }
-          }
+          include: conversationInclude
         });
 
         // Notify the seller that a new conversation has been initiated
@@ -63,12 +78,8 @@ export const createOrGetConversation = async (req: Request, res: Response, next:
         // Handle race condition: if another request created the same conversation
         if (error?.code === "P2002") {
           conversation = await prisma.conversation.findFirst({
-            where: { postId, buyerId, sellerId },
-            include: {
-              buyer: { select: { id: true, fullName: true, avatarUrl: true } },
-              seller: { select: { id: true, fullName: true, avatarUrl: true } },
-              post: { select: { id: true, title: true, price: true, area: true, propertyType: true, city: true, images: { take: 1, select: { imageUrl: true } } } }
-            }
+            where: { buyerId, sellerId },
+            include: conversationInclude
           });
 
           if (!conversation) {
@@ -78,6 +89,18 @@ export const createOrGetConversation = async (req: Request, res: Response, next:
           throw error;
         }
       }
+    } else if (conversation.postId !== postId || conversation.deletedByIds.length > 0) {
+      conversation = await prisma.conversation.update({
+        where: { id: conversation.id },
+        data: {
+          postId,
+          deletedByIds: []
+        },
+        include: conversationInclude
+      });
+
+      emitToUser(buyerId, "conversation_updated", { conversation });
+      emitToUser(sellerId, "conversation_updated", { conversation });
     }
 
     sendSuccess(res, { conversation }, "Conversation fetched successfully", 200);
