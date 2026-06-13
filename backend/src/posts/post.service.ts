@@ -7,6 +7,7 @@ import type { AuthenticatedUser } from "../types/auth.type.js";
 
 import { AppError } from "../middlewares/error.middleware.js";
 import { prisma } from "../prisma/prisma.service.js";
+import { redisClient } from "../config/redis.js";
 import { clearHomeCache } from "../home/home.service.js";
 import { deleteImageByUrl, uploadPostImages } from "../services/upload.service.js";
 import type {
@@ -148,13 +149,31 @@ const postsCache = new Map<
   }
 >();
 
+const localPostDetailCache = new Map<string, { expiresAt: number; data: any }>();
+
 export const clearPostsCache = () => {
   postsCache.clear();
+  localPostDetailCache.clear();
 };
 
-const invalidateCaches = () => {
+export const invalidatePostDetailCache = async (postId: string) => {
+  const cacheKey = `posts:detail:base:${postId}`;
+  localPostDetailCache.delete(cacheKey);
+  if (redisClient?.isOpen) {
+    try {
+      await redisClient.del(cacheKey);
+    } catch (err) {
+      console.warn("Failed to delete Redis cache key:", err);
+    }
+  }
+};
+
+const invalidateCaches = (postId?: string) => {
   clearPostsCache();
   clearHomeCache();
+  if (postId) {
+    invalidatePostDetailCache(postId).catch(console.error);
+  }
 };
 
 const ensureAuthenticated = (user?: AuthenticatedUser) => {
@@ -638,6 +657,48 @@ export const getPosts = async (
 };
 
 export const getPostById = async (id: string, user?: AuthenticatedUser) => {
+  const cacheKey = `posts:detail:base:${id}`;
+  let cachedBase: { post: any; relatedPosts: any[] } | null = null;
+
+  if (redisClient?.isOpen) {
+    try {
+      const cachedValue = await redisClient.get(cacheKey);
+      if (cachedValue) {
+        cachedBase = JSON.parse(cachedValue);
+      }
+    } catch (err) {
+      console.warn("Failed to read Redis cache key:", err);
+    }
+  } else {
+    const localCached = localPostDetailCache.get(cacheKey);
+    if (localCached && localCached.expiresAt > Date.now()) {
+      cachedBase = localCached.data;
+    }
+  }
+
+  if (cachedBase) {
+    const isSavedResult = user
+      ? await prisma.savedPost.findUnique({
+          where: {
+            userId_postId: {
+              userId: user.id,
+              postId: id,
+            },
+          },
+          select: { id: true },
+        })
+      : null;
+
+    const { features, ...rest } = cachedBase.post;
+    return {
+      ...rest,
+      features: features?.map((f: any) => f.feature) ?? [],
+      isSaved: Boolean(isSavedResult),
+      relatedPosts: cachedBase.relatedPosts,
+      banContext: null,
+    };
+  }
+
   const post = await prisma.propertyPost.findUnique({
     where: {
       id,
@@ -672,7 +733,7 @@ export const getPostById = async (id: string, user?: AuthenticatedUser) => {
     prisma.propertyPost.findMany({
       where: {
         status: PostStatus.ACTIVE,
-        city: { contains: post.city, mode: "insensitive" },
+        city: post.city,
         propertyType: post.propertyType,
         id: { not: id },
       },
@@ -708,6 +769,23 @@ export const getPostById = async (id: string, user?: AuthenticatedUser) => {
     imageCount: item.images.length,
     isSaved: false,
   }));
+
+  // Only cache ACTIVE posts to ensure real-time status changes and security checks
+  if (post.status === PostStatus.ACTIVE) {
+    const cacheData = { post, relatedPosts };
+    if (redisClient?.isOpen) {
+      try {
+        await redisClient.setEx(cacheKey, 5 * 60, JSON.stringify(cacheData)); // cache for 5 minutes
+      } catch (err) {
+        console.warn("Failed to set Redis cache key:", err);
+      }
+    } else {
+      localPostDetailCache.set(cacheKey, {
+        data: cacheData,
+        expiresAt: Date.now() + 5 * 60 * 1000,
+      });
+    }
+  }
 
   const { features, ...rest } = post;
 
@@ -770,7 +848,7 @@ export const updatePost = async (
     include: postInclude,
   });
 
-  invalidateCaches();
+  invalidateCaches(id);
   return attachSavedStateToDetailItem(updatedPost, user);
 };
 
@@ -797,7 +875,7 @@ export const deletePost = async (id: string, user?: AuthenticatedUser) => {
     postImages.map((img) => deleteImageByUrl(img.imageUrl)),
   ).catch(console.error);
 
-  invalidateCaches();
+  invalidateCaches(id);
 };
 
 export const addPostImages = async (
@@ -855,7 +933,7 @@ export const addPostImages = async (
     include: postInclude,
   });
 
-  invalidateCaches();
+  invalidateCaches(postId);
   return attachSavedStateToDetailItem(post, user);
 };
 
@@ -909,6 +987,6 @@ export const deletePostImage = async (
     throw error;
   }
 
-  invalidateCaches();
+  invalidateCaches(postId);
 };
 

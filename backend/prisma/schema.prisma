@@ -157,6 +157,7 @@ model PropertyPost {
 
   @@index([authorId])
   @@index([status, createdAt(sort: Desc)])
+  @@index([status, city, propertyType, createdAt(sort: Desc)])
 }
 
 model PropertyImage {

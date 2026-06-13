@@ -26,6 +26,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 
 import { api } from "@/lib/api";
+import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
 import { FeatureIcon } from "@/lib/feature-icons";
 import { compressPropertyImage } from "@/lib/image-compression";
 import {
@@ -309,9 +310,17 @@ export default function EditPostPage() {
 
   useEffect(() => {
     const fetchFeatures = async () => {
+      const cacheKey = `features:${watchedPropertyType}`;
+      const cached = readSessionCache<Feature[]>(cacheKey);
+      if (cached) {
+        setFeatures(cached);
+        return;
+      }
+
       try {
         const response = await api.get<{ data: Feature[] }>(`/features?propertyType=${watchedPropertyType}`);
         setFeatures(response.data.data);
+        writeSessionCache(cacheKey, response.data.data, { ttlMs: 30 * 60 * 1000 });
       } catch (err) {
         console.error("Lỗi tải đặc trưng:", err);
       }

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 import { api } from "@/lib/api";
+import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
 import { FeatureIcon } from "@/lib/feature-icons";
 import { groupFeaturesByCategory } from "@/lib/feature-groups";
 import {
@@ -115,10 +116,18 @@ export function PostFilter({
 
   useEffect(() => {
     const fetchFeatures = async () => {
+      const cacheKey = `features:${value.propertyType || "all"}`;
+      const cached = readSessionCache<Feature[]>(cacheKey);
+      if (cached) {
+        setFeatures(cached);
+        return;
+      }
+
       try {
         const url = value.propertyType ? `/features?propertyType=${value.propertyType}` : "/features";
         const response = await api.get<{ data: Feature[] }>(url);
         setFeatures(response.data.data);
+        writeSessionCache(cacheKey, response.data.data, { ttlMs: 30 * 60 * 1000 });
       } catch (err) {
         console.error("Lỗi tải đặc trưng:", err);
       }
