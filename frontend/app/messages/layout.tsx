@@ -475,6 +475,20 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
                           .catch(() => { });
                       }
                     }}
+                    onTouchStart={() => {
+                      const cacheKey = `messages_${conversation.id}`;
+                      if (!readSessionCache(cacheKey)) {
+                        api.get(`/conversations/${conversation.id}/messages?limit=20`)
+                          .then(({ data }) => {
+                            writeSessionCache(cacheKey, {
+                              messages: data.data.messages,
+                              conversation: data.data.conversation,
+                              nextCursor: data.data.nextCursor,
+                            });
+                          })
+                          .catch(() => { });
+                      }
+                    }}
                     onClick={() => {
                       const cacheKey = `messages_${conversation.id}`;
                       if (!readSessionCache(cacheKey)) {
