@@ -12,6 +12,8 @@ import {
   Bookmark,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
   Expand,
   LoaderCircle,
   MapPin,
@@ -31,6 +33,7 @@ import {
   Activity,
   Copy,
   Check,
+  Scale,
 } from "lucide-react";
 
 import { api } from "@/lib/api";
@@ -99,6 +102,7 @@ export default function PostDetailPage() {
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showAllFeatures, setShowAllFeatures] = useState(false);
   const mapSectionRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -129,6 +133,15 @@ export default function PostDetailPage() {
           setPost(cachedPost);
           setSelectedImage(0);
           setRelatedPosts(cachedPost.relatedPosts ?? []);
+          
+          try {
+            const storedCompare = localStorage.getItem("compared_posts");
+            const compareList = storedCompare ? JSON.parse(storedCompare) : [];
+            if (Array.isArray(compareList)) {
+              setIsCompared(compareList.some((item: any) => item.id === cachedPost.id));
+            }
+          } catch (e) {}
+
           setIsLoading(false);
         }
 
@@ -215,42 +228,20 @@ export default function PostDetailPage() {
     mapSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const handleCompareClick = () => {
-    if (!post) {
-      return;
-    }
-
-    try {
-      const stored = window.localStorage.getItem("compared_posts");
-      const parsed = stored ? JSON.parse(stored) : [];
-      let list = Array.isArray(parsed) ? (parsed as Post[]) : [];
-
-      const exists = list.some((item) => item.id === post.id);
-      if (exists) {
-        list = list.filter((item) => item.id !== post.id);
+  useEffect(() => {
+    if (!post) return;
+    const handleCompareUpdate = () => {
+      try {
+        const stored = localStorage.getItem("compared_posts");
+        const list = stored ? JSON.parse(stored) : [];
+        setIsCompared(Array.isArray(list) && list.some((item: any) => item.id === post.id));
+      } catch {
         setIsCompared(false);
-      } else {
-        if (list.length >= 3) {
-          toast.warning("Chỉ có thể so sánh tối đa 3 bất động sản cùng lúc.");
-          return;
-        }
-
-        if (list.length > 0 && list[0].postType !== post.postType) {
-          toast.warning("Không thể so sánh bất động sản Bán với bất động sản Cho thuê. Vui lòng chọn cùng loại giao dịch.");
-          return;
-        }
-
-        list.push(post);
-        setIsCompared(true);
       }
-
-      window.localStorage.setItem("compared_posts", JSON.stringify(list));
-      window.dispatchEvent(new Event("compare_list_updated"));
-    } catch (err) {
-      console.error("Failed to update compare list:", err);
-      toast.error("Không thể cập nhật danh sách so sánh.");
-    }
-  };
+    };
+    window.addEventListener("compare_list_updated", handleCompareUpdate);
+    return () => window.removeEventListener("compare_list_updated", handleCompareUpdate);
+  }, [post]);
 
   const handleSaveToggle = async () => {
     const rawValue = window.localStorage.getItem(savedKey);
@@ -363,6 +354,41 @@ export default function PostDetailPage() {
     }
   };
 
+  const handleCompareToggle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!post) return;
+
+    try {
+      const stored = localStorage.getItem("compared_posts");
+      let list = stored ? JSON.parse(stored) : [];
+      if (!Array.isArray(list)) list = [];
+
+      const exists = list.some((item: any) => item.id === post.id);
+      if (exists) {
+        list = list.filter((item: any) => item.id !== post.id);
+        setIsCompared(false);
+        toast.success("Đã bỏ so sánh bất động sản.");
+      } else {
+        if (list.length >= 3) {
+          toast.warning("Chỉ có thể so sánh tối đa 3 bất động sản cùng lúc.");
+          return;
+        }
+        if (list.length > 0 && list[0].postType !== post.postType) {
+          toast.warning("Không thể so sánh bất động sản Bán với bất động sản Cho thuê.");
+          return;
+        }
+        list.push(post);
+        setIsCompared(true);
+        toast.success("Đã thêm vào danh sách so sánh.");
+      }
+      localStorage.setItem("compared_posts", JSON.stringify(list));
+      window.dispatchEvent(new Event("compare_list_updated"));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const handleMessageClick = async () => {
     if (!user) {
       router.push(`/auth/login?redirectTo=${encodeURIComponent(window.location.pathname + window.location.search)}`);
@@ -432,7 +458,7 @@ export default function PostDetailPage() {
         <div className="glass-card p-8 text-center">
           <p className="text-lg text-[var(--danger-foreground)]">{error}</p>
           <button type="button" onClick={() => router.push("/posts")} className="btn-primary mt-6">
-            Quay lai danh sach
+            Quay lại danh sách
           </button>
         </div>
       </div>
@@ -534,7 +560,7 @@ export default function PostDetailPage() {
 
   return (
     <div className="container mx-auto space-y-5 px-4 pt-5 pb-28 lg:space-y-6 lg:px-8 lg:py-10">
-      <div className="hidden md:flex flex-wrap items-center gap-2 text-sm leading-6 text-[var(--muted-foreground)]">
+      <div className="hidden lg:flex flex-wrap items-center gap-2 text-sm leading-6 text-[var(--muted-foreground)]">
         <Link href="/" className="transition hover:text-[var(--foreground)]">
           Trang chủ
         </Link>
@@ -544,6 +570,17 @@ export default function PostDetailPage() {
         </Link>
         <span>/</span>
         <span className="line-clamp-2 text-[var(--foreground)]">{post.title}</span>
+      </div>
+
+      <div className="lg:hidden">
+        <button
+          type="button"
+          onClick={() => router.push("/posts")}
+          className="theme-surface-soft inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)]"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Quay lại danh sách
+        </button>
       </div>
 
       {error && (
@@ -686,16 +723,11 @@ export default function PostDetailPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={handleCompareClick}
-                  aria-pressed={isCompared}
-                  className={`inline-flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm transition sm:px-4 sm:py-3 ${
-                    isCompared
-                      ? "border-[var(--accent-border)] bg-[var(--accent-soft)] font-semibold text-[var(--accent)] hover:brightness-110"
-                      : "theme-surface-soft text-[var(--secondary-foreground)] hover:bg-[var(--surface-muted)]"
-                  }`}
+                  onClick={handleCompareToggle}
+                  className={`theme-surface-soft inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm transition hover:bg-[var(--surface-muted)] sm:px-4 sm:py-3 ${isCompared ? "text-[var(--accent)]" : "text-[var(--secondary-foreground)]"}`}
                 >
-                  <Scale className="h-4 w-4 text-[var(--accent)]" />
-                  So sánh
+                  <Scale className="h-4 w-4" />
+                  {isCompared ? "Đã so sánh" : "So sánh"}
                 </button>
                 {!isOwnPost ? (
                   <button
@@ -862,42 +894,44 @@ export default function PostDetailPage() {
 
           {post.features && post.features.length > 0 && (
             <div className="glass-card p-6">
-              <div className="flex flex-wrap items-end justify-between gap-3">
-                <div>
-                  <h2 className="text-2xl font-semibold text-[var(--foreground)]">Tiện ích & Đặc trưng</h2>
-                  <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-                    Được chia theo nhóm để dễ kiểm tra khi so sánh bất động sản.
-                  </p>
+              <h2 className="text-2xl font-semibold text-[var(--foreground)]">Tiện ích & Đặc trưng</h2>
+              <div className="relative mt-4">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+                  {(showAllFeatures ? post.features : post.features.slice(0, 8)).map((feature) => (
+                    <div
+                      key={feature.id}
+                      className="theme-surface-muted flex items-center gap-3 rounded-2xl p-3.5 text-[var(--secondary-foreground)] transition-all duration-300 hover:border-[var(--accent-border)] hover:bg-[var(--surface)]"
+                    >
+                      <div className="rounded-xl bg-[var(--accent-soft)] p-2 text-[var(--accent)]">
+                        <FeatureIcon name={feature.icon || "help-circle"} className="h-5 w-5" />
+                      </div>
+                      <span className="text-sm font-medium">{feature.name}</span>
+                    </div>
+                  ))}
                 </div>
-                <span className="theme-badge-info rounded-full px-3 py-1 text-xs font-semibold">
-                  {post.features.length} mục
-                </span>
               </div>
-
-              <div className="mt-5 space-y-5">
-                {groupedFeatures.map(([category, features]) => (
-                  <section key={category} className="space-y-3">
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--accent)]">{category}</h3>
-                      <span className="h-px flex-1 bg-[var(--border)]" />
-                      <span className="text-xs text-[var(--muted-foreground)]">{features.length}</span>
-                    </div>
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                      {features.map((feature) => (
-                        <div
-                          key={feature.id}
-                          className="theme-surface-muted flex min-w-0 items-center gap-3 rounded-2xl p-3.5 text-[var(--secondary-foreground)] transition-all duration-300 hover:border-[var(--accent-border)] hover:bg-[var(--surface)]"
-                        >
-                          <div className="rounded-xl bg-[var(--accent-soft)] p-2 text-[var(--accent)]">
-                            <FeatureIcon name={feature.icon || "help-circle"} className="h-5 w-5" />
-                          </div>
-                          <span className="min-w-0 break-words text-sm font-medium leading-snug">{feature.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                ))}
-              </div>
+              {post.features.length > 8 && (
+                <div className={`relative flex justify-center ${!showAllFeatures ? "mt-2 pt-6" : "mt-5"}`}>
+                  {!showAllFeatures && (
+                    <div className="pointer-events-none absolute bottom-0 left-0 h-20 w-full bg-gradient-to-t from-[var(--surface)] to-transparent opacity-80" />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowAllFeatures(!showAllFeatures)}
+                    className="relative z-10 inline-flex items-center gap-2 rounded-full bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--accent)] shadow-sm border border-[var(--border)] transition-colors hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
+                  >
+                    {showAllFeatures ? (
+                      <>
+                        Thu gọn <ChevronUp className="h-4 w-4" />
+                      </>
+                    ) : (
+                      <>
+                        Xem thêm ({post.features.length - 8}) <ChevronDown className="h-4 w-4" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -1051,7 +1085,7 @@ export default function PostDetailPage() {
             <button
               type="button"
               onClick={() => router.push("/posts")}
-              className="theme-surface-soft inline-flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)]"
+              className="hidden lg:inline-flex theme-surface-soft items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)]"
             >
               <ArrowLeft className="h-4 w-4" />
               Quay lại danh sách
@@ -1162,6 +1196,13 @@ export default function PostDetailPage() {
             className="theme-surface-soft inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Bookmark className={`h-5 w-5 ${post.isSaved ? "fill-[var(--accent)] text-[var(--accent)]" : "text-[var(--accent)]"}`} />
+          </button>
+          <button
+            type="button"
+            onClick={handleCompareToggle}
+            className="theme-surface-soft inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)]"
+          >
+            <Scale className={`h-5 w-5 ${isCompared ? "text-[var(--accent)]" : "text-[var(--accent)]"}`} />
           </button>
           <button
             type="button"
