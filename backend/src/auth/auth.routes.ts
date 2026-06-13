@@ -23,7 +23,6 @@ import {
   forgotPasswordController,
   resetPasswordController,
   verifyResetCodeController,
-  confirmRegisterController,
 } from "./auth.controller.js";
 import {
   changePasswordSchema,
@@ -33,7 +32,6 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
   verifyResetCodeSchema,
-  confirmRegisterSchema,
 } from "./auth.validation.js";
 
 export const authRouter = Router();
@@ -43,11 +41,6 @@ authRouter.post(
   registerRateLimit,
   validateRequest({ body: registerSchema }),
   registerController,
-);
-authRouter.post(
-  "/confirm-register",
-  validateRequest({ body: confirmRegisterSchema }),
-  confirmRegisterController,
 );
 authRouter.post("/login", loginRateLimit, validateRequest({ body: loginSchema }), loginController);
 authRouter.post("/refresh-token", refreshTokenRateLimit, refreshTokenController);

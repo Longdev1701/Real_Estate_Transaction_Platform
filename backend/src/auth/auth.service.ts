@@ -18,11 +18,7 @@ import {
   verifyRefreshToken,
 } from "../utils/jwt.js";
 import { redisClient } from "../config/redis.js";
-import { sendResetPasswordEmail, sendRegisterVerificationEmail, isEmailConfigured } from "../services/email.service.js";
-
-const memoryPendingRegistrations = new Map<string, { data: RegisterInput & { code: string }; expiresAt: number }>();
-
-
+import { isEmailConfigured, sendResetPasswordEmail } from "../services/email.service.js";
 
 type RegisterInput = {
   email: string;
@@ -53,23 +49,23 @@ type ChangePasswordInput = {
   newPassword: string;
 };
 
+type PublicUser = Pick<
+  User,
+  "id" | "email" | "fullName" | "phone" | "address" | "bio" | "role" | "status" | "avatarUrl"
+>;
+
 type AuthTokens = {
   accessToken: string;
 };
 
 type AuthResponse = {
-  user: Pick<User, "id" | "email" | "fullName" | "phone" | "role" | "status" | "avatarUrl">;
+  user: PublicUser;
   tokens: AuthTokens;
 };
 
 type AuthSession = AuthResponse & {
   refreshToken: string;
 };
-
-type PublicUser = Pick<
-  User,
-  "id" | "email" | "fullName" | "phone" | "address" | "bio" | "role" | "status" | "avatarUrl"
->;
 
 const buildPublicUser = (user: User): PublicUser => ({
   id: user.id,
@@ -89,6 +85,8 @@ const buildUserPayload = (user: User) => ({
   role: user.role,
 });
 
+const getRefreshTokenExpiry = () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
 export const revokeAllUserRefreshTokens = async (userId: string) => {
   await prisma.refreshToken.updateMany({
     where: {
@@ -101,19 +99,22 @@ export const revokeAllUserRefreshTokens = async (userId: string) => {
   });
 };
 
+const persistRefreshToken = async (userId: string, refreshToken: string) => {
+  await prisma.refreshToken.create({
+    data: {
+      userId,
+      tokenHash: sha256(refreshToken),
+      expiresAt: getRefreshTokenExpiry(),
+    },
+  });
+};
+
 const buildAuthResponse = async (user: User): Promise<AuthSession> => {
   const payload = buildUserPayload(user);
   const accessToken = signAccessToken(payload);
   const refreshToken = signRefreshToken(payload);
-  const refreshTokenHash = sha256(refreshToken);
 
-  await prisma.refreshToken.create({
-    data: {
-      userId: user.id,
-      tokenHash: refreshTokenHash,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    },
-  });
+  await persistRefreshToken(user.id, refreshToken);
 
   return {
     user: buildPublicUser(user),
@@ -124,7 +125,7 @@ const buildAuthResponse = async (user: User): Promise<AuthSession> => {
   };
 };
 
-export const register = async (input: RegisterInput) => {
+export const register = async (input: RegisterInput): Promise<AuthSession> => {
   const email = input.email.trim().toLowerCase();
   const existingUser = await prisma.user.findUnique({
     where: {
@@ -142,8 +143,8 @@ export const register = async (input: RegisterInput) => {
     data: {
       email,
       passwordHash,
-      fullName: input.fullName,
-      phone: input.phone || null,
+      fullName: input.fullName.trim(),
+      phone: input.phone?.trim() || null,
       role: UserRole.USER,
       status: UserStatus.ACTIVE,
     },
@@ -151,57 +152,6 @@ export const register = async (input: RegisterInput) => {
 
   return buildAuthResponse(user);
 };
-
-export const confirmRegister = async (input: { email: string; code: string }): Promise<AuthSession> => {
-  const email = input.email.trim().toLowerCase();
-  const code = input.code.trim();
-
-  const key = `pending-register:${email}`;
-  let pendingData: (RegisterInput & { code: string }) | null = null;
-
-  if (redisClient?.isOpen) {
-    const cached = await redisClient.get(key);
-    if (cached) {
-      pendingData = JSON.parse(cached);
-    }
-  } else {
-    const cached = memoryPendingRegistrations.get(key);
-    if (cached) {
-      if (cached.expiresAt > Date.now()) {
-        pendingData = cached.data;
-      } else {
-        memoryPendingRegistrations.delete(key);
-      }
-    }
-  }
-
-  if (!pendingData || pendingData.code !== code) {
-    throw new AppError("Mã xác thực không hợp lệ hoặc đã hết hạn.", 400);
-  }
-
-  const passwordHash = await hashValue(pendingData.password);
-
-  const user = await prisma.user.create({
-    data: {
-      email: pendingData.email,
-      passwordHash,
-      fullName: pendingData.fullName,
-      phone: pendingData.phone || null,
-      role: UserRole.USER,
-      status: UserStatus.ACTIVE,
-    },
-  });
-
-  // Clean up
-  if (redisClient?.isOpen) {
-    await redisClient.del(key);
-  } else {
-    memoryPendingRegistrations.delete(key);
-  }
-
-  return buildAuthResponse(user);
-};
-
 
 export const login = async (input: LoginInput): Promise<AuthSession> => {
   const email = input.email.trim().toLowerCase();
@@ -259,41 +209,66 @@ export const refreshAuthToken = async ({
     where: { tokenHash },
   });
 
-  if (
-    !matchedToken ||
-    matchedToken.userId !== user.id ||
-    matchedToken.revokedAt !== null ||
-    matchedToken.expiresAt <= new Date()
-  ) {
+  if (!matchedToken || matchedToken.userId !== user.id) {
     throw new AppError("Refresh token not recognized.", 401);
   }
 
-  const newAccessToken = signAccessToken(buildUserPayload(user));
+  if (matchedToken.revokedAt !== null) {
+    await revokeAllUserRefreshTokens(user.id);
+    throw new AppError("Refresh token reuse detected. Please log in again.", 401);
+  }
 
-  const updatedToken = await prisma.refreshToken.updateMany({
-    where: {
-      id: matchedToken.id,
-      tokenHash,
-      revokedAt: null,
-      expiresAt: {
-        gt: new Date(),
+  if (matchedToken.expiresAt <= new Date()) {
+    throw new AppError("Refresh token not recognized.", 401);
+  }
+
+  const nextAccessToken = signAccessToken(buildUserPayload(user));
+  const nextRefreshToken = signRefreshToken(buildUserPayload(user));
+  const nextRefreshTokenHash = sha256(nextRefreshToken);
+
+  await prisma.$transaction(async (tx) => {
+    const revokedToken = await tx.refreshToken.updateMany({
+      where: {
+        id: matchedToken.id,
+        tokenHash,
+        revokedAt: null,
+        expiresAt: {
+          gt: new Date(),
+        },
       },
-    },
-    data: {
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    },
-  });
+      data: {
+        revokedAt: new Date(),
+      },
+    });
 
-  if (updatedToken.count !== 1) {
-    throw new AppError("Refresh token not recognized.", 401);
-  }
+    if (revokedToken.count !== 1) {
+      await tx.refreshToken.updateMany({
+        where: {
+          userId: user.id,
+          revokedAt: null,
+        },
+        data: {
+          revokedAt: new Date(),
+        },
+      });
+      throw new AppError("Refresh token reuse detected. Please log in again.", 401);
+    }
+
+    await tx.refreshToken.create({
+      data: {
+        userId: user.id,
+        tokenHash: nextRefreshTokenHash,
+        expiresAt: getRefreshTokenExpiry(),
+      },
+    });
+  });
 
   return {
     user: buildPublicUser(user),
     tokens: {
-      accessToken: newAccessToken,
+      accessToken: nextAccessToken,
     },
-    refreshToken,
+    refreshToken: nextRefreshToken,
   };
 };
 
@@ -456,11 +431,9 @@ export const forgotPassword = async (input: { email: string }) => {
     throw new AppError("Không tìm thấy người dùng với email này.", 404);
   }
 
-  // Generate 6-digit verification code
   const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const ttlSeconds = 600; // 10 minutes
+  const ttlSeconds = 600;
 
-  // Store key-value (key: reset-password:email, value: code)
   const key = `reset-password:${email}`;
   if (redisClient?.isOpen) {
     await redisClient.setEx(key, ttlSeconds, code);
@@ -468,10 +441,8 @@ export const forgotPassword = async (input: { email: string }) => {
     memoryResetCodes.set(key, { code, expiresAt: Date.now() + ttlSeconds * 1000 });
   }
 
-  // Send email via service
   await sendResetPasswordEmail(email, user.fullName, code);
 
-  // Return development otp code if in development/testing context AND email is not configured
   return {
     message: "Mã xác thực đã được gửi tới email của bạn.",
     ...(!isEmailConfigured && process.env.NODE_ENV !== "production" ? { devOtpCode: code } : {}),
@@ -486,7 +457,6 @@ export const resetPassword = async (input: {
   const email = input.email.trim().toLowerCase();
   const code = input.code.trim();
 
-  // Retrieve code from Redis or Memory
   const key = `reset-password:${email}`;
   let storedCode: string | null = null;
 
@@ -515,7 +485,6 @@ export const resetPassword = async (input: {
     throw new AppError("Không tìm thấy người dùng.", 404);
   }
 
-  // Update password
   const passwordHash = await hashValue(input.newPassword);
   await prisma.user.update({
     where: { id: user.id },
@@ -525,7 +494,6 @@ export const resetPassword = async (input: {
   await revokeAllUserRefreshTokens(user.id);
   await invalidateCachedAuthUser(user.id);
 
-  // Delete stored code
   if (redisClient?.isOpen) {
     await redisClient.del(key);
   } else {
@@ -555,5 +523,3 @@ export const verifyResetCode = async (input: { email: string; code: string }) =>
 
   return true;
 };
-
-
