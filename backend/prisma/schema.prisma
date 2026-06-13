@@ -192,7 +192,7 @@ model Conversation {
   updatedAt    DateTime @updatedAt
   deletedByIds String[] @default([])
 
-  @@unique([buyerId, sellerId, postId])
+  @@unique([buyerId, sellerId])
   @@index([buyerId])
   @@index([sellerId])
   @@index([postId])

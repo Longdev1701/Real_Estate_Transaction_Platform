@@ -268,8 +268,38 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
       });
     };
 
+    const handleConversationUpdated = (data: { conversation: any }) => {
+      setConversations((prev) => {
+        const existingIndex = prev.findIndex((c) => c.id === data.conversation.id);
+
+        if (existingIndex === -1) {
+          const conversationItem: ConversationListItem = {
+            ...data.conversation,
+            messages: [],
+            _count: { messages: 0 }
+          };
+
+          return [conversationItem, ...prev];
+        }
+
+        const existingConversation = prev[existingIndex];
+        const nextConversation: ConversationListItem = {
+          ...existingConversation,
+          ...data.conversation,
+          messages: existingConversation.messages,
+          _count: existingConversation._count
+        };
+
+        return [
+          nextConversation,
+          ...prev.filter((conversation) => conversation.id !== data.conversation.id)
+        ];
+      });
+    };
+
     socket.on("receive_message", handleReceiveMessage);
     socket.on("conversation_created", handleConversationCreated);
+    socket.on("conversation_updated", handleConversationUpdated);
     socket.on("user_typing", handleUserTyping);
     socket.on("user_stop_typing", handleUserStopTyping);
     socket.on("messages_read", handleMessagesRead);
@@ -277,6 +307,7 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
     return () => {
       socket.off("receive_message", handleReceiveMessage);
       socket.off("conversation_created", handleConversationCreated);
+      socket.off("conversation_updated", handleConversationUpdated);
       socket.off("user_typing", handleUserTyping);
       socket.off("user_stop_typing", handleUserStopTyping);
       socket.off("messages_read", handleMessagesRead);
