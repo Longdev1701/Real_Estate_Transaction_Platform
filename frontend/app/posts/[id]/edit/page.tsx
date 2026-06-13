@@ -210,8 +210,9 @@ export default function EditPostPage() {
           return;
         }
 
-        if (user && user.role !== "ADMIN" && user.id !== currentPost.author.id) {
+        if (user && user.id !== currentPost.author.id) {
           addToast("Bạn không có quyền chỉnh sửa bài đăng này.", "error");
+          router.replace(`/posts/${params.id}`);
           return;
         }
 

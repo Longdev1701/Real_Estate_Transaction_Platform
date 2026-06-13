@@ -166,7 +166,7 @@ const ensureAuthenticated = (user?: AuthenticatedUser) => {
 };
 
 const canManagePost = (user: AuthenticatedUser, authorId: string) =>
-  user.role === UserRole.ADMIN || user.id === authorId;
+  user.id === authorId;
 
 const getSavedPostIds = async (postIds: string[], user?: AuthenticatedUser) => {
   if (!user || postIds.length === 0) {
@@ -651,7 +651,7 @@ export const getPostById = async (id: string, user?: AuthenticatedUser) => {
 
   if (
     post.status !== PostStatus.ACTIVE &&
-    (!user || !canManagePost(user, post.authorId))
+    (!user || (user.role !== UserRole.ADMIN && !canManagePost(user, post.authorId)))
   ) {
     throw new AppError("Post not found.", 404);
   }
@@ -740,7 +740,10 @@ export const updatePost = async (
   const existingPost = await getPostOwnership(id);
 
   if (!canManagePost(actor, existingPost.authorId)) {
-    throw new AppError("You do not have permission to update this post.", 403);
+    const isOnlyUpdatingStatus = Object.keys(input).length === 1 && input.status !== undefined;
+    if (!(actor.role === UserRole.ADMIN && isOnlyUpdatingStatus)) {
+      throw new AppError("You do not have permission to update this post.", 403);
+    }
   }
 
   if (input.status && actor.role !== UserRole.ADMIN) {
