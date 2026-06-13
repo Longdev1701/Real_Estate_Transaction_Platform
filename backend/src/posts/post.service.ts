@@ -35,6 +35,13 @@ const postInclude = {
       feature: true,
     },
   },
+  _count: {
+    select: {
+      likes: true,
+      comments: true,
+      images: true,
+    },
+  },
 } satisfies Prisma.PropertyPostInclude;
 
 const postListSelect = {
@@ -79,6 +86,7 @@ const postListSelect = {
     select: {
       images: true,
       comments: true,
+      likes: true,
     },
   },
 } satisfies Prisma.PropertyPostSelect;
@@ -180,14 +188,35 @@ const getSavedPostIds = async (postIds: string[], user?: AuthenticatedUser) => {
   return new Set(savedPosts.map((item) => item.postId));
 };
 
+const getLikedPostIds = async (postIds: string[], user?: AuthenticatedUser) => {
+  if (!user || postIds.length === 0) {
+    return new Set<string>();
+  }
+
+  const likedPosts = await prisma.postLike.findMany({
+    where: {
+      userId: user.id,
+      postId: {
+        in: postIds,
+      },
+    },
+    select: {
+      postId: true,
+    },
+  });
+
+  return new Set(likedPosts.map((item) => item.postId));
+};
+
 const attachSavedStateToListItems = async (
   items: PostListItem[],
   user?: AuthenticatedUser,
 ) => {
-  const savedPostIds = await getSavedPostIds(
-    items.map((item) => item.id),
-    user,
-  );
+  const postIds = items.map((item) => item.id);
+  const [savedPostIds, likedPostIds] = await Promise.all([
+    getSavedPostIds(postIds, user),
+    getLikedPostIds(postIds, user),
+  ]);
 
   return items.map((item) => {
     const { _count, ...rest } = item;
@@ -196,7 +225,9 @@ const attachSavedStateToListItems = async (
       ...rest,
       imageCount: _count.images,
       commentCount: _count.comments,
+      likeCount: _count.likes,
       isSaved: savedPostIds.has(item.id),
+      isLiked: likedPostIds.has(item.id),
     };
   });
 };
@@ -206,12 +237,17 @@ const attachSavedStateToDetailItem = async (
   user?: AuthenticatedUser,
 ) => {
   const savedPostIds = await getSavedPostIds([post.id], user);
-  const { features, ...rest } = post;
+  const likedPostIds = await getLikedPostIds([post.id], user);
+  const { features, _count, ...rest } = post;
 
   return {
     ...rest,
     features: features?.map((f: any) => f.feature) ?? [],
+    imageCount: _count.images,
+    commentCount: _count.comments,
+    likeCount: _count.likes,
     isSaved: savedPostIds.has(post.id),
+    isLiked: likedPostIds.has(post.id),
   };
 };
 
@@ -439,7 +475,7 @@ export const getPosts = async (
     Boolean(authorId) &&
     user?.id === authorId;
   const isCacheableQuery =
-    (!user || user.role !== UserRole.ADMIN) && !canViewOwnNonActivePosts;
+    !user && !canViewOwnNonActivePosts;
 
   const where: Prisma.PropertyPostWhereInput = {
     authorId,

@@ -10,6 +10,7 @@ import { authenticate } from "./middlewares/auth.middleware.js";
 import { errorMiddleware } from "./middlewares/error.middleware.js";
 import { authorizeRoles } from "./middlewares/role.middleware.js";
 import { postRoutes } from "./posts/post.routes.js";
+import { postLikeRoutes } from "./post-likes/post-like.routes.js";
 import { conversationRoutes } from "./conversations/conversation.routes.js";
 import { savedPostRoutes } from "./saved-posts/saved-post.routes.js";
 import { commentRoutes } from "./comments/comment.routes.js";
@@ -35,6 +36,7 @@ app.get("/api/health", (_req, res) => {
 app.use("/api/auth", authRouter);
 app.use("/api/home", homeRoutes);
 app.use("/api/posts", postRoutes);
+app.use("/api/post-likes", postLikeRoutes);
 app.use("/api/saved-posts", savedPostRoutes);
 app.use("/api/conversations", conversationRoutes);
 app.use("/api/comments", commentRoutes);

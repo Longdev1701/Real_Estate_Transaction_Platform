@@ -104,6 +104,7 @@ model User {
   notifications       Notification[]
   reports             Report[]
   savedPosts          SavedPost[]
+  likedPosts          PostLike[]
   refreshTokens       RefreshToken[]
   systemLogs          SystemLog[]
   comments            Comment[]
@@ -147,6 +148,7 @@ model PropertyPost {
   conversations Conversation[]
   reports       Report[]
   savedBy       SavedPost[]
+  likes         PostLike[]
   comments      Comment[]
   features      PropertyPostFeature[]
 
@@ -297,6 +299,22 @@ model SystemLog {
 }
 
 model SavedPost {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  postId String
+  post   PropertyPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, postId])
+  @@index([postId])
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+model PostLike {
   id String @id @default(cuid())
 
   userId String
