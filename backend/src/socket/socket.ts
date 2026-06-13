@@ -21,35 +21,7 @@ export interface AuthenticatedSocket extends Socket {
   };
 }
 
-const onlineUsers = new Map<string, number>();
 const conversationAuthCache = new Map<string, { buyerId: string; sellerId: string; expiresAt: number }>();
-
-const getOnlineCount = async (userId: string) => {
-  if (redisClient?.isOpen) {
-    const countStr = await redisClient.hGet("onlineUsers", userId);
-    return countStr ? parseInt(countStr, 10) : 0;
-  }
-
-  return onlineUsers.get(userId) ?? 0;
-};
-
-const setOnlineCount = async (userId: string, count: number) => {
-  if (redisClient?.isOpen) {
-    await redisClient.hSet("onlineUsers", userId, count);
-    return;
-  }
-
-  onlineUsers.set(userId, count);
-};
-
-const deleteOnlineCount = async (userId: string) => {
-  if (redisClient?.isOpen) {
-    await redisClient.hDel("onlineUsers", userId);
-    return;
-  }
-
-  onlineUsers.delete(userId);
-};
 
 const getCachedConversationAuth = async (conversationId: string) => {
   const cacheKey = `conv_auth:${conversationId}`;
@@ -144,12 +116,12 @@ export function initializeSocket(httpServer: HTTPServer) {
 
     console.log(`User connected to socket: ${user.fullName} (${user.id})`);
 
+    socket.join(user.id);
+
     (async () => {
       try {
-        const count = await getOnlineCount(user.id);
-        await setOnlineCount(user.id, count + 1);
-
-        if (count === 0) {
+        const sockets = await io.in(user.id).fetchSockets();
+        if (sockets.length === 1) {
           io.emit("user_online", user.id);
         }
       } catch (err) {
@@ -159,18 +131,16 @@ export function initializeSocket(httpServer: HTTPServer) {
 
     socket.on("check_online_status", async (userId: string) => {
       try {
-        const count = await getOnlineCount(userId);
+        const sockets = await io.in(userId).fetchSockets();
 
         socket.emit("online_status_result", {
           userId,
-          isOnline: count > 0,
+          isOnline: sockets.length > 0,
         });
       } catch {
         // ignore
       }
     });
-
-    socket.join(user.id);
 
     socket.on("join_room", (conversationId: string) => {
       socket.join(conversationId);
@@ -491,13 +461,9 @@ export function initializeSocket(httpServer: HTTPServer) {
       console.log(`User disconnected from socket: ${user.fullName} (${user.id})`);
 
       try {
-        const count = await getOnlineCount(user.id);
-
-        if (count <= 1) {
-          await deleteOnlineCount(user.id);
+        const sockets = await io.in(user.id).fetchSockets();
+        if (sockets.length === 0) {
           io.emit("user_offline", user.id);
-        } else {
-          await setOnlineCount(user.id, count - 1);
         }
       } catch (err) {
         console.error("Online status error on disconnect", err);
