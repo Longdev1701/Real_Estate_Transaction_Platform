@@ -89,7 +89,7 @@ export function FloatingCompareBar() {
       <button
         type="button"
         onClick={() => setIsCollapsed(false)}
-        className="theme-floating-panel fixed bottom-6 left-6 z-[999] flex h-14 w-14 animate-in fade-in zoom-in-50 items-center justify-center rounded-full border border-[var(--accent-border)] text-[var(--accent)] backdrop-blur-xl transition-all duration-300 hover:scale-105 hover:bg-[var(--hover)] active:scale-95 md:bottom-8 md:left-8"
+        className="theme-floating-panel fixed bottom-24 left-4 z-[999] flex h-14 w-14 animate-in fade-in zoom-in-50 items-center justify-center rounded-full border border-[var(--accent-border)] text-[var(--accent)] backdrop-blur-xl transition-all duration-300 hover:scale-105 hover:bg-[var(--hover)] active:scale-95 sm:bottom-24 sm:left-6 md:bottom-8 md:left-8"
         title="Mở rộng thanh so sánh"
       >
         <Scale className="h-6 w-6 animate-pulse" />
@@ -101,7 +101,7 @@ export function FloatingCompareBar() {
   }
 
   return (
-    <div className="fixed bottom-6 left-1/2 z-[999] w-[90%] max-w-md -translate-x-1/2 animate-in fade-in slide-in-from-bottom-5 duration-300">
+    <div className="fixed bottom-24 left-1/2 z-[999] w-[90%] max-w-md -translate-x-1/2 animate-in fade-in slide-in-from-bottom-5 duration-300 sm:bottom-24 md:bottom-6">
       <div className="theme-floating-panel relative flex items-center justify-between gap-3 rounded-xl border border-[var(--accent-border)] p-2 backdrop-blur-xl">
         <div className="flex shrink-0 items-center gap-2 pl-1.5">
           <Scale className="h-4.5 w-4.5 text-[var(--accent)]" />
