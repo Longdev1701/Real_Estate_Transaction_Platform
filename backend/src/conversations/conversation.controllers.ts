@@ -174,21 +174,34 @@ export const getConversationMessages = async (req: Request, res: Response, next:
     const id = req.params.id as string;
     const userId = req.user!.id;
 
-    const conversation = await prisma.conversation.findUnique({
-      where: { id },
-      include: {
-        buyer: { select: { id: true, fullName: true, avatarUrl: true } },
-        seller: { select: { id: true, fullName: true, avatarUrl: true } },
-        post: { select: { id: true, title: true, price: true, area: true, propertyType: true, city: true, images: { take: 1, select: { imageUrl: true } } } }
-      }
-    });
-
-    if (!conversation || (conversation.buyerId !== userId && conversation.sellerId !== userId) || conversation.deletedByIds.includes(userId)) {
-      throw new AppError("Conversation not found, unauthorized, or deleted.", 404);
-    }
-
     const cursor = req.query.cursor as string;
     const limit = parseInt(req.query.limit as string) || 50;
+
+    let conversation = null;
+
+    if (!cursor) {
+      conversation = await prisma.conversation.findUnique({
+        where: { id },
+        include: {
+          buyer: { select: { id: true, fullName: true, avatarUrl: true } },
+          seller: { select: { id: true, fullName: true, avatarUrl: true } },
+          post: { select: { id: true, title: true, price: true, area: true, propertyType: true, city: true, images: { take: 1, select: { imageUrl: true } } } }
+        }
+      });
+
+      if (!conversation || (conversation.buyerId !== userId && conversation.sellerId !== userId) || conversation.deletedByIds.includes(userId)) {
+        throw new AppError("Conversation not found, unauthorized, or deleted.", 404);
+      }
+    } else {
+      const lightConversation = await prisma.conversation.findUnique({
+        where: { id },
+        select: { buyerId: true, sellerId: true, deletedByIds: true }
+      });
+
+      if (!lightConversation || (lightConversation.buyerId !== userId && lightConversation.sellerId !== userId) || lightConversation.deletedByIds.includes(userId)) {
+        throw new AppError("Conversation not found, unauthorized, or deleted.", 404);
+      }
+    }
 
     const messages = await prisma.message.findMany({
       where: { conversationId: id },
@@ -345,6 +358,8 @@ export const deleteConversation = async (req: Request, res: Response, next: Next
           }
         }
       });
+      // Emit socket event to notify other tabs/devices of the current user
+      emitToUser(userId, "conversation_deleted", { conversationId: id });
     }
 
     sendSuccess(res, null, "Conversation deleted successfully");
