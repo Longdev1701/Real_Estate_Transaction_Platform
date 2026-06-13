@@ -412,7 +412,7 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
         </aside>
 
         <section
-          className={`theme-message-sidebar min-h-0 w-full shrink-0 border-r border-[var(--border)] md:w-[350px] ${isMobileDetailView ? "hidden lg:flex" : "flex"
+          className={`theme-message-sidebar min-h-0 w-full shrink-0 border-r border-[var(--border)] md:w-[350px] ${isMobileDetailView ? "hidden md:flex" : "flex"
             } flex-col`}
         >
           <div className="border-b border-[var(--border)] px-4 py-4">
@@ -592,7 +592,7 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
           </div>
         </section>
 
-        <section className={`min-w-0 flex-1 ${!isMobileDetailView ? "hidden lg:flex" : "flex"} flex-col`}>
+        <section className={`min-w-0 flex-1 ${!isMobileDetailView ? "hidden md:flex" : "flex"} flex-col`}>
           {children}
         </section>
       </div>

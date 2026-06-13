@@ -956,7 +956,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
           <div className="flex min-w-0 items-center gap-3">
             <Link
               href="/messages"
-              className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] text-[var(--secondary-foreground)] transition hover:bg-[var(--surface)] hover:text-[var(--foreground)] lg:hidden"
+              className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] text-[var(--secondary-foreground)] transition hover:bg-[var(--surface)] hover:text-[var(--foreground)] md:hidden"
             >
               <ArrowLeft className="h-5 w-5" />
             </Link>
