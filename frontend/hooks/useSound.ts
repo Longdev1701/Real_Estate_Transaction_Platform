@@ -1,7 +1,7 @@
 "use client";
-import { useCallback } from 'react';
 
-// Singleton audio objects initialized once globally
+import { useCallback } from "react";
+
 let sendAudio: HTMLAudioElement | null = null;
 let receiveAudio: HTMLAudioElement | null = null;
 let detailAudio: HTMLAudioElement | null = null;
@@ -9,37 +9,88 @@ let likeBeginAudio: HTMLAudioElement | null = null;
 let likeEndAudio: HTMLAudioElement | null = null;
 let commentAudio: HTMLAudioElement | null = null;
 let saveAudio: HTMLAudioElement | null = null;
+let reportAudio: HTMLAudioElement | null = null;
+let homePageAudio: HTMLAudioElement | null = null;
+let homePageReadyPromise: Promise<void> | null = null;
+
+const createAudio = (src: string) => {
+  const audio = new Audio(src);
+  audio.preload = "auto";
+  audio.load();
+  return audio;
+};
 
 const initAudio = () => {
-  if (typeof window !== 'undefined' && !sendAudio) {
-    sendAudio = new Audio('/sounds/apple_send.mp3');
-    receiveAudio = new Audio('/sounds/apple_receive.mp3');
-    detailAudio = new Audio('/sounds/xem_chi_tiet.mp3');
-    likeBeginAudio = new Audio('/sounds/like_begin.mp3');
-    likeEndAudio = new Audio('/sounds/like_end.mp3');
-    commentAudio = new Audio('/sounds/comment.mp3');
-    saveAudio = new Audio('/sounds/save.mp3');
+  if (typeof window !== "undefined" && !sendAudio) {
+    sendAudio = createAudio("/sounds/apple_send.mp3");
+    receiveAudio = createAudio("/sounds/apple_receive.mp3");
+    detailAudio = createAudio("/sounds/xem_chi_tiet.mp3");
+    likeBeginAudio = createAudio("/sounds/like_begin.mp3");
+    likeEndAudio = createAudio("/sounds/like_end.mp3");
+    commentAudio = createAudio("/sounds/comment.mp3");
+    saveAudio = createAudio("/sounds/save.mp3");
+    reportAudio = createAudio("/sounds/report.mp3");
+    homePageAudio = createAudio("/sounds/home_page.mp3");
   }
 };
 
+const ensureHomePageAudioReady = () => {
+  initAudio();
+
+  if (!homePageAudio) {
+    return Promise.resolve();
+  }
+
+  if (homePageAudio.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
+    return Promise.resolve();
+  }
+
+  if (!homePageReadyPromise) {
+    homePageReadyPromise = new Promise<void>((resolve) => {
+      const handleReady = () => {
+        cleanup();
+        resolve();
+      };
+
+      const handleError = () => {
+        cleanup();
+        resolve();
+      };
+
+      const cleanup = () => {
+        homePageAudio?.removeEventListener("canplaythrough", handleReady);
+        homePageAudio?.removeEventListener("loadeddata", handleReady);
+        homePageAudio?.removeEventListener("error", handleError);
+        homePageReadyPromise = null;
+      };
+
+      homePageAudio?.addEventListener("canplaythrough", handleReady, { once: true });
+      homePageAudio?.addEventListener("loadeddata", handleReady, { once: true });
+      homePageAudio?.addEventListener("error", handleError, { once: true });
+      homePageAudio?.load();
+    });
+  }
+
+  return homePageReadyPromise;
+};
+
 export const useSound = () => {
-  // Ensure audio is initialized on client
   initAudio();
 
   const playPop = useCallback(() => {
     if (sendAudio) {
-      sendAudio.currentTime = 0; // Trở về đầu file
+      sendAudio.currentTime = 0;
       sendAudio.play().catch((err) => {
-        console.log("Chưa có file send.mp3 hoặc trình duyệt chặn autoplay:", err);
+        console.log("Khong the phat am thanh gui:", err);
       });
     }
   }, []);
 
   const playDing = useCallback(() => {
     if (receiveAudio) {
-      receiveAudio.currentTime = 0; // Trở về đầu file
+      receiveAudio.currentTime = 0;
       receiveAudio.play().catch((err) => {
-        console.log("Chưa có file receive.mp3 hoặc trình duyệt chặn autoplay:", err);
+        console.log("Khong the phat am thanh nhan:", err);
       });
     }
   }, []);
@@ -48,7 +99,7 @@ export const useSound = () => {
     if (detailAudio) {
       detailAudio.currentTime = 0;
       detailAudio.play().catch((err) => {
-        console.log("Không thể phát âm thanh xem chi tiết:", err);
+        console.log("Khong the phat am thanh xem chi tiet:", err);
       });
     }
   }, []);
@@ -57,7 +108,7 @@ export const useSound = () => {
     if (likeBeginAudio) {
       likeBeginAudio.currentTime = 0;
       likeBeginAudio.play().catch((err) => {
-        console.log("Không thể phát âm thanh bắt đầu like:", err);
+        console.log("Khong the phat am thanh bat dau like:", err);
       });
     }
   }, []);
@@ -66,7 +117,7 @@ export const useSound = () => {
     if (likeEndAudio) {
       likeEndAudio.currentTime = 0;
       likeEndAudio.play().catch((err) => {
-        console.log("Không thể phát âm thanh hủy like:", err);
+        console.log("Khong the phat am thanh huy like:", err);
       });
     }
   }, []);
@@ -75,7 +126,7 @@ export const useSound = () => {
     if (commentAudio) {
       commentAudio.currentTime = 0;
       commentAudio.play().catch((err) => {
-        console.log("Không thể phát âm thanh comment:", err);
+        console.log("Khong the phat am thanh comment:", err);
       });
     }
   }, []);
@@ -84,10 +135,45 @@ export const useSound = () => {
     if (saveAudio) {
       saveAudio.currentTime = 0;
       saveAudio.play().catch((err) => {
-        console.log("Không thể phát âm thanh lưu bài:", err);
+        console.log("Khong the phat am thanh luu bai:", err);
       });
     }
   }, []);
 
-  return { playPop, playDing, playDetail, playLikeBegin, playLikeEnd, playComment, playSave };
+  const playReport = useCallback(() => {
+    if (reportAudio) {
+      reportAudio.currentTime = 0;
+      reportAudio.play().catch((err) => {
+        console.log("Khong the phat am thanh bao cao:", err);
+      });
+    }
+  }, []);
+
+  const playHomePage = useCallback(async () => {
+    await ensureHomePageAudioReady();
+
+    if (homePageAudio) {
+      homePageAudio.currentTime = 0;
+      homePageAudio.play().catch((err) => {
+        console.log("Khong the phat am thanh trang chu:", err);
+      });
+    }
+  }, []);
+
+  const prepareHomePageSound = useCallback(async () => {
+    await ensureHomePageAudioReady();
+  }, []);
+
+  return {
+    playPop,
+    playDing,
+    playDetail,
+    playLikeBegin,
+    playLikeEnd,
+    playComment,
+    playSave,
+    playReport,
+    playHomePage,
+    prepareHomePageSound,
+  };
 };

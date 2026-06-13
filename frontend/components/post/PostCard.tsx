@@ -166,7 +166,7 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuthStore();
-  const { playDetail, playLikeBegin, playLikeEnd, playComment, playSave } = useSound();
+  const { playDetail, playLikeBegin, playLikeEnd, playComment, playSave, playReport } = useSound();
   const [imageError, setImageError] = useState(false);
   const [isCommentOpen, setIsCommentOpen] = useState(false);
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
@@ -458,6 +458,8 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
   };
 
   const handleReportClick = () => {
+    playReport();
+
     if (!user) {
       router.push(`/auth/login?redirectTo=${encodeURIComponent(window.location.pathname + window.location.search)}`);
       return;
