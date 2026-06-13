@@ -380,7 +380,7 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
   };
 
   return (
-    <div className={`mx-auto max-w-[1520px] p-0 md:p-2.5 lg:p-4 ${pathname === "/messages" ? "h-[calc(100%-64px)] md:h-full" : "h-full"}`}>
+    <div className={`mx-auto max-w-[1520px] p-0 md:p-2.5 lg:p-4 h-full`}>
       <div className="theme-message-shell flex h-full overflow-hidden rounded-none border-none md:rounded-[26px] md:border md:border-[var(--accent-border)]">
         <aside className="theme-message-rail hidden w-[84px] flex-col justify-between border-r border-[var(--border)] px-3 py-5 md:flex">
           <div className="space-y-2.5">
@@ -459,7 +459,7 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
           </div>
 
           <div
-            className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-3 py-2.5"
+            className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-3 pt-2.5 pb-4 md:pb-2.5"
             onScroll={handleScroll}
           >
             {loading ? (
@@ -559,7 +559,7 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
                           </span>
                         </div>
 
-                        <p className={`truncate text-[14px] ${isTyping ? "font-medium text-[var(--accent)]" : "text-[var(--secondary-foreground)]"}`}>
+                        <p className={`line-clamp-1 break-all text-[14px] ${isTyping ? "font-medium text-[var(--accent)]" : "text-[var(--secondary-foreground)]"}`}>
                           {isTyping ? "Đang nhập..." : formatConversationPreview(lastMessage)}
                         </p>
                         <p className="mt-1 truncate text-xs text-[var(--muted-foreground)]">{conversation.post.title}</p>
