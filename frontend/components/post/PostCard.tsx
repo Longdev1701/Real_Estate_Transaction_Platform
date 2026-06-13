@@ -31,7 +31,7 @@ import {
 } from "@/lib/posts";
 import { useSound } from "@/hooks/useSound";
 import { api } from "@/lib/api";
-import { writeSessionCache } from "@/lib/client-cache";
+import { updateSessionCaches, writeSessionCache } from "@/lib/client-cache";
 import { useAuthStore } from "@/stores/auth.store";
 
 import CommentSection from "@/components/comment/CommentSection";
@@ -62,6 +62,67 @@ const getRelativeTime = (rawDate: string) => {
   if (diffHours > 0) return `${diffHours} giờ trước`;
   if (diffMinutes > 0) return `${diffMinutes} phút trước`;
   return "Vừa đăng";
+};
+
+const patchPostLikeInCacheValue = (
+  value: unknown,
+  postId: string,
+  isLiked: boolean,
+  likeCount: number,
+): unknown => {
+  if (Array.isArray(value)) {
+    return value.map((item) => patchPostLikeInCacheValue(item, postId, isLiked, likeCount));
+  }
+
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+
+  const record = value as Record<string, unknown>;
+  let nextRecord: Record<string, unknown> | null = null;
+  const ensureNextRecord = () => {
+    if (!nextRecord) {
+      nextRecord = { ...record };
+    }
+
+    return nextRecord;
+  };
+
+  if (record.id === postId && "author" in record && "title" in record) {
+    Object.assign(ensureNextRecord(), {
+      isLiked,
+      likeCount,
+    });
+  }
+
+  if (Array.isArray(record.items)) {
+    ensureNextRecord().items = record.items.map((item) =>
+      patchPostLikeInCacheValue(item, postId, isLiked, likeCount),
+    );
+  }
+
+  if (Array.isArray(record.posts)) {
+    ensureNextRecord().posts = record.posts.map((item) =>
+      patchPostLikeInCacheValue(item, postId, isLiked, likeCount),
+    );
+  }
+
+  if (record.post && typeof record.post === "object") {
+    ensureNextRecord().post = patchPostLikeInCacheValue(record.post, postId, isLiked, likeCount);
+  }
+
+  return nextRecord ?? value;
+};
+
+const updateCachedPostLike = (postId: string, isLiked: boolean, likeCount: number) => {
+  updateSessionCaches(
+    (key) =>
+      key.startsWith("posts:list:") ||
+      key.startsWith("posts_page_state:") ||
+      key.startsWith("profile:posts:") ||
+      key === `posts:detail:${postId}`,
+    (value) => patchPostLikeInCacheValue(value, postId, isLiked, likeCount),
+  );
 };
 
 const Metric = ({
@@ -107,7 +168,9 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
   const [isCommentOpen, setIsCommentOpen] = useState(false);
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [isLiked, setIsLiked] = useState(false);
+  const [isLiked, setIsLiked] = useState(Boolean(post.isLiked));
+  const [likeCount, setLikeCount] = useState(post.likeCount ?? 0);
+  const [isLikeSubmitting, setIsLikeSubmitting] = useState(false);
   const [likeBurstKey, setLikeBurstKey] = useState(0);
   const [isSaved, setIsSaved] = useState(Boolean(post.isSaved));
   const [isSaveSubmitting, setIsSaveSubmitting] = useState(false);
@@ -147,6 +210,11 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  useEffect(() => {
+    setIsLiked(Boolean(post.isLiked));
+    setLikeCount(post.likeCount ?? 0);
+  }, [post.id, post.isLiked, post.likeCount]);
 
   useEffect(() => {
     if (!isFirstPost || post.images.length <= 1) return;
@@ -273,8 +341,6 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
   const activeImage = images[activeImageIndex]?.imageUrl ?? imageFallback;
   const location = formatLocation(post) || post.address || post.city;
   const canReportPost = !user || user.id !== post.author.id;
-  const engagementSeed = post.id.split("").reduce((total, char) => total + char.charCodeAt(0), 0);
-  const likeCount = 48 + (engagementSeed % 96);
   const commentCount = post.commentCount ?? 0;
   const shouldShowDescriptionToggle = post.description.trim().length > 120;
 
@@ -286,6 +352,8 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
   const cachePostDetailPreview = () => {
     writeSessionCache(`posts:detail:${post.id}`, {
       ...post,
+      isLiked,
+      likeCount,
       features: post.features ?? [],
       relatedPosts: post.relatedPosts ?? [],
     }, { ttlMs: POST_DETAIL_CACHE_TTL_MS });
@@ -305,16 +373,48 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
     setActiveImageIndex((current) => (current === images.length - 1 ? 0 : current + 1));
   };
 
-  const handleLikeClick = () => {
-    setIsLiked((current) => {
-      if (current) {
-        playLikeEnd();
-      } else {
-        playLikeBegin();
-      }
-      return !current;
-    });
+  const handleLikeClick = async () => {
+    if (isLikeSubmitting) {
+      return;
+    }
+
+    if (!user) {
+      router.push(`/auth/login?redirectTo=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+      return;
+    }
+
+    const nextLiked = !isLiked;
+    const previousLiked = isLiked;
+    const previousLikeCount = likeCount;
+
+    setIsLikeSubmitting(true);
+    setIsLiked(nextLiked);
+    const optimisticLikeCount = Math.max(0, likeCount + (nextLiked ? 1 : -1));
+    setLikeCount(optimisticLikeCount);
+    updateCachedPostLike(post.id, nextLiked, optimisticLikeCount);
+    if (nextLiked) {
+      playLikeBegin();
+    } else {
+      playLikeEnd();
+    }
     setLikeBurstKey((current) => current + 1);
+
+    try {
+      const response = nextLiked
+        ? await api.post<{ data: { isLiked: boolean; likeCount: number } }>("/post-likes", { postId: post.id })
+        : await api.delete<{ data: { isLiked: boolean; likeCount: number } }>(`/post-likes/${post.id}`);
+
+      setIsLiked(response.data.data.isLiked);
+      setLikeCount(response.data.data.likeCount);
+      updateCachedPostLike(post.id, response.data.data.isLiked, response.data.data.likeCount);
+    } catch (error) {
+      setIsLiked(previousLiked);
+      setLikeCount(previousLikeCount);
+      updateCachedPostLike(post.id, previousLiked, previousLikeCount);
+      console.error("Failed to toggle post like:", error);
+    } finally {
+      setIsLikeSubmitting(false);
+    }
   };
 
   const handleSaveClick = async () => {
@@ -606,6 +706,7 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
             <button
               type="button"
               onClick={handleLikeClick}
+              disabled={isLikeSubmitting}
               className={`group/like relative inline-flex items-center justify-center gap-2 overflow-visible border-r border-[var(--border)] px-2 py-3 transition hover:bg-[color:color-mix(in_srgb,var(--danger)_10%,transparent)] ${
                 isLiked ? "theme-reaction-active" : "hover:text-[var(--danger-foreground)]"
               }`}
@@ -645,7 +746,7 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
                 }`}
               />
               <span className="hidden sm:inline">Thích</span>
-              <span className="text-xs text-[var(--muted-foreground)]">{likeCount + (isLiked ? 1 : 0)}</span>
+              <span className="text-xs text-[var(--muted-foreground)]">{likeCount}</span>
             </button>
             <button
               type="button"

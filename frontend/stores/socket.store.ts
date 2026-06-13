@@ -45,11 +45,14 @@ export const useSocketStore = create<SocketState>((set, get) => ({
     });
 
     socket.on("connect_error", (err) => {
-      console.error("Socket connect error:", err);
       if (err.message.includes("Authentication error") || err.message.includes("Invalid token")) {
-        // We do not disconnect completely, but wait for token to be refreshed
-        // The token will be updated by the AuthSessionProvider when API refreshes it
+        socket.disconnect();
+        set({ socket: null, isConnected: false });
+        useAuthStore.getState().logout();
+        return;
       }
+
+      console.warn("Socket connect error:", err.message);
     });
 
     set({ socket });

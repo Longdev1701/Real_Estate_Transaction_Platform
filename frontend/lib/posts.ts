@@ -61,7 +61,9 @@ export type Post = {
   images: PostImage[];
   imageCount?: number;
   commentCount?: number;
+  likeCount?: number;
   isSaved?: boolean;
+  isLiked?: boolean;
   relatedPosts?: Post[];
   banContext?: PostBanContext | null;
   features: {
