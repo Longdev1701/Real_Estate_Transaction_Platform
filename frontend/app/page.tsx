@@ -28,6 +28,7 @@ import {
 } from "@/lib/posts";
 
 import { CompareButton } from "@/components/post/CompareButton";
+import { HomePageSound } from "@/components/home/HomePageSound";
 import { HeroSlideshow } from "@/components/home/HeroSlideshow";
 import { HomeSearchForm } from "@/components/home/HomeSearchForm";
 
@@ -143,6 +144,8 @@ export default async function HomePage() {
 
   return (
     <div className="pb-14">
+      <HomePageSound />
+
       <section className="relative min-h-[480px] lg:min-h-[560px] overflow-hidden border-b border-[var(--border)]">
         <div className="absolute inset-0 z-0">
           <HeroSlideshow />
