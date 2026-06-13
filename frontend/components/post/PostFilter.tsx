@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ChevronDown,
   ChevronUp,
@@ -10,6 +10,7 @@ import {
 
 import { api } from "@/lib/api";
 import { FeatureIcon } from "@/lib/feature-icons";
+import { groupFeaturesByCategory } from "@/lib/feature-groups";
 import {
   PROPERTY_TYPES,
   propertyTypeLabels,
@@ -205,6 +206,7 @@ export function PostFilter({
   }, [districts, value.district]);
 
   const selectedIds = value.featureIds ? value.featureIds.split(",").filter(Boolean) : [];
+  const groupedFeatures = useMemo(() => groupFeaturesByCategory(features), [features]);
 
   const updateField = <K extends keyof PostFilterValue>(key: K, fieldValue: PostFilterValue[K]) => {
     onChange({
@@ -398,24 +400,36 @@ export function PostFilter({
                   Đang tải tiện ích...
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-1.5 max-h-36 overflow-y-auto pr-1 custom-scrollbar">
-                  {features.map((feature) => {
-                    const isSelected = selectedIds.includes(feature.id);
-                    return (
-                      <button
-                        key={feature.id}
-                        type="button"
-                        onClick={() => toggleFeatureId(feature.id)}
-                        className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-medium transition-all duration-200 text-left truncate ${isSelected
-                            ? "border-[var(--accent-border)] bg-[var(--accent-soft)] text-[var(--accent)]"
-                            : "border-[var(--border)] bg-[var(--surface)] text-[var(--secondary-foreground)] hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
-                          }`}
-                      >
-                        <FeatureIcon name={feature.icon || "help-circle"} className="h-2.5 w-2.5 shrink-0" />
-                        <span className="truncate">{feature.name}</span>
-                      </button>
-                    );
-                  })}
+                <div className="max-h-56 space-y-3 overflow-y-auto pr-1 custom-scrollbar">
+                  {groupedFeatures.map(([category, list]) => (
+                    <section key={category} className="space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
+                          {category}
+                        </h4>
+                        <span className="h-px flex-1 bg-[var(--border)]" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {list.map((feature) => {
+                          const isSelected = selectedIds.includes(feature.id);
+                          return (
+                            <button
+                              key={feature.id}
+                              type="button"
+                              onClick={() => toggleFeatureId(feature.id)}
+                              className={`flex min-w-0 items-center gap-1 rounded-lg border px-2 py-1 text-left text-[10px] font-medium transition-all duration-200 ${isSelected
+                                  ? "border-[var(--accent-border)] bg-[var(--accent-soft)] text-[var(--accent)]"
+                                  : "border-[var(--border)] bg-[var(--surface)] text-[var(--secondary-foreground)] hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
+                                }`}
+                            >
+                              <FeatureIcon name={feature.icon || "help-circle"} className="h-2.5 w-2.5 shrink-0" />
+                              <span className="min-w-0 break-words leading-snug">{feature.name}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </section>
+                  ))}
                 </div>
               )}
             </div>

@@ -21,6 +21,7 @@ import {
 import { api } from "@/lib/api";
 import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
 import {
+  formatCompactPrice,
   formatPrice,
   PROPERTY_TYPES,
   postTypeLabels,
@@ -529,11 +530,13 @@ export default function SavedPostsPage() {
                     </div>
 
                     <div>
-                      <p className="text-2xl font-bold text-[var(--accent)]">{formatPrice(post.price)}</p>
+                      <p className="truncate text-2xl font-bold text-[var(--accent)] tabular-nums" title={formatPrice(post.price)}>
+                        {formatCompactPrice(post.price)}
+                      </p>
                       <Link
                         href={`/posts/${post.id}`}
                         onClick={() => writeSessionCache(`posts:detail:${post.id}`, post)}
-                        className="mt-2 block truncate text-lg font-semibold text-[var(--foreground)] transition hover:text-[var(--accent)]"
+                        className="mt-2 block line-clamp-2 break-words text-lg font-semibold leading-snug text-[var(--foreground)] transition hover:text-[var(--accent)]"
                       >
                         {post.title}
                       </Link>
@@ -541,7 +544,7 @@ export default function SavedPostsPage() {
 
                     <div className="flex items-start gap-2 text-sm text-[var(--secondary-foreground)]">
                       <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent)]" />
-                      <span className="line-clamp-1">
+                      <span className="break-words">
                         {[post.district, post.city].filter(Boolean).join(", ")}
                       </span>
                     </div>

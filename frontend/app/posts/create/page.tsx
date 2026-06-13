@@ -1086,7 +1086,7 @@ export default function CreatePostPage() {
                                   className={`h-4 w-4 shrink-0 transition-transform duration-300 group-hover:scale-110 ${isSelected ? "text-[var(--accent)]" : "text-[var(--muted-foreground)]"
                                     }`}
                                 />
-                                <span className="truncate">{feature.name}</span>
+                                <span className="min-w-0 break-words leading-snug">{feature.name}</span>
                               </div>
                               {isSelected && (
                                 <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-[var(--primary-foreground)] shadow-[var(--shadow-glow)]">

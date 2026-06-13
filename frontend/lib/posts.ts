@@ -193,6 +193,30 @@ export const formatPrice = (price: number) => {
   return `${formattedNumber} ₫`;
 };
 
+export const formatCompactPrice = (price: number) => {
+  if (!Number.isFinite(price)) {
+    return formatPrice(price);
+  }
+
+  const formatter = new Intl.NumberFormat("vi-VN", {
+    maximumFractionDigits: 2,
+  });
+
+  if (Math.abs(price) >= 1_000_000_000_000) {
+    return `${formatter.format(price / 1_000_000_000_000)} nghìn tỷ ₫`;
+  }
+
+  if (Math.abs(price) >= 1_000_000_000) {
+    return `${formatter.format(price / 1_000_000_000)} tỷ ₫`;
+  }
+
+  if (Math.abs(price) >= 1_000_000) {
+    return `${formatter.format(price / 1_000_000)} triệu ₫`;
+  }
+
+  return formatPrice(price);
+};
+
 export const formatArea = (area: number) =>
   `${new Intl.NumberFormat("vi-VN", {
     maximumFractionDigits: area % 1 === 0 ? 0 : 1,

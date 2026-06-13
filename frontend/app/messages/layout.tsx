@@ -553,7 +553,7 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
 
                       <div className="min-w-0 flex-1 pr-8">
                         <div className="mb-1 flex items-start justify-between gap-3">
-                          <h3 className="truncate text-[15px] font-semibold text-[var(--foreground)]">{otherUser.fullName}</h3>
+                          <h3 className="line-clamp-2 min-w-0 break-words text-[15px] font-semibold leading-snug text-[var(--foreground)]">{otherUser.fullName}</h3>
                           <span className="shrink-0 text-xs text-[var(--muted-foreground)]">
                             {formatConversationTime(lastMessage?.createdAt)}
                           </span>

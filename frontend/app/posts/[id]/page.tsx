@@ -10,7 +10,6 @@ import {
   ArrowLeft,
   BadgeCheck,
   Bookmark,
-  Building2,
   ChevronLeft,
   ChevronRight,
   ChevronUp,
@@ -22,6 +21,7 @@ import {
   Pencil,
   Phone,
   Save,
+  Scale,
   ShieldAlert,
   ShieldCheck,
   TriangleAlert,
@@ -39,8 +39,10 @@ import {
 import { api } from "@/lib/api";
 import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
 import { FeatureIcon } from "@/lib/feature-icons";
+import { groupFeaturesByCategory } from "@/lib/feature-groups";
 import {
   formatArea,
+  formatCompactPrice,
   formatLocation,
   formatPrice,
   propertyTypeLabels,
@@ -176,12 +178,34 @@ export default function PostDetailPage() {
     };
   }, [params.id]);
 
+  useEffect(() => {
+    if (!post) {
+      setIsCompared(false);
+      return;
+    }
+
+    const handleCompareUpdate = () => {
+      try {
+        const stored = window.localStorage.getItem("compared_posts");
+        const parsed = stored ? JSON.parse(stored) : [];
+        const list = Array.isArray(parsed) ? (parsed as Post[]) : [];
+        setIsCompared(list.some((item) => item.id === post.id));
+      } catch {
+        setIsCompared(false);
+      }
+    };
+
+    handleCompareUpdate();
+    window.addEventListener("compare_list_updated", handleCompareUpdate);
+    return () => window.removeEventListener("compare_list_updated", handleCompareUpdate);
+  }, [post]);
+
   const canManagePost = useMemo(() => {
     if (!user || !post) {
       return false;
     }
 
-    return user.role === "ADMIN" || user.id === post.author.id;
+    return user.id === post.author.id;
   }, [post, user]);
 
   const images = useMemo(() => {
@@ -195,6 +219,10 @@ export default function PostDetailPage() {
   const activeImage = images[selectedImage]?.imageUrl ?? imageFallback;
   const isOwnPost = !!user && !!post && user.id === post.author.id;
   const isBannedOwnerView = Boolean(post && isOwnPost && post.status === "BANNED");
+  const groupedFeatures = useMemo(
+    () => groupFeaturesByCategory(post?.features ?? []),
+    [post?.features],
+  );
 
   const handleScrollToMap = () => {
     mapSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -722,7 +750,12 @@ export default function PostDetailPage() {
             <div className="mt-6 border-b border-[var(--border)] pb-6">
               <div className="grid gap-4 sm:gap-6 grid-cols-2 md:grid-cols-4 lg:gap-x-8 xl:gap-x-12">
                 <div className="min-w-0 grid content-start gap-1">
-                  <p className="break-words text-2xl font-semibold leading-tight text-[var(--accent)] sm:text-3xl xl:whitespace-nowrap">{formatPrice(post.price)}</p>
+                  <p
+                    className="max-w-full truncate text-2xl font-semibold leading-tight text-[var(--accent)] tabular-nums sm:text-3xl"
+                    title={formatPrice(post.price)}
+                  >
+                    {formatCompactPrice(post.price)}
+                  </p>
                   <p className="text-xs text-[var(--muted-foreground)] sm:text-sm">{post.postType === "SELL" ? "Giá bán" : "Giá thuê"}</p>
                 </div>
                 <div className="min-w-0 grid content-start gap-1">
@@ -774,8 +807,8 @@ export default function PostDetailPage() {
                         <BadgeCheck className="h-3.5 w-3.5 text-[var(--accent)]" />
                       </div>
                     </Link>
-                    <div className="min-w-0">
-                      <Link href={`/profile/posts?authorId=${post.author.id}`} className="line-clamp-1 font-bold text-[var(--foreground)] transition hover:text-[var(--accent)] block">
+                    <div className="min-w-0 flex-1">
+                      <Link href={`/profile/posts?authorId=${post.author.id}`} className="block break-words font-bold leading-snug text-[var(--foreground)] transition hover:text-[var(--accent)]">
                         {post.author.fullName}
                       </Link>
                       <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">Đã xác thực</p>
@@ -967,8 +1000,8 @@ export default function PostDetailPage() {
                       <BadgeCheck className="h-4 w-4 text-[var(--accent)]" />
                     </div>
                   </Link>
-                  <div className="min-w-0">
-                    <Link href={`/profile/posts?authorId=${post.author.id}`} onClick={cacheAuthorPreview} className="line-clamp-1 text-lg font-bold text-[var(--foreground)] transition hover:text-[var(--accent)] block">
+                  <div className="min-w-0 flex-1">
+                    <Link href={`/profile/posts?authorId=${post.author.id}`} onClick={cacheAuthorPreview} className="block break-words text-lg font-bold leading-snug text-[var(--foreground)] transition hover:text-[var(--accent)]">
                       {post.author.fullName}
                     </Link>
                     <p className="mt-1 text-sm text-[var(--muted-foreground)]">Hoạt động gần đây</p>
@@ -1037,7 +1070,9 @@ export default function PostDetailPage() {
                           <p className="mt-1 text-xs text-[var(--muted-foreground)] sm:text-sm">{formatLocation(item)}</p>
                         </div>
                         <div className="mt-2 flex flex-wrap items-center justify-between gap-1">
-                          <span className="font-semibold text-[var(--accent)]">{formatPrice(item.price)}</span>
+                          <span className="min-w-0 truncate font-semibold text-[var(--accent)] tabular-nums" title={formatPrice(item.price)}>
+                            {formatCompactPrice(item.price)}
+                          </span>
                           <span className="text-xs text-[var(--muted-foreground)] sm:text-sm">{formatArea(item.area)}</span>
                         </div>
                       </div>
