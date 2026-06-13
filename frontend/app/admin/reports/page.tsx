@@ -458,10 +458,9 @@ function ReportRow({
 }) {
   return (
     <>
-      <button
-        type="button"
+      <div
         onClick={onOpenDetail}
-        className={`block w-full px-4 py-4 text-left transition xl:hidden ${
+        className={`block w-full cursor-pointer px-4 py-4 text-left transition xl:hidden ${
           selected ? "bg-[var(--accent-soft)]" : "hover:bg-[var(--accent-soft)]"
         }`}
       >
@@ -527,7 +526,7 @@ function ReportRow({
             </div>
           </div>
         </div>
-      </button>
+      </div>
 
       <div
         className={`hidden grid-cols-[128px_minmax(0,2fr)_minmax(0,1.15fr)_minmax(0,1.5fr)_148px_200px_132px] items-center gap-4 px-5 py-3 text-sm transition xl:grid ${
