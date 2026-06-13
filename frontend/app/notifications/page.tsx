@@ -286,8 +286,8 @@ export default function NotificationsPage() {
   return (
     <div className="px-4 py-6 lg:px-6 xl:h-[calc(100vh-5rem)] xl:overflow-hidden">
       <div className="grid min-h-0 gap-5 lg:grid-cols-[minmax(0,1fr)_320px] xl:h-full xl:grid-cols-[260px_minmax(0,1fr)_320px]">
-        <aside className="glass-card h-fit p-3.5 xl:max-h-full xl:overflow-y-auto no-scrollbar">
-          <nav className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+        <aside className="glass-card -mx-4 sm:mx-0 rounded-none sm:rounded-2xl border-x-0 sm:border-x h-fit p-2 overflow-x-auto no-scrollbar xl:p-3.5 xl:max-h-full xl:overflow-y-auto">
+          <nav className="flex gap-2 snap-x xl:grid xl:grid-cols-1">
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = typeFilter === item.type;
@@ -296,8 +296,11 @@ export default function NotificationsPage() {
                 <button
                   key={item.type}
                   type="button"
-                  onClick={() => setTypeFilter(item.type)}
-                  className={`flex w-full items-center justify-between gap-3 rounded-xl border px-3.5 py-3 text-left transition ${
+                  onClick={(e) => {
+                    setTypeFilter(item.type);
+                    e.currentTarget.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                  }}
+                  className={`flex shrink-0 snap-center items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-left transition xl:w-full xl:py-3 ${
                     active
                       ? "border-[var(--info-border)] bg-[var(--info-soft)] text-[var(--foreground)] shadow-[var(--shadow-glow)]"
                       : "border-transparent text-[var(--secondary-foreground)] hover:border-[var(--border)] hover:bg-[var(--hover)]"
@@ -305,7 +308,7 @@ export default function NotificationsPage() {
                 >
                   <span className="flex items-center gap-2.5">
                     <Icon className="h-4.5 w-4.5" />
-                    <span className="text-sm font-medium">{item.label}</span>
+                    <span className="text-sm font-medium whitespace-nowrap">{item.label}</span>
                   </span>
                   <span className="theme-surface-soft rounded-full px-2 py-0.5 text-xs font-semibold">
                     {counts[item.type]}
@@ -338,19 +341,19 @@ export default function NotificationsPage() {
           </div>
         </aside>
 
-        <main className="min-w-0 flex min-h-0 flex-col xl:h-full">
-          <div className="mb-4 flex flex-col gap-3 shrink-0 sm:flex-row sm:items-center sm:justify-between">
-            <h1 className="text-3xl font-bold text-[var(--foreground)]">Thông báo</h1>
-            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+        <main className="min-w-0 flex min-h-0 flex-col mt-4 xl:mt-0 xl:h-full">
+          <div className="mb-4 flex items-center justify-between gap-3 shrink-0">
+            <h1 className="text-2xl sm:text-3xl font-bold text-[var(--foreground)]">Thông báo</h1>
+            <div className="flex flex-wrap items-center justify-end gap-1.5 sm:gap-2">
               <button
                 type="button"
                 onClick={() => setIsFilterOpen(true)}
-                className="theme-surface-soft inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--surface-muted)] xl:hidden"
+                className="theme-surface-soft inline-flex items-center justify-center gap-1.5 rounded-xl px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--surface-muted)] xl:hidden"
               >
-                <SlidersHorizontal className="h-4 w-4 text-[var(--accent)]" />
-                Bộ lọc
+                <SlidersHorizontal className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[var(--accent)]" />
+                <span className="hidden sm:inline">Bộ lọc</span>
                 {activeFilterCount > 0 ? (
-                  <span className="theme-badge-info inline-flex min-w-6 items-center justify-center rounded-full px-2 py-0.5 text-xs">
+                  <span className="theme-badge-info inline-flex min-w-5 h-5 items-center justify-center rounded-full px-1.5 text-[10px] sm:text-xs">
                     {activeFilterCount}
                   </span>
                 ) : null}
@@ -359,10 +362,11 @@ export default function NotificationsPage() {
                 type="button"
                 onClick={markAllAsRead}
                 disabled={unreadCount === 0}
-                className="theme-link inline-flex items-center gap-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                title="Đánh dấu tất cả đã đọc"
+                className="theme-link inline-flex h-9 w-9 sm:h-auto sm:w-auto items-center justify-center gap-2 rounded-xl sm:rounded-none bg-[var(--surface-soft)] sm:bg-transparent text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <Check className="h-4 w-4" />
-                Đánh dấu tất cả đã đọc
+                <Check className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="hidden sm:inline">Đánh dấu tất cả đã đọc</span>
               </button>
             </div>
           </div>
@@ -381,70 +385,84 @@ export default function NotificationsPage() {
                   Đang tải thông báo...
                 </div>
               </div>
-            ) : filteredItems.length === 0 ? (
-              <div className="theme-surface-soft theme-empty-state flex h-full min-h-[300px] items-center justify-center rounded-2xl border-dashed p-8 text-center">
-                Không có thông báo phù hợp.
-              </div>
             ) : (
-              <div className="space-y-3">
-                {filteredItems.map((notification) => {
-                  const Icon = getTypeIcon(notification.type);
-                  const href = getNotificationHref(notification);
+              <div key={typeFilter} className="animate-in fade-in slide-in-from-bottom-4 duration-500 h-full">
+                {filteredItems.length === 0 ? (
+                  <div className="theme-surface-soft theme-empty-state flex h-full min-h-[300px] items-center justify-center rounded-2xl border-dashed p-8 text-center">
+                    Không có thông báo phù hợp.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {filteredItems.map((notification) => {
+                      const Icon = getTypeIcon(notification.type);
+                      const href = getNotificationHref(notification);
 
-                  return (
-                    <article
-                      key={notification.id}
-                      className={`rounded-xl border p-4 transition ${
-                        notification.isRead
-                          ? "theme-surface-soft"
-                          : "border-[var(--info-border)] bg-[var(--info-soft)] shadow-[var(--shadow-glow)]"
-                      }`}
-                    >
-                      <div className="grid gap-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-start xl:grid-cols-[auto_minmax(0,1fr)_auto] xl:items-center">
-                        <div className="flex items-center gap-3">
-                          <span className={`h-3 w-3 rounded-full ${notification.isRead ? "theme-notification-dot-read" : "theme-notification-dot-unread"}`} />
-                          <span className={`flex h-14 w-14 items-center justify-center rounded-full ${notification.isRead ? "theme-surface-soft text-[var(--secondary-foreground)]" : "theme-button-primary"}`}>
-                            <Icon className="h-6 w-6" />
-                          </span>
-                        </div>
+                      return (
+                        <Link
+                          key={notification.id}
+                          href={href}
+                          onClick={() => markOneAsRead(notification)}
+                          className={`block rounded-2xl border p-3.5 sm:p-4 transition hover:brightness-95 ${
+                            notification.isRead
+                              ? "theme-surface-soft border-transparent"
+                              : "border-[var(--info-border)] bg-[var(--info-soft)] shadow-[var(--shadow-glow)]"
+                          }`}
+                        >
+                          <div className="flex gap-3 sm:gap-4 items-start">
+                            <div className="flex items-center gap-2 pt-1 sm:pt-0">
+                              <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${notification.isRead ? "theme-notification-dot-read" : "theme-notification-dot-unread"}`} />
+                              <span className={`flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-full ${notification.isRead ? "theme-surface-soft text-[var(--secondary-foreground)]" : "theme-button-primary"}`}>
+                                <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
+                              </span>
+                            </div>
 
-                        <div className="min-w-0">
-                          <h2 className="line-clamp-1 font-semibold text-[var(--foreground)]">{notification.title}</h2>
-                          <p className="theme-text-secondary mt-1 line-clamp-2 text-sm leading-6">{notification.content}</p>
-                          <p className="theme-text-muted mt-1 text-sm">{formatNotificationTime(notification.createdAt)}</p>
-                        </div>
-
-                        <div className="flex flex-col gap-2 sm:col-span-2 sm:flex-row sm:justify-end xl:col-span-1 xl:flex-col xl:items-end">
-                          <Link
-                            href={href}
-                            onClick={() => markOneAsRead(notification)}
-                            className="theme-button-primary inline-flex w-full justify-center rounded-lg px-4 py-2 text-sm font-semibold transition sm:w-auto sm:min-w-32"
-                          >
-                            {getActionLabel(notification.type)}
-                          </Link>
-                          <button
-                            type="button"
-                            onClick={() => markOneAsRead(notification)}
-                            disabled={notification.isRead}
-                            className="theme-button-info rounded-lg px-3 py-1 text-xs font-medium transition disabled:border-[var(--border)] disabled:bg-[var(--surface)] disabled:text-[var(--muted-foreground)]"
-                          >
-                            {notification.isRead ? "Đã đọc" : "Chưa đọc"}
-                          </button>
-                        </div>
-                      </div>
-                    </article>
-                  );
-                })}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex justify-between gap-2 items-start">
+                                <h2 className="line-clamp-1 text-sm sm:text-base font-semibold text-[var(--foreground)]">{notification.title}</h2>
+                                <span className="theme-text-muted shrink-0 whitespace-nowrap text-xs">{formatNotificationTime(notification.createdAt)}</span>
+                              </div>
+                              <p className="theme-text-secondary mt-1 line-clamp-2 text-xs sm:text-sm leading-5 sm:leading-6">{notification.content}</p>
+                              
+                              <div className="mt-3 flex items-center justify-between">
+                                <span className="text-xs font-medium text-[var(--accent)] hover:underline inline-flex items-center gap-1">
+                                  {getActionLabel(notification.type)}
+                                  <ChevronRight className="h-3 w-3" />
+                                </span>
+                                {!notification.isRead && (
+                                  <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--info)] bg-[var(--info-soft)] px-2 py-0.5 rounded-md border border-[var(--info-border)]">Mới</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>
         </main>
 
-        <aside className="space-y-4 pb-6 lg:col-span-2 xl:col-span-1 xl:max-h-full xl:overflow-y-auto no-scrollbar">
+        <aside className="hidden lg:block space-y-4 pb-6 lg:col-span-2 xl:col-span-1 xl:max-h-full xl:overflow-y-auto no-scrollbar">
           <section className="hidden glass-card p-4 xl:block">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-[var(--foreground)]">Bộ lọc thông báo</h2>
-              <SlidersHorizontal className="h-4 w-4 text-[var(--primary)]" />
+              {activeFilterCount > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTypeFilter("all");
+                    setStatusFilter("all");
+                    setTimeFilter("7d");
+                  }}
+                  className="text-sm font-medium text-[var(--info)] hover:underline"
+                >
+                  Đặt lại
+                </button>
+              ) : (
+                <SlidersHorizontal className="h-4 w-4 text-[var(--primary)]" />
+              )}
             </div>
 
             <div className="space-y-4">
@@ -563,7 +581,21 @@ export default function NotificationsPage() {
               <section className="glass-card p-4">
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-xl font-semibold text-[var(--foreground)]">Bộ lọc thông báo</h2>
-                  <SlidersHorizontal className="h-4 w-4 text-[var(--primary)]" />
+                  {activeFilterCount > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTypeFilter("all");
+                        setStatusFilter("all");
+                        setTimeFilter("7d");
+                      }}
+                      className="text-sm font-medium text-[var(--info)] hover:underline"
+                    >
+                      Đặt lại
+                    </button>
+                  ) : (
+                    <SlidersHorizontal className="h-4 w-4 text-[var(--primary)]" />
+                  )}
                 </div>
 
                 <div className="space-y-4">

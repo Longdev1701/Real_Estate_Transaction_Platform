@@ -12,6 +12,7 @@ import {
   Save,
   ChevronUp,
   ChevronDown,
+  Star,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -674,6 +675,10 @@ export default function CreatePostPage() {
     }
   };
 
+  const onError = () => {
+    addToast("Vui lòng kiểm tra lại thông tin. Có trường bị bỏ trống hoặc không hợp lệ.", "error");
+  };
+
   if (!hasHydrated || isLoadingUser || (accessToken && !user)) {
     return null;
   }
@@ -738,14 +743,16 @@ export default function CreatePostPage() {
       </div>
 
 
-      {/* Grid ngang 2 phần, nằm trọn trên 1 page trên desktop */}
-      <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6 lg:grid-cols-[1.3fr_1fr] min-w-0 min-h-0 flex-1 w-full lg:overflow-hidden">
+      {/* Grid ngang 2 phần, nằm trọn trên 1 page trên desktop. Flex-col-reverse trên mobile để ảnh lên trên */}
+      <form onSubmit={handleSubmit(onSubmit, onError)} className="flex flex-col-reverse gap-6 lg:grid lg:grid-cols-[1.3fr_1fr] min-w-0 min-h-0 flex-1 w-full lg:overflow-hidden">
 
         {/* CỘT TRÁI: Bảng nhập thông tin */}
-        <div className="theme-post-form-shell flex min-w-0 min-h-0 flex-col p-4 sm:p-5 lg:overflow-y-auto custom-scrollbar">
-          <h2 className="mb-4 shrink-0 border-b border-[var(--border)] pb-2 text-base font-semibold text-[var(--accent)]">Thông tin chi tiết</h2>
-
-          <div className="space-y-4 flex-1 pr-1">
+        <div className="flex min-w-0 min-h-0 flex-col lg:overflow-y-auto custom-scrollbar space-y-6 lg:pr-2 pb-24 lg:pb-0">
+          
+          {/* Card 1: Thông tin cơ bản */}
+          <div className="theme-post-form-shell p-4 sm:p-5">
+            <h2 className="mb-4 shrink-0 border-b border-[var(--border)] pb-2 text-base font-semibold text-[var(--accent)]">Thông tin cơ bản</h2>
+            <div className="space-y-4">
             {/* Tiêu đề */}
             <div>
               <label className="theme-post-label mb-1 block text-xs font-medium">Tiêu đề bài đăng <span className="text-[var(--danger)]">*</span></label>
@@ -860,10 +867,16 @@ export default function CreatePostPage() {
                     </button>
                   </div>
                 </div>
+                </div>
                 {errors.area && <p className="mt-1 text-xs text-[var(--danger-foreground)]">{errors.area.message}</p>}
               </div>
             </div>
+          </div>
 
+          {/* Card 2: Vị trí & Bản đồ */}
+          <div className="theme-post-form-shell p-4 sm:p-5">
+            <h2 className="mb-4 shrink-0 border-b border-[var(--border)] pb-2 text-base font-semibold text-[var(--accent)]">Vị trí & Bản đồ</h2>
+            <div className="space-y-4">
             {/* Khu vực chọn cấp bậc */}
             <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
               <div>
@@ -916,95 +929,22 @@ export default function CreatePostPage() {
             </div>
 
             {/* Tọa độ Map */}
-            <div className="grid gap-4 grid-cols-1 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-              <div>
-                <label className="theme-post-label mb-1 block text-xs font-medium">Vĩ độ (Lat)</label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    step="any"
-                    {...register("latitude")}
-                    onKeyDown={(e) => {
-                      if (e.key === "ArrowUp") {
-                        e.preventDefault();
-                        setValue("latitude", (Number(watch("latitude")) || 0) + 0.0001, { shouldValidate: true, shouldDirty: true });
-                      } else if (e.key === "ArrowDown") {
-                        e.preventDefault();
-                        setValue("latitude", (Number(watch("latitude")) || 0) - 0.0001, { shouldValidate: true, shouldDirty: true });
-                      }
-                    }}
-                    className="input-dark theme-post-input py-2 text-sm pr-8 appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
-                  <div className="absolute right-1 top-0 bottom-0 flex flex-col justify-center gap-[2px]">
-                    <button
-                      type="button"
-                      onClick={() => setValue("latitude", (Number(watch("latitude")) || 0) + 0.0001, { shouldValidate: true, shouldDirty: true })}
-                      className="theme-step-button rounded p-[2px] focus:outline-none"
-                    >
-                      <ChevronUp size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setValue("latitude", (Number(watch("latitude")) || 0) - 0.0001, { shouldValidate: true, shouldDirty: true })}
-                      className="theme-step-button rounded p-[2px] focus:outline-none"
-                    >
-                      <ChevronDown size={14} />
-                    </button>
-                  </div>
-                </div>
-                {errors.latitude && <p className="mt-1 text-xs text-[var(--danger-foreground)]">{errors.latitude.message}</p>}
-              </div>
-
-              <div>
-                <label className="theme-post-label mb-1 block text-xs font-medium">Kinh độ (Lng)</label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    step="any"
-                    {...register("longitude")}
-                    onKeyDown={(e) => {
-                      if (e.key === "ArrowUp") {
-                        e.preventDefault();
-                        setValue("longitude", (Number(watch("longitude")) || 0) + 0.0001, { shouldValidate: true, shouldDirty: true });
-                      } else if (e.key === "ArrowDown") {
-                        e.preventDefault();
-                        setValue("longitude", (Number(watch("longitude")) || 0) - 0.0001, { shouldValidate: true, shouldDirty: true });
-                      }
-                    }}
-                    className="input-dark theme-post-input py-2 text-sm pr-8 appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  />
-                  <div className="absolute right-1 top-0 bottom-0 flex flex-col justify-center gap-[2px]">
-                    <button
-                      type="button"
-                      onClick={() => setValue("longitude", (Number(watch("longitude")) || 0) + 0.0001, { shouldValidate: true, shouldDirty: true })}
-                      className="theme-step-button rounded p-[2px] focus:outline-none"
-                    >
-                      <ChevronUp size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setValue("longitude", (Number(watch("longitude")) || 0) - 0.0001, { shouldValidate: true, shouldDirty: true })}
-                      className="theme-step-button rounded p-[2px] focus:outline-none"
-                    >
-                      <ChevronDown size={14} />
-                    </button>
-                  </div>
-                </div>
-                {errors.longitude && <p className="mt-1 text-xs text-[var(--danger-foreground)]">{errors.longitude.message}</p>}
-              </div>
+            <div className="flex items-center gap-4">
+              <input type="hidden" {...register("latitude")} />
+              <input type="hidden" {...register("longitude")} />
 
               <button
                 type="button"
                 onClick={handleGeocode}
                 disabled={isGeocoding || !address || !city}
-                className="btn-primary py-2 px-3 text-xs flex items-center gap-1 h-[38px] disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                className="theme-button-secondary w-full py-2 px-3 text-xs flex items-center justify-center gap-1.5 h-[38px] disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
               >
                 {isGeocoding ? (
                   <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
                 ) : (
                   <MapPin className="h-3.5 w-3.5" />
                 )}
-                <span>Tìm vị trí</span>
+                <span>Định vị trên bản đồ</span>
               </button>
             </div>
 
@@ -1098,7 +1038,13 @@ export default function CreatePostPage() {
                 </p>
               </>
             ) : null}
+            </div>
+          </div>
 
+          {/* Card 3: Thông tin mô tả */}
+          <div className="theme-post-form-shell p-4 sm:p-5">
+            <h2 className="mb-4 shrink-0 border-b border-[var(--border)] pb-2 text-base font-semibold text-[var(--accent)]">Thông tin mô tả</h2>
+            <div className="space-y-4">
             {/* Mô tả chi tiết */}
             <div>
               <label className="theme-post-label mb-1 block text-xs font-medium">Mô tả bài đăng <span className="text-[var(--danger)]">*</span></label>
@@ -1111,12 +1057,14 @@ export default function CreatePostPage() {
                 <p className="mt-1 text-xs text-[var(--danger-foreground)]">{errors.description.message}</p>
               )}
             </div>
+            </div>
+          </div>
 
-            {/* Đặc trưng bất động sản */}
-            {features.length > 0 && (
-              <div className="mt-4 border-t border-[var(--border)] pt-2">
-                <label className="mb-2.5 block text-xs font-semibold uppercase tracking-wider text-[var(--accent)]">Đặc trưng bất động sản</label>
-                <div className="space-y-4">
+          {/* Đặc trưng bất động sản */}
+          {features.length > 0 && (
+            <div className="theme-post-form-shell p-4 sm:p-5">
+              <h2 className="mb-4 shrink-0 border-b border-[var(--border)] pb-2 text-base font-semibold text-[var(--accent)]">Đặc trưng bất động sản</h2>
+              <div className="space-y-4">
                   {Object.entries(groupedFeatures).map(([category, list]) => (
                     <div key={category} className="space-y-2">
                       <h4 className="text-[11px] font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">{category}</h4>
@@ -1153,12 +1101,11 @@ export default function CreatePostPage() {
                   ))}
                 </div>
               </div>
-            )}
-          </div>
+          )}
         </div>
 
         {/* CỘT PHẢI: Upload ảnh nằm ngang và nút đăng bài */}
-        <div className="theme-post-form-shell flex min-w-0 min-h-0 flex-col p-4 sm:p-5 lg:overflow-y-auto custom-scrollbar pb-24 lg:pb-5">
+        <div className="theme-post-form-shell flex min-w-0 min-h-0 flex-col p-4 sm:p-5 lg:overflow-y-auto custom-scrollbar lg:pb-5">
           <div className="mb-4 flex shrink-0 items-center justify-between border-b border-[var(--border)] pb-2">
             <h2 className="text-base font-semibold text-[var(--accent)]">Hình ảnh bất động sản</h2>
             <span className="theme-badge-info rounded-full px-2 py-0.5 text-xs font-medium">
@@ -1168,15 +1115,18 @@ export default function CreatePostPage() {
 
           <div className="space-y-5 flex-1 flex flex-col min-h-0">
             {/* Dropzone upload */}
-            <div className="theme-upload-zone shrink-0 rounded-2xl p-4 transition duration-300">
+            <div className="theme-upload-zone shrink-0 rounded-xl lg:rounded-2xl p-2 lg:p-4 transition duration-300">
               <button
                 type="button"
                 onClick={openFilePicker}
-                className="flex w-full flex-col items-center justify-center gap-2 py-4 text-[var(--secondary-foreground)] hover:text-[var(--foreground)]"
+                className="flex w-full flex-row lg:flex-col items-center justify-center gap-3 lg:gap-2 py-2 lg:py-4 text-[var(--secondary-foreground)] hover:text-[var(--foreground)]"
               >
-                <Upload className="h-7 w-7 animate-bounce text-[var(--accent)]" />
-                <span className="text-sm font-semibold">Tải ảnh lên tại đây</span>
-                <span className="text-xs text-[var(--muted-foreground)]">Chấp nhận định dạng JPG, PNG, WEBP. Tối đa 5MB/ảnh</span>
+                <Upload className="h-5 w-5 lg:h-7 lg:w-7 animate-bounce text-[var(--accent)] shrink-0" />
+                <div className="flex flex-col lg:items-center text-left lg:text-center">
+                  <span className="text-[13px] lg:text-sm font-semibold">Tải ảnh lên tại đây</span>
+                  <span className="text-[11px] lg:text-xs text-[var(--muted-foreground)] hidden lg:inline">Chấp nhận định dạng JPG, PNG, WEBP. Tối đa 5MB/ảnh</span>
+                  <span className="text-[11px] lg:text-xs text-[var(--muted-foreground)] lg:hidden">Tối đa 5MB/ảnh (JPG, PNG)</span>
+                </div>
               </button>
               <input
                 key={fileInputKey}
@@ -1201,10 +1151,12 @@ export default function CreatePostPage() {
 
             {/* Vùng xem ảnh nằm ngang bên phải */}
             <div className="flex-1 min-w-0 min-h-0 flex flex-col justify-center">
-              <span className="theme-post-helper mb-2 block shrink-0 text-xs font-medium">Danh sách ảnh đã tải lên (trượt ngang):</span>
+              {imagePreviews.length > 0 && (
+                <span className="theme-post-helper mb-2 block shrink-0 text-[11px] lg:text-xs font-medium">Danh sách ảnh đã tải lên (trượt ngang):</span>
+              )}
 
               {imagePreviews.length > 0 ? (
-                <div className="flex w-full min-w-0 items-center gap-4 overflow-x-auto pb-4 pt-1 custom-scrollbar min-h-[160px] max-h-[220px]">
+                <div className="flex w-full min-w-0 items-center gap-3 lg:gap-4 overflow-x-auto pb-2 lg:pb-4 pt-1 custom-scrollbar mobile-hide-scroll min-h-[160px] max-h-[220px]">
                   {imagePreviews.map((image, index) => {
                     const isAvatar = image.id === avatarImageId;
                     return (
@@ -1219,16 +1171,16 @@ export default function CreatePostPage() {
                           className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
 
-                        {/* Overlay hiển thị nút (Luôn hiện trên mobile, hover trên desktop) */}
-                        <div className="absolute inset-0 flex flex-col justify-between bg-gradient-to-b from-black/50 via-transparent to-black/50 p-2 opacity-100 lg:opacity-0 transition-opacity duration-200 lg:group-hover:opacity-100">
-                          <div className="flex justify-end">
+                        {/* Nút thao tác (Luôn hiện trên mobile, hover trên desktop) */}
+                        <div className="absolute inset-0 flex flex-col justify-between p-1.5 opacity-100 lg:opacity-0 transition-opacity duration-200 lg:group-hover:opacity-100 lg:bg-black/20 pointer-events-none">
+                          <div className="flex justify-end pointer-events-auto">
                             <button
                               type="button"
                               onClick={() => handleRemoveImage(image.id)}
-                              className="theme-button-danger-solid flex h-7 w-7 items-center justify-center rounded-full transition"
+                              className="bg-black/50 text-white hover:bg-red-500 flex h-6 w-6 items-center justify-center rounded-full transition backdrop-blur-sm"
                               title="Xóa ảnh"
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <Trash2 className="h-3 w-3" />
                             </button>
                           </div>
 
@@ -1236,19 +1188,20 @@ export default function CreatePostPage() {
                             <button
                               type="button"
                               onClick={() => setAvatarImageId(image.id)}
-                              className="theme-button-success w-full rounded-lg py-1 text-[10px] font-semibold transition"
+                              className="bg-black/50 hover:bg-green-600 text-white w-full rounded-md py-1 text-[10px] font-medium transition backdrop-blur-sm flex items-center justify-center gap-1 pointer-events-auto"
                             >
-                              Chọn làm đại diện
+                              <Star className="h-3 w-3" />
+                              <span>Đại diện</span>
                             </button>
                           )}
                         </div>
 
                         {isAvatar ? (
-                          <div className="theme-badge-success absolute bottom-2 left-2 rounded-md px-1.5 py-0.5 text-[10px] font-semibold">
+                          <div className="theme-badge-success absolute top-1.5 left-1.5 rounded-md px-1.5 py-0.5 text-[10px] font-semibold">
                             Ảnh đại diện
                           </div>
                         ) : (
-                          <div className="absolute bottom-2 left-2 rounded-md bg-[var(--overlay-strong)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--accent)] backdrop-blur-sm">
+                          <div className="absolute top-1.5 left-1.5 rounded-md bg-black/50 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
                             Ảnh #{index + 1}
                           </div>
                         )}
@@ -1257,7 +1210,7 @@ export default function CreatePostPage() {
                   })}
                 </div>
               ) : (
-                <div className="theme-upload-preview flex flex-1 flex-col items-center justify-center rounded-2xl p-6 text-center text-[var(--muted-foreground)]">
+                <div className="theme-upload-preview hidden lg:flex flex-1 flex-col items-center justify-center rounded-2xl p-6 text-center text-[var(--muted-foreground)]">
                   <ImagePlus className="mb-2 h-7 w-7 text-[var(--accent)]" />
                   <p className="text-xs">Chưa có hình ảnh nào được tải lên.</p>
                 </div>
@@ -1306,6 +1259,15 @@ export default function CreatePostPage() {
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background: color-mix(in srgb, var(--foreground) 20%, transparent);
+        }
+        @media (max-width: 1024px) {
+          .mobile-hide-scroll::-webkit-scrollbar {
+            display: none;
+          }
+          .mobile-hide-scroll {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+          }
         }
       ` }} />
     </div>
