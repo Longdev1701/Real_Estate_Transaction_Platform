@@ -100,8 +100,14 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
 
   const fetchConversations = async (pageNum: number, isLoadMore = false) => {
     try {
-      if (!isLoadMore) setLoading(true);
-      else setIsLoadingMore(true);
+      if (!isLoadMore) {
+        const cached = user ? readSessionCache<ConversationListItem[]>(`conversations_${user.id}`) : null;
+        if (!cached || cached.length === 0) {
+          setLoading(true);
+        }
+      } else {
+        setIsLoadingMore(true);
+      }
 
       const { data } = await api.get(`/conversations?page=${pageNum}&limit=20`);
 
@@ -114,7 +120,11 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
       if (isLoadMore) {
         setConversations((prev) => processConvs([...prev, ...data.data.conversations]));
       } else {
-        setConversations(processConvs(data.data.conversations));
+        const freshConvs = processConvs(data.data.conversations);
+        setConversations(freshConvs);
+        if (user) {
+          writeSessionCache(`conversations_${user.id}`, freshConvs, { ttlMs: 5 * 60 * 1000 });
+        }
       }
       setHasMore(data.data.pagination?.hasMore ?? false);
     } catch (error) {
@@ -127,10 +137,23 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
 
   useEffect(() => {
     if (user) {
+      const cached = readSessionCache<ConversationListItem[]>(`conversations_${user.id}`);
+      if (cached && cached.length > 0) {
+        setConversations(cached);
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
       fetchConversations(1, false);
       setPage(1);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (user && conversations.length > 0) {
+      writeSessionCache(`conversations_${user.id}`, conversations, { ttlMs: 5 * 60 * 1000 });
+    }
+  }, [conversations, user]);
 
   useEffect(() => {
     if (!socket || !isConnected) return;
