@@ -33,7 +33,6 @@ import {
   Activity,
   Copy,
   Check,
-  Scale,
 } from "lucide-react";
 
 import { api } from "@/lib/api";
