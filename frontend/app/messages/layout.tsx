@@ -382,33 +382,6 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
               );
             })}
           </div>
-
-          <div className="space-y-2.5">
-            <button
-              className="group relative flex w-full items-center justify-center rounded-[20px] px-2 py-3 text-[var(--muted-foreground)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
-              aria-label="Thông báo"
-              title="Thông báo"
-            >
-              <span className="flex h-11 w-11 items-center justify-center rounded-[16px] border border-[var(--border)] bg-[var(--surface-muted)]">
-                <Bell className="h-[18px] w-[18px]" />
-              </span>
-              <span className="theme-message-popover pointer-events-none absolute left-full z-20 ml-3 whitespace-nowrap rounded-xl px-2.5 py-1.5 text-xs font-medium text-[var(--foreground)] opacity-0 transition group-hover:opacity-100">
-                Thông báo
-              </span>
-            </button>
-            <button
-              className="group relative flex w-full items-center justify-center rounded-[20px] px-2 py-3 text-[var(--muted-foreground)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
-              aria-label="Cài đặt"
-              title="Cài đặt"
-            >
-              <span className="flex h-11 w-11 items-center justify-center rounded-[16px] border border-[var(--border)] bg-[var(--surface-muted)]">
-                <Settings className="h-[18px] w-[18px]" />
-              </span>
-              <span className="theme-message-popover pointer-events-none absolute left-full z-20 ml-3 whitespace-nowrap rounded-xl px-2.5 py-1.5 text-xs font-medium text-[var(--foreground)] opacity-0 transition group-hover:opacity-100">
-                Cài đặt
-              </span>
-            </button>
-          </div>
         </aside>
 
         <section
