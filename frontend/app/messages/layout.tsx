@@ -237,20 +237,22 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
     const conversationId = pathname.split("/messages/")[1];
     if (!conversationId) return;
 
-    // If the conversation is not in the list yet (e.g. just created), refresh the list
-    const hasConversation = conversations.some((c) => c.id === conversationId);
-    if (!hasConversation && !loading) {
-      fetchConversations(1, false);
-    }
+    setConversations((prev) => {
+      // If the conversation is not in the list yet (e.g. just created), refresh the list
+      const hasConversation = prev.some((c) => c.id === conversationId);
+      if (!hasConversation && !loading) {
+        setTimeout(() => {
+          fetchConversations(1, false);
+        }, 0);
+      }
 
-    setConversations((prev) =>
-      prev.map((conversation) =>
+      return prev.map((conversation) =>
         conversation.id === conversationId && conversation._count.messages > 0
           ? { ...conversation, _count: { messages: 0 } }
           : conversation,
-      ),
-    );
-  }, [pathname, conversations, loading]);
+      );
+    });
+  }, [pathname, loading]);
 
   const filteredConversations = useMemo(() => {
     if (!user) return [];
