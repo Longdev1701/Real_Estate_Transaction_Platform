@@ -291,6 +291,12 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
     }, { ttlMs: POST_DETAIL_CACHE_TTL_MS });
   };
 
+  const cacheAuthorPreview = () => {
+    writeSessionCache(`profile:author:${post.author.id}`, post.author, {
+      ttlMs: POST_DETAIL_CACHE_TTL_MS,
+    });
+  };
+
   const goToPreviousImage = () => {
     setActiveImageIndex((current) => (current === 0 ? images.length - 1 : current - 1));
   };
@@ -386,6 +392,7 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
 
             <Link
               href={`/profile/posts?authorId=${post.author.id}`}
+              onClick={cacheAuthorPreview}
               className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--accent-border)] bg-[var(--accent-soft)] text-sm font-semibold text-[var(--accent)] transition hover:border-[var(--accent)] hover:ring-2 hover:ring-[color:color-mix(in_srgb,var(--accent)_22%,transparent)]"
               aria-label={`Xem bài đăng của ${post.author.fullName}`}
             >
@@ -399,6 +406,7 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
               <div className="flex min-w-0 items-center gap-2">
                 <Link
                   href={`/profile/posts?authorId=${post.author.id}`}
+                  onClick={cacheAuthorPreview}
                   className="truncate font-semibold text-[var(--foreground)] transition-colors hover:text-[var(--accent)]"
                 >
                   {post.author.fullName}

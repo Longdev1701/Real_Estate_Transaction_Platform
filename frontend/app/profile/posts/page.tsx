@@ -7,7 +7,7 @@ import { AxiosError } from "axios";
 import { BadgeCheck, LoaderCircle, Star, Mail, Phone, CalendarDays, MessageCircle, MapPin } from "lucide-react";
 
 import { ProfilePostCard } from "@/components/post/ProfilePostCard";
-import { buildPostQuery, defaultPostFilter, type Post, type PostListData } from "@/lib/posts";
+import { buildPostQuery, defaultPostFilter, type Post, type PostAuthor, type PostListData } from "@/lib/posts";
 import { api } from "@/lib/api";
 import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
 import { useAuthStore } from "@/stores/auth.store";
@@ -21,12 +21,24 @@ export default function ProfilePostsPage() {
   const authorId = searchParams.get("authorId");
   const { user, accessToken, hasHydrated, isLoadingUser } = useAuthStore();
   const [posts, setPosts] = useState<Post[]>([]);
+  const [authorPreview, setAuthorPreview] = useState<PostAuthor | null>(null);
   const [activeTab, setActiveTab] = useState<PostViewTab>("ALL");
   const [mainTab, setMainTab] = useState<"posts" | "about">("posts");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const [isStartingConversation, setIsStartingConversation] = useState(false);
+
+  const targetAuthorId = authorId ?? user?.id ?? "";
+
+  useEffect(() => {
+    if (!targetAuthorId) {
+      setAuthorPreview(null);
+      return;
+    }
+
+    setAuthorPreview(readSessionCache<PostAuthor>(`profile:author:${targetAuthorId}`));
+  }, [targetAuthorId]);
 
   useEffect(() => {
     if (!hasHydrated || isLoadingUser) {
@@ -54,6 +66,7 @@ export default function ProfilePostsPage() {
           1,
           30,
         );
+        const listQuery = isOwnerView ? query : `${query}&imageLimit=1`;
         const cacheKey = `profile:posts:${targetAuthorId}:${isOwnerView ? "owner" : "public"}`;
         if (!isOwnerView) {
           const cachedPayload = readSessionCache<PostListData>(cacheKey);
@@ -69,7 +82,7 @@ export default function ProfilePostsPage() {
           return;
         }
 
-        const endpoint = isOwnerView ? `/posts/mine?${query}` : `/posts?${query}`;
+        const endpoint = isOwnerView ? `/posts/mine?${query}` : `/posts?${listQuery}`;
         const response = await api.get<{ data: PostListData }>(endpoint);
         if (isMounted) {
           setPosts(response.data.data.items);
@@ -96,9 +109,8 @@ export default function ProfilePostsPage() {
     };
   }, [accessToken, authorId, hasHydrated, isLoadingUser, user?.id]);
 
-  const targetAuthorId = authorId ?? user?.id ?? "";
   const myPosts = useMemo(() => (targetAuthorId ? posts : []), [posts, targetAuthorId]);
-  const targetAuthor = myPosts[0]?.author;
+  const targetAuthor = myPosts[0]?.author ?? authorPreview;
   const isOwnProfile = !!user && targetAuthorId === user.id;
 
   const saleCount = useMemo(

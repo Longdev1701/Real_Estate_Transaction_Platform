@@ -73,6 +73,7 @@ export const postFilterSchema = z
     minArea: optionalNumberSchema,
     maxArea: optionalNumberSchema,
     featureIds: z.string().trim().optional(),
+    imageLimit: z.coerce.number().int().min(1).max(10).optional(),
     page: z.coerce.number().int().min(1).optional(),
     limit: z.coerce.number().int().min(1).max(100).optional(),
   })
