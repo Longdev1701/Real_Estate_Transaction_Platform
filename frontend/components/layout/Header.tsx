@@ -113,7 +113,7 @@ export function Header() {
   return (
     <header className="fixed top-0 z-[120] w-full overflow-visible glass-panel">
       <div className="container mx-auto flex h-20 items-center justify-between overflow-visible px-4 lg:px-8">
-        <div className="flex items-center gap-8">
+        <div className="flex items-center gap-4 lg:gap-8">
           <Link href="/" className="flex items-center gap-2 text-2xl font-bold tracking-wider text-[var(--foreground)]">
             <span className="theme-header-brand flex h-8 w-8 items-center justify-center rounded-lg">
               T
@@ -121,7 +121,7 @@ export function Header() {
             Trust<span className="text-[var(--accent)]">Estate</span>
           </Link>
 
-          <nav className="hidden items-center gap-6 text-sm font-medium text-[var(--muted-foreground)] md:flex">
+          <nav className="hidden items-center gap-4 text-sm font-medium text-[var(--muted-foreground)] md:flex lg:gap-6">
             <Link href="/" className="transition-colors hover:text-[var(--foreground)]">
               Trang chủ
             </Link>
@@ -134,10 +134,10 @@ export function Header() {
           </nav>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 lg:gap-4">
           <ThemeToggle />
 
-          <Link href="/posts/create" className="btn-primary ml-2 hidden sm:block">
+          <Link href="/posts/create" className="btn-primary ml-2 hidden sm:inline-flex items-center justify-center whitespace-nowrap">
             + Đăng bài
           </Link>
 

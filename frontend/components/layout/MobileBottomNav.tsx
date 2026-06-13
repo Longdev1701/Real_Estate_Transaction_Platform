@@ -67,7 +67,8 @@ export function MobileBottomNav() {
     pathname?.startsWith("/messages/") ||
     pathname?.startsWith("/admin") ||
     pathname?.startsWith("/auth") ||
-    pathname === "/posts/create"
+    pathname === "/posts/create" ||
+    (pathname?.startsWith("/posts/") && pathname !== "/posts")
   ) {
     return null;
   }

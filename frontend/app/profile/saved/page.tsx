@@ -564,7 +564,7 @@ export default function SavedPostsPage() {
         )}
 
         {selectedPostIds.length > 0 ? (
-          <div className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center px-4">
+          <div className="pointer-events-none fixed inset-x-0 bottom-20 z-50 flex justify-center px-4 md:bottom-4">
             <div className="theme-floating-panel pointer-events-auto flex w-full max-w-3xl flex-wrap items-center justify-center gap-3 rounded-2xl border border-[var(--accent-border)] px-4 py-3 backdrop-blur-xl">
               <span className="text-sm font-medium text-[var(--foreground)]">
                 Đã chọn {selectedPostIds.length} bài

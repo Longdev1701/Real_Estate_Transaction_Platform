@@ -285,8 +285,8 @@ export default function NotificationsPage() {
 
   return (
     <div className="px-4 py-6 lg:px-6 xl:h-[calc(100vh-5rem)] xl:overflow-hidden">
-      <div className="grid min-h-0 gap-5 lg:grid-cols-[minmax(0,1fr)_320px] xl:h-full xl:grid-cols-[260px_minmax(0,1fr)_320px]">
-        <aside className="glass-card h-fit p-3.5 xl:max-h-full xl:overflow-y-auto no-scrollbar">
+      <div className="grid min-h-0 gap-5 xl:h-full xl:grid-cols-[260px_minmax(0,1fr)_320px]">
+        <aside className="hidden xl:block glass-card h-fit p-3.5 xl:max-h-full xl:overflow-y-auto no-scrollbar">
           <nav className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -440,7 +440,7 @@ export default function NotificationsPage() {
           </div>
         </main>
 
-        <aside className="space-y-4 pb-6 lg:col-span-2 xl:col-span-1 xl:max-h-full xl:overflow-y-auto no-scrollbar">
+        <aside className="space-y-4 pb-6 xl:col-span-1 xl:max-h-full xl:overflow-y-auto no-scrollbar">
           <section className="hidden glass-card p-4 xl:block">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-[var(--foreground)]">Bộ lọc thông báo</h2>
