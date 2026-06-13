@@ -46,6 +46,7 @@ import {
   type Post,
 } from "@/lib/posts";
 import { useAuthStore } from "@/stores/auth.store";
+import { confirm } from "@/stores/confirm.store";
 import dynamic from "next/dynamic";
 import CommentSection from "@/components/comment/CommentSection";
 import { AppealBanDialog } from "@/components/post/AppealBanDialog";
@@ -273,7 +274,13 @@ export default function PostDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!window.confirm("Xóa bài đăng này?")) {
+    const confirmed = await confirm({
+      title: "Xóa bài đăng",
+      message: "Bạn có chắc chắn muốn xóa bài đăng này?",
+      confirmLabel: "Xóa",
+      cancelLabel: "Hủy"
+    });
+    if (!confirmed) {
       return;
     }
 

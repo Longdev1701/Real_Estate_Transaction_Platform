@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Scale, X, ArrowRight, ChevronDown, Trash2 } from "lucide-react";
 import { getPrimaryImage, type Post } from "@/lib/posts";
+import { confirm } from "@/stores/confirm.store";
 
 export function FloatingCompareBar() {
   const pathname = usePathname();
@@ -55,10 +56,14 @@ export function FloatingCompareBar() {
     }
   };
 
-  const handleClearAll = () => {
-    if (!window.confirm("Xóa toàn bộ bất động sản đã chọn để so sánh?")) {
-      return;
-    }
+  const handleClearAll = async () => {
+    const confirmed = await confirm({
+      title: "Xóa so sánh",
+      message: "Xóa toàn bộ bất động sản đã chọn để so sánh?",
+      confirmLabel: "Xóa",
+      cancelLabel: "Hủy"
+    });
+    if (!confirmed) return;
 
     try {
       localStorage.removeItem("compared_posts");

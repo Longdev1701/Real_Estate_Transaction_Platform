@@ -28,6 +28,7 @@ import {
   type SavedPost,
 } from "@/lib/posts";
 import { useAuthStore } from "@/stores/auth.store";
+import { confirm } from "@/stores/confirm.store";
 
 type SortValue = "newest" | "priceAsc" | "priceDesc";
 
@@ -210,9 +211,12 @@ export default function SavedPostsPage() {
       return;
     }
 
-    const shouldContinue = window.confirm(
-      `Bạn có chắc muốn bỏ lưu ${selectedPostIds.length} bài đăng đã chọn không?`,
-    );
+    const shouldContinue = await confirm({
+      title: "Bỏ lưu bài đăng",
+      message: `Bạn có chắc muốn bỏ lưu ${selectedPostIds.length} bài đăng đã chọn không?`,
+      confirmLabel: "Bỏ lưu",
+      cancelLabel: "Hủy"
+    });
 
     if (!shouldContinue) {
       return;

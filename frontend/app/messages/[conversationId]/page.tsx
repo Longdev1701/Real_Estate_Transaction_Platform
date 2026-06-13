@@ -36,6 +36,8 @@ import { useSound } from "@/hooks/useSound";
 import { useAuthStore } from "@/stores/auth.store";
 import { useSocketStore } from "@/stores/socket.store";
 import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
+import { confirm } from "@/stores/confirm.store";
+import { toast } from "@/stores/toast.store";
 
 type Message = {
   isHistory?: boolean;
@@ -274,6 +276,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
   const initialPositionSettledRef = useRef(false);
   const bottomSnapInProgressRef = useRef(false);
   const bottomSnapTimeoutsRef = useRef<number[]>([]);
+  const isTypingRef = useRef(false);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -593,7 +596,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
       if (!error.tempId) return;
 
       setMessages((prev) => prev.filter((message) => message.id !== error.tempId));
-      window.alert(error.message || "Không thể gửi tin nhắn. Vui lòng thử lại.");
+      toast.error(error.message || "Không thể gửi tin nhắn. Vui lòng thử lại.");
     };
 
     socket.emit("join_room", conversationId);
@@ -681,8 +684,14 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
     textInputRef.current?.focus();
   };
 
-  const handleDeleteMessage = (messageId: string) => {
-    if (window.confirm("Thu hồi tin nhắn này?")) {
+  const handleDeleteMessage = async (messageId: string) => {
+    const confirmed = await confirm({
+      title: "Thu hồi tin nhắn",
+      message: "Thu hồi tin nhắn này?",
+      confirmLabel: "Thu hồi",
+      cancelLabel: "Hủy"
+    });
+    if (confirmed) {
       socket?.emit("delete_message", { messageId, conversationId });
       setMessages((prev) => prev.filter((message) => message.id !== messageId));
     }
@@ -715,6 +724,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
 
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     socket.emit("stop_typing", { conversationId });
+    isTypingRef.current = false;
     shouldStickToBottomRef.current = true;
     setShowScrollButton(false);
 
@@ -792,7 +802,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
         setImagePreviewUrls([]);
       } catch (error) {
         console.error("Upload failed", error);
-        window.alert("Tải ảnh thất bại. Vui lòng thử lại.");
+        toast.error("Tải ảnh thất bại. Vui lòng thử lại.");
         setMessages((prev) => prev.filter((message) => message.id !== tempId));
       } finally {
         setIsUploading(false);
@@ -834,12 +844,16 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
 
     if (!socket || !isConnected) return;
 
-    socket.emit("typing", { conversationId });
+    if (!isTypingRef.current) {
+      isTypingRef.current = true;
+      socket.emit("typing", { conversationId });
+    }
 
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
     typingTimeoutRef.current = setTimeout(() => {
       socket.emit("stop_typing", { conversationId });
+      isTypingRef.current = false;
     }, 2000);
   };
 
@@ -849,11 +863,11 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
 
     let validFiles = files.filter((file) => file.size <= 5 * 1024 * 1024);
     if (validFiles.length < files.length) {
-      window.alert("Một số ảnh bị bỏ qua do vượt quá 5MB.");
+      toast.warning("Một số ảnh bị bỏ qua do vượt quá 5MB.");
     }
 
     if (selectedImages.length + validFiles.length > 10) {
-      window.alert("Bạn chỉ có thể chọn gửi tối đa 10 ảnh cùng lúc.");
+      toast.warning("Bạn chỉ có thể chọn gửi tối đa 10 ảnh cùng lúc.");
       validFiles = validFiles.slice(0, Math.max(0, 10 - selectedImages.length));
     }
 
@@ -950,7 +964,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
           <div className="flex min-w-0 items-center gap-3">
             <Link
               href="/messages"
-              className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] text-[var(--secondary-foreground)] transition hover:bg-[var(--surface)] hover:text-[var(--foreground)] lg:hidden"
+              className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] text-[var(--secondary-foreground)] transition hover:bg-[var(--surface)] hover:text-[var(--foreground)] md:hidden"
             >
               <ArrowLeft className="h-5 w-5" />
             </Link>

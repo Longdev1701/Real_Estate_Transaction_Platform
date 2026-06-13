@@ -7,6 +7,7 @@ import { Edit3, LoaderCircle, MessageSquare, Send, Trash2, X } from "lucide-reac
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth.store";
 import { useSocketStore } from "@/stores/socket.store";
+import { confirm } from "@/stores/confirm.store";
 
 type CommentAuthor = {
   id: string;
@@ -299,7 +300,13 @@ export default function CommentSection({ postId, postAuthorId }: CommentSectionP
   };
 
   const handleDelete = async (commentId: string) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xoá bình luận này?")) return;
+    const confirmed = await confirm({
+      title: "Xóa bình luận",
+      message: "Bạn có chắc chắn muốn xoá bình luận này?",
+      confirmLabel: "Xóa",
+      cancelLabel: "Hủy"
+    });
+    if (!confirmed) return;
 
     try {
       setDeletingId(commentId);

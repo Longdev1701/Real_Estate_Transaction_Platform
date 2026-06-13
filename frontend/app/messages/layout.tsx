@@ -19,6 +19,7 @@ import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth.store";
 import { useSocketStore } from "@/stores/socket.store";
 import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
+import { confirm } from "@/stores/confirm.store";
 
 export interface ConversationListItem {
   id: string;
@@ -100,8 +101,14 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
 
   const fetchConversations = async (pageNum: number, isLoadMore = false) => {
     try {
-      if (!isLoadMore) setLoading(true);
-      else setIsLoadingMore(true);
+      if (!isLoadMore) {
+        const cached = user ? readSessionCache<ConversationListItem[]>(`conversations_${user.id}`) : null;
+        if (!cached || cached.length === 0) {
+          setLoading(true);
+        }
+      } else {
+        setIsLoadingMore(true);
+      }
 
       const { data } = await api.get(`/conversations?page=${pageNum}&limit=20`);
 
@@ -114,7 +121,11 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
       if (isLoadMore) {
         setConversations((prev) => processConvs([...prev, ...data.data.conversations]));
       } else {
-        setConversations(processConvs(data.data.conversations));
+        const freshConvs = processConvs(data.data.conversations);
+        setConversations(freshConvs);
+        if (user) {
+          writeSessionCache(`conversations_${user.id}`, freshConvs, { ttlMs: 5 * 60 * 1000 });
+        }
       }
       setHasMore(data.data.pagination?.hasMore ?? false);
     } catch (error) {
@@ -127,10 +138,23 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
 
   useEffect(() => {
     if (user) {
+      const cached = readSessionCache<ConversationListItem[]>(`conversations_${user.id}`);
+      if (cached && cached.length > 0) {
+        setConversations(cached);
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
       fetchConversations(1, false);
       setPage(1);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (user && conversations.length > 0) {
+      writeSessionCache(`conversations_${user.id}`, conversations, { ttlMs: 5 * 60 * 1000 });
+    }
+  }, [conversations, user]);
 
   useEffect(() => {
     if (!socket || !isConnected) return;
@@ -138,7 +162,33 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
     const handleReceiveMessage = (message: any) => {
       setConversations((prev) => {
         const index = prev.findIndex((c) => c.id === message.conversationId);
-        if (index === -1) return prev; // Optionally fetch if not found
+        if (index === -1) {
+          // Fetch this single new conversation in the background and prepend it
+          setTimeout(() => {
+            api.get(`/conversations/${message.conversationId}/messages?limit=1`)
+              .then(({ data }) => {
+                const newConv = data.data.conversation;
+                const isIncoming = message.senderId !== user?.id;
+                const isActiveConversation = pathname === `/messages/${message.conversationId}`;
+                
+                const conversationItem: ConversationListItem = {
+                  ...newConv,
+                  messages: [message],
+                  _count: {
+                    messages: isActiveConversation ? 0 : isIncoming ? 1 : 0
+                  }
+                };
+
+                setConversations((currentList) => {
+                  if (currentList.some((c) => c.id === message.conversationId)) return currentList;
+                  return [conversationItem, ...currentList];
+                });
+              })
+              .catch(console.error);
+          }, 0);
+
+          return prev;
+        }
 
         const conversation = prev[index];
         const isIncoming = message.senderId !== user?.id;
@@ -205,13 +255,28 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
       }
     };
 
+    const handleConversationCreated = (data: { conversation: any }) => {
+      setConversations((prev) => {
+        if (prev.some((c) => c.id === data.conversation.id)) return prev;
+
+        const conversationItem: ConversationListItem = {
+          ...data.conversation,
+          messages: [],
+          _count: { messages: 0 }
+        };
+        return [conversationItem, ...prev];
+      });
+    };
+
     socket.on("receive_message", handleReceiveMessage);
+    socket.on("conversation_created", handleConversationCreated);
     socket.on("user_typing", handleUserTyping);
     socket.on("user_stop_typing", handleUserStopTyping);
     socket.on("messages_read", handleMessagesRead);
 
     return () => {
       socket.off("receive_message", handleReceiveMessage);
+      socket.off("conversation_created", handleConversationCreated);
       socket.off("user_typing", handleUserTyping);
       socket.off("user_stop_typing", handleUserStopTyping);
       socket.off("messages_read", handleMessagesRead);
@@ -231,14 +296,35 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
     const conversationId = pathname.split("/messages/")[1];
     if (!conversationId) return;
 
-    setConversations((prev) =>
-      prev.map((conversation) =>
+    setConversations((prev) => {
+      // If the conversation is not in the list yet (e.g. just created), fetch it in the background
+      const hasConversation = prev.some((c) => c.id === conversationId);
+      if (!hasConversation && !loading) {
+        setTimeout(() => {
+          api.get(`/conversations/${conversationId}/messages?limit=1`)
+            .then(({ data }) => {
+              const newConv = data.data.conversation;
+              const conversationItem: ConversationListItem = {
+                ...newConv,
+                messages: data.data.messages.slice(-1),
+                _count: { messages: 0 }
+              };
+              setConversations((currentList) => {
+                if (currentList.some((c) => c.id === conversationId)) return currentList;
+                return [conversationItem, ...currentList];
+              });
+            })
+            .catch(console.error);
+        }, 0);
+      }
+
+      return prev.map((conversation) =>
         conversation.id === conversationId && conversation._count.messages > 0
           ? { ...conversation, _count: { messages: 0 } }
           : conversation,
-      ),
-    );
-  }, [pathname]);
+      );
+    });
+  }, [pathname, loading]);
 
   const filteredConversations = useMemo(() => {
     if (!user) return [];
@@ -268,7 +354,14 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
   const handleDeleteConversation = async (event: React.MouseEvent, conversationId: string) => {
     event.preventDefault();
 
-    if (!window.confirm("Xóa đoạn chat này?")) {
+    const confirmed = await confirm({
+      title: "Xóa đoạn chat",
+      message: "Xóa đoạn chat này?",
+      confirmLabel: "Xóa",
+      cancelLabel: "Hủy"
+    });
+
+    if (!confirmed) {
       setOpenConvMenuId(null);
       return;
     }
@@ -320,37 +413,10 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
               );
             })}
           </div>
-
-          <div className="space-y-2.5">
-            <button
-              className="group relative flex w-full items-center justify-center rounded-[20px] px-2 py-3 text-[var(--muted-foreground)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
-              aria-label="Thông báo"
-              title="Thông báo"
-            >
-              <span className="flex h-11 w-11 items-center justify-center rounded-[16px] border border-[var(--border)] bg-[var(--surface-muted)]">
-                <Bell className="h-[18px] w-[18px]" />
-              </span>
-              <span className="theme-message-popover pointer-events-none absolute left-full z-20 ml-3 whitespace-nowrap rounded-xl px-2.5 py-1.5 text-xs font-medium text-[var(--foreground)] opacity-0 transition group-hover:opacity-100">
-                Thông báo
-              </span>
-            </button>
-            <button
-              className="group relative flex w-full items-center justify-center rounded-[20px] px-2 py-3 text-[var(--muted-foreground)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
-              aria-label="Cài đặt"
-              title="Cài đặt"
-            >
-              <span className="flex h-11 w-11 items-center justify-center rounded-[16px] border border-[var(--border)] bg-[var(--surface-muted)]">
-                <Settings className="h-[18px] w-[18px]" />
-              </span>
-              <span className="theme-message-popover pointer-events-none absolute left-full z-20 ml-3 whitespace-nowrap rounded-xl px-2.5 py-1.5 text-xs font-medium text-[var(--foreground)] opacity-0 transition group-hover:opacity-100">
-                Cài đặt
-              </span>
-            </button>
-          </div>
         </aside>
 
         <section
-          className={`theme-message-sidebar min-h-0 w-full shrink-0 border-r border-[var(--border)] md:w-[350px] ${isMobileDetailView ? "hidden lg:flex" : "flex"
+          className={`theme-message-sidebar min-h-0 w-full shrink-0 border-r border-[var(--border)] md:w-[350px] ${isMobileDetailView ? "hidden md:flex" : "flex"
             } flex-col`}
         >
           <div className="border-b border-[var(--border)] px-4 py-4">
@@ -427,6 +493,20 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
                     key={conversation.id}
                     href={`/messages/${conversation.id}`}
                     onMouseEnter={() => {
+                      const cacheKey = `messages_${conversation.id}`;
+                      if (!readSessionCache(cacheKey)) {
+                        api.get(`/conversations/${conversation.id}/messages?limit=20`)
+                          .then(({ data }) => {
+                            writeSessionCache(cacheKey, {
+                              messages: data.data.messages,
+                              conversation: data.data.conversation,
+                              nextCursor: data.data.nextCursor,
+                            });
+                          })
+                          .catch(() => { });
+                      }
+                    }}
+                    onTouchStart={() => {
                       const cacheKey = `messages_${conversation.id}`;
                       if (!readSessionCache(cacheKey)) {
                         api.get(`/conversations/${conversation.id}/messages?limit=20`)
@@ -530,7 +610,7 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
           </div>
         </section>
 
-        <section className={`min-w-0 flex-1 ${!isMobileDetailView ? "hidden lg:flex" : "flex"} flex-col`}>
+        <section className={`min-w-0 flex-1 ${!isMobileDetailView ? "hidden md:flex" : "flex"} flex-col`}>
           {children}
         </section>
       </div>
