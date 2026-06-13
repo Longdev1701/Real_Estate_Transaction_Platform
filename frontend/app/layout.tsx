@@ -11,6 +11,7 @@ import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { ToastProvider } from "@/components/theme/ToastProvider";
 
 import { ToastContainer } from "@/components/layout/ToastContainer";
+import { ConfirmContainer } from "@/components/layout/ConfirmContainer";
 
 const themeInitScript = `
   (() => {
@@ -56,6 +57,7 @@ export default function RootLayout({
               <FloatingCompareBar />
               <MobileBottomNav />
               <ToastContainer />
+              <ConfirmContainer />
             </div>
             <ToastProvider />
           </AuthSessionProvider>

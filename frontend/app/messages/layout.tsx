@@ -19,6 +19,7 @@ import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth.store";
 import { useSocketStore } from "@/stores/socket.store";
 import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
+import { confirm } from "@/stores/confirm.store";
 
 export interface ConversationListItem {
   id: string;
@@ -353,7 +354,14 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
   const handleDeleteConversation = async (event: React.MouseEvent, conversationId: string) => {
     event.preventDefault();
 
-    if (!window.confirm("Xóa đoạn chat này?")) {
+    const confirmed = await confirm({
+      title: "Xóa đoạn chat",
+      message: "Xóa đoạn chat này?",
+      confirmLabel: "Xóa",
+      cancelLabel: "Hủy"
+    });
+
+    if (!confirmed) {
       setOpenConvMenuId(null);
       return;
     }
