@@ -250,7 +250,10 @@ export function initializeSocket(httpServer: HTTPServer) {
             }),
             prisma.conversation.update({
               where: { id: conversationId },
-              data: { updatedAt: new Date() },
+              data: { 
+                updatedAt: new Date(),
+                deletedByIds: [] // Reset deletedByIds so the conversation reappears if there is a new message
+              },
             }),
           ]).then((results) => {
             if (results[0].status === "rejected") {

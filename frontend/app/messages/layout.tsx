@@ -100,8 +100,14 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
 
   const fetchConversations = async (pageNum: number, isLoadMore = false) => {
     try {
-      if (!isLoadMore) setLoading(true);
-      else setIsLoadingMore(true);
+      if (!isLoadMore) {
+        const cached = user ? readSessionCache<ConversationListItem[]>(`conversations_${user.id}`) : null;
+        if (!cached || cached.length === 0) {
+          setLoading(true);
+        }
+      } else {
+        setIsLoadingMore(true);
+      }
 
       const { data } = await api.get(`/conversations?page=${pageNum}&limit=20`);
 
@@ -114,7 +120,11 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
       if (isLoadMore) {
         setConversations((prev) => processConvs([...prev, ...data.data.conversations]));
       } else {
-        setConversations(processConvs(data.data.conversations));
+        const freshConvs = processConvs(data.data.conversations);
+        setConversations(freshConvs);
+        if (user) {
+          writeSessionCache(`conversations_${user.id}`, freshConvs, { ttlMs: 5 * 60 * 1000 });
+        }
       }
       setHasMore(data.data.pagination?.hasMore ?? false);
     } catch (error) {
@@ -127,10 +137,23 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
 
   useEffect(() => {
     if (user) {
+      const cached = readSessionCache<ConversationListItem[]>(`conversations_${user.id}`);
+      if (cached && cached.length > 0) {
+        setConversations(cached);
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
       fetchConversations(1, false);
       setPage(1);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (user && conversations.length > 0) {
+      writeSessionCache(`conversations_${user.id}`, conversations, { ttlMs: 5 * 60 * 1000 });
+    }
+  }, [conversations, user]);
 
   useEffect(() => {
     if (!socket || !isConnected) return;
@@ -382,37 +405,10 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
               );
             })}
           </div>
-
-          <div className="space-y-2.5">
-            <button
-              className="group relative flex w-full items-center justify-center rounded-[20px] px-2 py-3 text-[var(--muted-foreground)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
-              aria-label="Thông báo"
-              title="Thông báo"
-            >
-              <span className="flex h-11 w-11 items-center justify-center rounded-[16px] border border-[var(--border)] bg-[var(--surface-muted)]">
-                <Bell className="h-[18px] w-[18px]" />
-              </span>
-              <span className="theme-message-popover pointer-events-none absolute left-full z-20 ml-3 whitespace-nowrap rounded-xl px-2.5 py-1.5 text-xs font-medium text-[var(--foreground)] opacity-0 transition group-hover:opacity-100">
-                Thông báo
-              </span>
-            </button>
-            <button
-              className="group relative flex w-full items-center justify-center rounded-[20px] px-2 py-3 text-[var(--muted-foreground)] transition hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
-              aria-label="Cài đặt"
-              title="Cài đặt"
-            >
-              <span className="flex h-11 w-11 items-center justify-center rounded-[16px] border border-[var(--border)] bg-[var(--surface-muted)]">
-                <Settings className="h-[18px] w-[18px]" />
-              </span>
-              <span className="theme-message-popover pointer-events-none absolute left-full z-20 ml-3 whitespace-nowrap rounded-xl px-2.5 py-1.5 text-xs font-medium text-[var(--foreground)] opacity-0 transition group-hover:opacity-100">
-                Cài đặt
-              </span>
-            </button>
-          </div>
         </aside>
 
         <section
-          className={`theme-message-sidebar min-h-0 w-full shrink-0 border-r border-[var(--border)] md:w-[350px] ${isMobileDetailView ? "hidden lg:flex" : "flex"
+          className={`theme-message-sidebar min-h-0 w-full shrink-0 border-r border-[var(--border)] md:w-[350px] ${isMobileDetailView ? "hidden md:flex" : "flex"
             } flex-col`}
         >
           <div className="border-b border-[var(--border)] px-4 py-4">
@@ -489,6 +485,20 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
                     key={conversation.id}
                     href={`/messages/${conversation.id}`}
                     onMouseEnter={() => {
+                      const cacheKey = `messages_${conversation.id}`;
+                      if (!readSessionCache(cacheKey)) {
+                        api.get(`/conversations/${conversation.id}/messages?limit=20`)
+                          .then(({ data }) => {
+                            writeSessionCache(cacheKey, {
+                              messages: data.data.messages,
+                              conversation: data.data.conversation,
+                              nextCursor: data.data.nextCursor,
+                            });
+                          })
+                          .catch(() => { });
+                      }
+                    }}
+                    onTouchStart={() => {
                       const cacheKey = `messages_${conversation.id}`;
                       if (!readSessionCache(cacheKey)) {
                         api.get(`/conversations/${conversation.id}/messages?limit=20`)
@@ -592,7 +602,7 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
           </div>
         </section>
 
-        <section className={`min-w-0 flex-1 ${!isMobileDetailView ? "hidden lg:flex" : "flex"} flex-col`}>
+        <section className={`min-w-0 flex-1 ${!isMobileDetailView ? "hidden md:flex" : "flex"} flex-col`}>
           {children}
         </section>
       </div>
