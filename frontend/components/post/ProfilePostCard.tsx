@@ -6,6 +6,7 @@ import { Bookmark, Expand, MapPin, Trash2 } from "lucide-react";
 
 import {
   formatArea,
+  formatCompactPrice,
   formatPrice,
   postTypeLabels,
   propertyTypeLabels,
@@ -42,7 +43,7 @@ export function ProfilePostCard({ post, isOwnProfile, onDelete }: { post: Post, 
   return (
     <article className="glass-card flex h-full flex-col overflow-hidden p-4 md:p-5">
         <div className="mb-4 flex items-start gap-4">
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--accent-border)] bg-[var(--accent-soft)] text-sm font-semibold text-[var(--accent)]">
             {post.author.avatarUrl ? (
               <img src={post.author.avatarUrl} alt={post.author.fullName} className="h-full w-full object-cover" />
@@ -50,9 +51,9 @@ export function ProfilePostCard({ post, isOwnProfile, onDelete }: { post: Post, 
               post.author.fullName.charAt(0).toUpperCase()
             )}
           </div>
-          <div>
-            <p className="line-clamp-1 font-semibold text-[var(--foreground)]">{post.author.fullName}</p>
-            <div className="mt-0.5 flex items-center gap-1.5 text-xs text-[var(--muted)]">
+          <div className="min-w-0 flex-1">
+            <p className="line-clamp-2 break-words font-semibold leading-snug text-[var(--foreground)]">{post.author.fullName}</p>
+            <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-[var(--muted)]">
               <span className="font-medium text-[var(--accent)]">{postTypeLabels[post.postType]}</span>
               <span className="h-1 w-1 rounded-full bg-[var(--notification-read-dot)]" />
               <span>{propertyTypeLabels[post.propertyType]}</span>
@@ -94,7 +95,9 @@ export function ProfilePostCard({ post, isOwnProfile, onDelete }: { post: Post, 
         </p>
 
         <div className="mt-auto">
-          <p className="mb-3 text-2xl font-bold text-[var(--accent)]">{formatPrice(post.price)}</p>
+          <p className="mb-3 truncate text-2xl font-bold text-[var(--accent)] tabular-nums" title={formatPrice(post.price)}>
+            {formatCompactPrice(post.price)}
+          </p>
 
           <div className="mb-5 flex flex-wrap items-center gap-3 text-sm text-[var(--secondary-foreground)]">
             <span className="theme-chip inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1">
@@ -103,7 +106,7 @@ export function ProfilePostCard({ post, isOwnProfile, onDelete }: { post: Post, 
             </span>
             <span className="theme-chip inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1">
               <MapPin className="h-3.5 w-3.5 text-[var(--muted)]" />
-              <span className="line-clamp-1 max-w-[120px]">{post.city}</span>
+              <span className="break-words">{post.city}</span>
             </span>
           </div>
 

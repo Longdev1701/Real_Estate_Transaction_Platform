@@ -18,6 +18,7 @@ import {
 import { getHomeData } from "@/lib/home";
 import {
   formatArea,
+  formatCompactPrice,
   formatLocation,
   formatPrice,
   getPrimaryImage,
@@ -102,7 +103,9 @@ function PropertyCard({ post, index }: { post: Post; index: number }) {
         </div>
 
         <div className="mt-auto flex items-end justify-between gap-3 pt-4">
-          <span className="text-2xl font-bold text-[var(--accent)]">{formatPrice(post.price)}</span>
+          <span className="min-w-0 truncate text-2xl font-bold text-[var(--accent)] tabular-nums" title={formatPrice(post.price)}>
+            {formatCompactPrice(post.price)}
+          </span>
         </div>
       </div>
     </Link>

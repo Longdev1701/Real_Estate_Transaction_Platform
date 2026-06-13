@@ -23,6 +23,7 @@ import {
 
 import {
   formatArea,
+  formatCompactPrice,
   formatLocation,
   formatPrice,
   postTypeLabels,
@@ -129,17 +130,19 @@ const Metric = ({
   icon: Icon,
   label,
   value,
+  title,
   className = "",
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: string;
+  title?: string;
   className?: string;
 }) => (
   <div className={`theme-post-metric min-w-0 rounded-xl px-3 py-2 ${className}`}>
     <div className="flex min-w-0 items-center gap-2">
       <Icon className="h-4 w-4 shrink-0 text-[var(--accent)]" />
-      <p className="truncate text-sm font-semibold text-[var(--foreground)]">{value}</p>
+      <p className="truncate text-sm font-semibold text-[var(--foreground)] tabular-nums" title={title ?? value}>{value}</p>
     </div>
     <p className="mt-1 pl-6 text-xs text-[var(--muted-foreground)]">{label}</p>
   </div>
@@ -502,12 +505,12 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
                 getInitial(post.author.fullName)
               )}
             </Link>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="flex min-w-0 items-center gap-2">
                 <Link
                   href={`/profile/posts?authorId=${post.author.id}`}
                   onClick={cacheAuthorPreview}
-                  className="truncate font-semibold text-[var(--foreground)] transition-colors hover:text-[var(--accent)]"
+                  className="line-clamp-2 break-words font-semibold leading-snug text-[var(--foreground)] transition-colors hover:text-[var(--accent)]"
                 >
                   {post.author.fullName}
                 </Link>
@@ -611,7 +614,7 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
 
         <div className="px-4 md:px-5">
           <Link href={`/posts/${post.id}`} onClick={cachePostDetailPreview} className="mb-1 block">
-            <h3 className="line-clamp-1 text-base font-semibold text-[var(--foreground)] transition hover:text-[var(--accent)]">
+            <h3 className="line-clamp-2 break-words text-base font-semibold leading-snug text-[var(--foreground)] transition hover:text-[var(--accent)]">
               {post.title}
             </h3>
           </Link>
@@ -697,7 +700,7 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
 
         <div className="space-y-4 px-4 pb-4 md:px-5 md:pb-5">
           <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3">
-            <Metric icon={Building2} label="Giá bán" value={formatPrice(post.price)} />
+            <Metric icon={Building2} label="Giá bán" value={formatCompactPrice(post.price)} title={formatPrice(post.price)} />
             <Metric icon={Ruler} label="Diện tích" value={formatArea(post.area)} />
             <Metric className="col-span-2 md:col-span-1" icon={MapPin} label="Vị trí" value={location} />
           </div>
@@ -893,9 +896,9 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
                     getInitial(post.author.fullName)
                   )}
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="truncate font-semibold text-[var(--foreground)]">{post.author.fullName}</p>
+                    <p className="line-clamp-2 break-words font-semibold leading-snug text-[var(--foreground)]">{post.author.fullName}</p>
                   </div>
                   <p className="mt-1 text-xs text-[var(--muted-foreground)]">
                     {getRelativeTime(post.createdAt)} · {propertyTypeLabels[post.propertyType]}
@@ -979,7 +982,7 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
               </div>
 
               <div className="mt-4 grid gap-3 md:grid-cols-3">
-                <Metric icon={Building2} label="Giá bán" value={formatPrice(post.price)} />
+                <Metric icon={Building2} label="Giá bán" value={formatCompactPrice(post.price)} title={formatPrice(post.price)} />
                 <Metric icon={Expand} label="Diện tích" value={formatArea(post.area)} />
                 <Metric icon={MapPin} label="Vị trí" value={location} />
               </div>

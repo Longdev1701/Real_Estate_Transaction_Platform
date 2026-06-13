@@ -10,7 +10,6 @@ import {
   ArrowLeft,
   BadgeCheck,
   Bookmark,
-  Building2,
   ChevronLeft,
   ChevronRight,
   Expand,
@@ -20,6 +19,7 @@ import {
   Pencil,
   Phone,
   Save,
+  Scale,
   ShieldAlert,
   ShieldCheck,
   TriangleAlert,
@@ -36,8 +36,10 @@ import {
 import { api } from "@/lib/api";
 import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
 import { FeatureIcon } from "@/lib/feature-icons";
+import { groupFeaturesByCategory } from "@/lib/feature-groups";
 import {
   formatArea,
+  formatCompactPrice,
   formatLocation,
   formatPrice,
   propertyTypeLabels,
@@ -47,6 +49,7 @@ import {
 } from "@/lib/posts";
 import { useAuthStore } from "@/stores/auth.store";
 import { confirm } from "@/stores/confirm.store";
+import { toast } from "@/stores/toast.store";
 import dynamic from "next/dynamic";
 import CommentSection from "@/components/comment/CommentSection";
 import { AppealBanDialog } from "@/components/post/AppealBanDialog";
@@ -83,6 +86,7 @@ export default function PostDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
   const [isSaved, setIsSaved] = useState(false);
+  const [isCompared, setIsCompared] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaveSubmitting, setIsSaveSubmitting] = useState(false);
   const [isStartingConversation, setIsStartingConversation] = useState(false);
@@ -161,12 +165,34 @@ export default function PostDetailPage() {
     };
   }, [params.id]);
 
+  useEffect(() => {
+    if (!post) {
+      setIsCompared(false);
+      return;
+    }
+
+    const handleCompareUpdate = () => {
+      try {
+        const stored = window.localStorage.getItem("compared_posts");
+        const parsed = stored ? JSON.parse(stored) : [];
+        const list = Array.isArray(parsed) ? (parsed as Post[]) : [];
+        setIsCompared(list.some((item) => item.id === post.id));
+      } catch {
+        setIsCompared(false);
+      }
+    };
+
+    handleCompareUpdate();
+    window.addEventListener("compare_list_updated", handleCompareUpdate);
+    return () => window.removeEventListener("compare_list_updated", handleCompareUpdate);
+  }, [post]);
+
   const canManagePost = useMemo(() => {
     if (!user || !post) {
       return false;
     }
 
-    return user.role === "ADMIN" || user.id === post.author.id;
+    return user.id === post.author.id;
   }, [post, user]);
 
   const images = useMemo(() => {
@@ -180,9 +206,50 @@ export default function PostDetailPage() {
   const activeImage = images[selectedImage]?.imageUrl ?? imageFallback;
   const isOwnPost = !!user && !!post && user.id === post.author.id;
   const isBannedOwnerView = Boolean(post && isOwnPost && post.status === "BANNED");
+  const groupedFeatures = useMemo(
+    () => groupFeaturesByCategory(post?.features ?? []),
+    [post?.features],
+  );
 
   const handleScrollToMap = () => {
     mapSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const handleCompareClick = () => {
+    if (!post) {
+      return;
+    }
+
+    try {
+      const stored = window.localStorage.getItem("compared_posts");
+      const parsed = stored ? JSON.parse(stored) : [];
+      let list = Array.isArray(parsed) ? (parsed as Post[]) : [];
+
+      const exists = list.some((item) => item.id === post.id);
+      if (exists) {
+        list = list.filter((item) => item.id !== post.id);
+        setIsCompared(false);
+      } else {
+        if (list.length >= 3) {
+          toast.warning("Chỉ có thể so sánh tối đa 3 bất động sản cùng lúc.");
+          return;
+        }
+
+        if (list.length > 0 && list[0].postType !== post.postType) {
+          toast.warning("Không thể so sánh bất động sản Bán với bất động sản Cho thuê. Vui lòng chọn cùng loại giao dịch.");
+          return;
+        }
+
+        list.push(post);
+        setIsCompared(true);
+      }
+
+      window.localStorage.setItem("compared_posts", JSON.stringify(list));
+      window.dispatchEvent(new Event("compare_list_updated"));
+    } catch (err) {
+      console.error("Failed to update compare list:", err);
+      toast.error("Không thể cập nhật danh sách so sánh.");
+    }
   };
 
   const handleSaveToggle = async () => {
@@ -617,8 +684,17 @@ export default function PostDetailPage() {
                   <Bookmark className={`h-4 w-4 ${post.isSaved ? "fill-[var(--accent)] text-[var(--accent)]" : "text-[var(--accent)]"}`} />
                   {post.isSaved ? "Đã lưu" : "Lưu"}
                 </button>
-                <button type="button" className="theme-surface-soft inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)] sm:px-4 sm:py-3">
-                  <Building2 className="h-4 w-4 text-[var(--accent)]" />
+                <button
+                  type="button"
+                  onClick={handleCompareClick}
+                  aria-pressed={isCompared}
+                  className={`inline-flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm transition sm:px-4 sm:py-3 ${
+                    isCompared
+                      ? "border-[var(--accent-border)] bg-[var(--accent-soft)] font-semibold text-[var(--accent)] hover:brightness-110"
+                      : "theme-surface-soft text-[var(--secondary-foreground)] hover:bg-[var(--surface-muted)]"
+                  }`}
+                >
+                  <Scale className="h-4 w-4 text-[var(--accent)]" />
                   So sánh
                 </button>
                 {!isOwnPost ? (
@@ -642,7 +718,12 @@ export default function PostDetailPage() {
             <div className="mt-6 border-b border-[var(--border)] pb-6">
               <div className="grid gap-4 sm:gap-6 grid-cols-2 md:grid-cols-4 lg:gap-x-8 xl:gap-x-12">
                 <div className="min-w-0 grid content-start gap-1">
-                  <p className="break-words text-2xl font-semibold leading-tight text-[var(--accent)] sm:text-3xl xl:whitespace-nowrap">{formatPrice(post.price)}</p>
+                  <p
+                    className="max-w-full truncate text-2xl font-semibold leading-tight text-[var(--accent)] tabular-nums sm:text-3xl"
+                    title={formatPrice(post.price)}
+                  >
+                    {formatCompactPrice(post.price)}
+                  </p>
                   <p className="text-xs text-[var(--muted-foreground)] sm:text-sm">{post.postType === "SELL" ? "Giá bán" : "Giá thuê"}</p>
                 </div>
                 <div className="min-w-0 grid content-start gap-1">
@@ -694,8 +775,8 @@ export default function PostDetailPage() {
                         <BadgeCheck className="h-3.5 w-3.5 text-[var(--accent)]" />
                       </div>
                     </Link>
-                    <div className="min-w-0">
-                      <Link href={`/profile/posts?authorId=${post.author.id}`} className="line-clamp-1 font-bold text-[var(--foreground)] transition hover:text-[var(--accent)] block">
+                    <div className="min-w-0 flex-1">
+                      <Link href={`/profile/posts?authorId=${post.author.id}`} className="block break-words font-bold leading-snug text-[var(--foreground)] transition hover:text-[var(--accent)]">
                         {post.author.fullName}
                       </Link>
                       <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">Đã xác thực</p>
@@ -781,18 +862,40 @@ export default function PostDetailPage() {
 
           {post.features && post.features.length > 0 && (
             <div className="glass-card p-6">
-              <h2 className="text-2xl font-semibold text-[var(--foreground)]">Tiện ích & Đặc trưng</h2>
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-                {post.features.map((feature) => (
-                  <div
-                    key={feature.id}
-                    className="theme-surface-muted flex items-center gap-3 rounded-2xl p-3.5 text-[var(--secondary-foreground)] transition-all duration-300 hover:border-[var(--accent-border)] hover:bg-[var(--surface)]"
-                  >
-                    <div className="rounded-xl bg-[var(--accent-soft)] p-2 text-[var(--accent)]">
-                      <FeatureIcon name={feature.icon || "help-circle"} className="h-5 w-5" />
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <h2 className="text-2xl font-semibold text-[var(--foreground)]">Tiện ích & Đặc trưng</h2>
+                  <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+                    Được chia theo nhóm để dễ kiểm tra khi so sánh bất động sản.
+                  </p>
+                </div>
+                <span className="theme-badge-info rounded-full px-3 py-1 text-xs font-semibold">
+                  {post.features.length} mục
+                </span>
+              </div>
+
+              <div className="mt-5 space-y-5">
+                {groupedFeatures.map(([category, features]) => (
+                  <section key={category} className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--accent)]">{category}</h3>
+                      <span className="h-px flex-1 bg-[var(--border)]" />
+                      <span className="text-xs text-[var(--muted-foreground)]">{features.length}</span>
                     </div>
-                    <span className="text-sm font-medium">{feature.name}</span>
-                  </div>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                      {features.map((feature) => (
+                        <div
+                          key={feature.id}
+                          className="theme-surface-muted flex min-w-0 items-center gap-3 rounded-2xl p-3.5 text-[var(--secondary-foreground)] transition-all duration-300 hover:border-[var(--accent-border)] hover:bg-[var(--surface)]"
+                        >
+                          <div className="rounded-xl bg-[var(--accent-soft)] p-2 text-[var(--accent)]">
+                            <FeatureIcon name={feature.icon || "help-circle"} className="h-5 w-5" />
+                          </div>
+                          <span className="min-w-0 break-words text-sm font-medium leading-snug">{feature.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
                 ))}
               </div>
             </div>
@@ -863,8 +966,8 @@ export default function PostDetailPage() {
                       <BadgeCheck className="h-4 w-4 text-[var(--accent)]" />
                     </div>
                   </Link>
-                  <div className="min-w-0">
-                    <Link href={`/profile/posts?authorId=${post.author.id}`} onClick={cacheAuthorPreview} className="line-clamp-1 text-lg font-bold text-[var(--foreground)] transition hover:text-[var(--accent)] block">
+                  <div className="min-w-0 flex-1">
+                    <Link href={`/profile/posts?authorId=${post.author.id}`} onClick={cacheAuthorPreview} className="block break-words text-lg font-bold leading-snug text-[var(--foreground)] transition hover:text-[var(--accent)]">
                       {post.author.fullName}
                     </Link>
                     <p className="mt-1 text-sm text-[var(--muted-foreground)]">Hoạt động gần đây</p>
@@ -933,7 +1036,9 @@ export default function PostDetailPage() {
                           <p className="mt-1 text-xs text-[var(--muted-foreground)] sm:text-sm">{formatLocation(item)}</p>
                         </div>
                         <div className="mt-2 flex flex-wrap items-center justify-between gap-1">
-                          <span className="font-semibold text-[var(--accent)]">{formatPrice(item.price)}</span>
+                          <span className="min-w-0 truncate font-semibold text-[var(--accent)] tabular-nums" title={formatPrice(item.price)}>
+                            {formatCompactPrice(item.price)}
+                          </span>
                           <span className="text-xs text-[var(--muted-foreground)] sm:text-sm">{formatArea(item.area)}</span>
                         </div>
                       </div>

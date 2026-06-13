@@ -983,8 +983,8 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
               />
             </div>
 
-            <div className="min-w-0">
-              <h2 className="truncate text-[1.55rem] font-semibold tracking-tight text-[var(--foreground)]">{otherUser.fullName}</h2>
+            <div className="min-w-0 flex-1">
+              <h2 className="line-clamp-2 break-words text-xl font-semibold leading-tight tracking-tight text-[var(--foreground)] sm:text-[1.55rem]">{otherUser.fullName}</h2>
               <div className="mt-0.5 flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
                 <span className={`h-2 w-2 rounded-full ${isOtherUserOnline ? "bg-[var(--success)]" : "bg-[var(--muted-foreground)]"}`} />
                 <span>{isOtherUserOnline ? "online" : "offline"}</span>

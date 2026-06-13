@@ -506,7 +506,7 @@ export function PostList() {
                   ? total > 0
                     ? `${total} bài đăng đang hiển thị`
                     : `${posts.length} bài đăng đang hiển thị`
-                  : "Chưa có bài đăng phù hợp."}
+                  : "0 bài đăng đang hiển thị"}
               </p>
             </div>
             <button
