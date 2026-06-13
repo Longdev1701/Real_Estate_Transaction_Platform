@@ -88,6 +88,12 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
   }, [hasHydrated, logout, setIsLoadingUser, setTokens, setUser]);
 
   useEffect(() => {
+    if (accessToken && user) {
+      setIsSessionVerified(true);
+    }
+  }, [accessToken, user]);
+
+  useEffect(() => {
     if (!hasHydrated) {
       return;
     }

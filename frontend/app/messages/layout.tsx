@@ -138,7 +138,33 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
     const handleReceiveMessage = (message: any) => {
       setConversations((prev) => {
         const index = prev.findIndex((c) => c.id === message.conversationId);
-        if (index === -1) return prev; // Optionally fetch if not found
+        if (index === -1) {
+          // Fetch this single new conversation in the background and prepend it
+          setTimeout(() => {
+            api.get(`/conversations/${message.conversationId}/messages?limit=1`)
+              .then(({ data }) => {
+                const newConv = data.data.conversation;
+                const isIncoming = message.senderId !== user?.id;
+                const isActiveConversation = pathname === `/messages/${message.conversationId}`;
+                
+                const conversationItem: ConversationListItem = {
+                  ...newConv,
+                  messages: [message],
+                  _count: {
+                    messages: isActiveConversation ? 0 : isIncoming ? 1 : 0
+                  }
+                };
+
+                setConversations((currentList) => {
+                  if (currentList.some((c) => c.id === message.conversationId)) return currentList;
+                  return [conversationItem, ...currentList];
+                });
+              })
+              .catch(console.error);
+          }, 0);
+
+          return prev;
+        }
 
         const conversation = prev[index];
         const isIncoming = message.senderId !== user?.id;
@@ -205,13 +231,28 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
       }
     };
 
+    const handleConversationCreated = (data: { conversation: any }) => {
+      setConversations((prev) => {
+        if (prev.some((c) => c.id === data.conversation.id)) return prev;
+
+        const conversationItem: ConversationListItem = {
+          ...data.conversation,
+          messages: [],
+          _count: { messages: 0 }
+        };
+        return [conversationItem, ...prev];
+      });
+    };
+
     socket.on("receive_message", handleReceiveMessage);
+    socket.on("conversation_created", handleConversationCreated);
     socket.on("user_typing", handleUserTyping);
     socket.on("user_stop_typing", handleUserStopTyping);
     socket.on("messages_read", handleMessagesRead);
 
     return () => {
       socket.off("receive_message", handleReceiveMessage);
+      socket.off("conversation_created", handleConversationCreated);
       socket.off("user_typing", handleUserTyping);
       socket.off("user_stop_typing", handleUserStopTyping);
       socket.off("messages_read", handleMessagesRead);
@@ -231,14 +272,35 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
     const conversationId = pathname.split("/messages/")[1];
     if (!conversationId) return;
 
-    setConversations((prev) =>
-      prev.map((conversation) =>
+    setConversations((prev) => {
+      // If the conversation is not in the list yet (e.g. just created), fetch it in the background
+      const hasConversation = prev.some((c) => c.id === conversationId);
+      if (!hasConversation && !loading) {
+        setTimeout(() => {
+          api.get(`/conversations/${conversationId}/messages?limit=1`)
+            .then(({ data }) => {
+              const newConv = data.data.conversation;
+              const conversationItem: ConversationListItem = {
+                ...newConv,
+                messages: data.data.messages.slice(-1),
+                _count: { messages: 0 }
+              };
+              setConversations((currentList) => {
+                if (currentList.some((c) => c.id === conversationId)) return currentList;
+                return [conversationItem, ...currentList];
+              });
+            })
+            .catch(console.error);
+        }, 0);
+      }
+
+      return prev.map((conversation) =>
         conversation.id === conversationId && conversation._count.messages > 0
           ? { ...conversation, _count: { messages: 0 } }
           : conversation,
-      ),
-    );
-  }, [pathname]);
+      );
+    });
+  }, [pathname, loading]);
 
   const filteredConversations = useMemo(() => {
     if (!user) return [];
