@@ -11,6 +11,8 @@ import { buildPostQuery, defaultPostFilter, type Post, type PostListData } from 
 import { api } from "@/lib/api";
 import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
 import { useAuthStore } from "@/stores/auth.store";
+import { confirm } from "@/stores/confirm.store";
+import { toast } from "@/stores/toast.store";
 
 type PostViewTab = "ALL" | "SELL" | "RENT" | "SOLD" | "BANNED";
 
@@ -160,14 +162,14 @@ export default function ProfilePostsPage() {
     if (!targetAuthorId) return;
 
     if (user.id === targetAuthorId) {
-      alert("Bạn không thể tự nhắn tin cho chính mình.");
+      toast.warning("Bạn không thể tự nhắn tin cho chính mình.");
       return;
     }
 
     const postId = myPosts.length > 0 ? myPosts[0].id : null;
     
     if (!postId) {
-      alert("Người dùng này chưa có bài đăng nào để có thể bắt đầu cuộc trò chuyện. Hãy đợi họ đăng tin bài nhé!");
+      toast.info("Người dùng này chưa có bài đăng nào để có thể bắt đầu cuộc trò chuyện. Hãy đợi họ đăng tin bài nhé!");
       return;
     }
 
@@ -188,7 +190,7 @@ export default function ProfilePostsPage() {
       router.push(`/messages/${conversation.id}`);
     } catch (err) {
       const axiosError = err as AxiosError<{ message?: string }>;
-      alert(axiosError.response?.data?.message ?? "Không thể bắt đầu cuộc trò chuyện lúc này.");
+      toast.error(axiosError.response?.data?.message ?? "Không thể bắt đầu cuộc trò chuyện lúc này.");
       console.error("Failed to start conversation:", err);
     } finally {
       setIsStartingConversation(false);
@@ -196,14 +198,20 @@ export default function ProfilePostsPage() {
   };
 
   const handleDeletePost = async (postId: string) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa bài đăng này không?")) return;
+    const confirmed = await confirm({
+      title: "Xóa bài đăng",
+      message: "Bạn có chắc chắn muốn xóa bài đăng này không?",
+      confirmLabel: "Xóa",
+      cancelLabel: "Hủy"
+    });
+    if (!confirmed) return;
     try {
       await api.delete(`/posts/${postId}`);
       setPosts((prev) => prev.filter((p) => p.id !== postId));
     } catch (err) {
       console.error("Failed to delete post:", err);
       const axiosError = err as AxiosError<{ message?: string }>;
-      alert(axiosError.response?.data?.message ?? "Không thể xóa bài đăng. Vui lòng thử lại.");
+      toast.error(axiosError.response?.data?.message ?? "Không thể xóa bài đăng. Vui lòng thử lại.");
     }
   };
 
