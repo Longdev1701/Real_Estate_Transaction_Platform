@@ -420,6 +420,9 @@ export const getPosts = async (
   const minArea = toOptionalNumber(filter.minArea);
   const maxArea = toOptionalNumber(filter.maxArea);
   const featureIds = toOptionalString(filter.featureIds);
+  const imageLimit = filter.imageLimit
+    ? toPaginationNumber(filter.imageLimit, 1, 1, 10)
+    : undefined;
   const featureIdsArray = featureIds
     ? featureIds
         .split(",")
@@ -530,6 +533,7 @@ export const getPosts = async (
         minArea: minArea ?? null,
         maxArea: maxArea ?? null,
         featureIds: featureIdsArray.join(","),
+        imageLimit: imageLimit ?? null,
         status: filter.status ?? "",
       })
     : null;
@@ -544,7 +548,15 @@ export const getPosts = async (
   const [rawItems, total] = await Promise.all([
     prisma.propertyPost.findMany({
       where,
-      select: postListSelect,
+      select: imageLimit
+        ? {
+            ...postListSelect,
+            images: {
+              ...postListSelect.images,
+              take: imageLimit,
+            },
+          }
+        : postListSelect,
       orderBy: [
         {
           createdAt: "desc",

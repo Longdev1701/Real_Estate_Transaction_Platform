@@ -22,6 +22,7 @@ const profileStatusColors: Record<string, string> = {
   HIDDEN: "theme-badge-warning",
   BANNED: "theme-badge-danger",
 };
+const POST_DETAIL_PREVIEW_CACHE_TTL_MS = 2 * 60 * 1000;
 
 export function ProfilePostCard({ post, isOwnProfile, onDelete }: { post: Post, isOwnProfile?: boolean, onDelete?: (id: string) => void }) {
   const [imageError, setImageError] = useState(false);
@@ -33,6 +34,8 @@ export function ProfilePostCard({ post, isOwnProfile, onDelete }: { post: Post, 
       ...post,
       features: post.features ?? [],
       relatedPosts: post.relatedPosts ?? [],
+    }, {
+      ttlMs: POST_DETAIL_PREVIEW_CACHE_TTL_MS,
     });
   };
 
