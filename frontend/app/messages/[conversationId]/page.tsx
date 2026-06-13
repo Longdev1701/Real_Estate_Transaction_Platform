@@ -274,6 +274,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
   const initialPositionSettledRef = useRef(false);
   const bottomSnapInProgressRef = useRef(false);
   const bottomSnapTimeoutsRef = useRef<number[]>([]);
+  const isTypingRef = useRef(false);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -715,6 +716,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
 
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     socket.emit("stop_typing", { conversationId });
+    isTypingRef.current = false;
     shouldStickToBottomRef.current = true;
     setShowScrollButton(false);
 
@@ -834,12 +836,16 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
 
     if (!socket || !isConnected) return;
 
-    socket.emit("typing", { conversationId });
+    if (!isTypingRef.current) {
+      isTypingRef.current = true;
+      socket.emit("typing", { conversationId });
+    }
 
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
     typingTimeoutRef.current = setTimeout(() => {
       socket.emit("stop_typing", { conversationId });
+      isTypingRef.current = false;
     }, 2000);
   };
 
