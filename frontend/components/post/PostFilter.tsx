@@ -110,7 +110,7 @@ export function PostFilter({
   const [districts, setDistricts] = useState<District[]>([]);
   const [selectedProvinceCode, setSelectedProvinceCode] = useState("");
   const [selectedDistrictCode, setSelectedDistrictCode] = useState("");
-  const [showFeatures, setShowFeatures] = useState(false);
+  const [showFeatures, setShowFeatures] = useState(true);
 
   useEffect(() => {
     const fetchFeatures = async () => {

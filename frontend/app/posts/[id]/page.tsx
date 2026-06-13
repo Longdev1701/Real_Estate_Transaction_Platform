@@ -13,6 +13,8 @@ import {
   Building2,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
   Expand,
   LoaderCircle,
   MapPin,
@@ -31,6 +33,7 @@ import {
   Activity,
   Copy,
   Check,
+  Scale,
 } from "lucide-react";
 
 import { api } from "@/lib/api";
@@ -47,6 +50,7 @@ import {
 } from "@/lib/posts";
 import { useAuthStore } from "@/stores/auth.store";
 import { confirm } from "@/stores/confirm.store";
+import { toast } from "@/stores/toast.store";
 import dynamic from "next/dynamic";
 import CommentSection from "@/components/comment/CommentSection";
 import { AppealBanDialog } from "@/components/post/AppealBanDialog";
@@ -83,6 +87,7 @@ export default function PostDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
   const [isSaved, setIsSaved] = useState(false);
+  const [isCompared, setIsCompared] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaveSubmitting, setIsSaveSubmitting] = useState(false);
   const [isStartingConversation, setIsStartingConversation] = useState(false);
@@ -95,6 +100,7 @@ export default function PostDetailPage() {
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [showAllFeatures, setShowAllFeatures] = useState(false);
   const mapSectionRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -125,6 +131,15 @@ export default function PostDetailPage() {
           setPost(cachedPost);
           setSelectedImage(0);
           setRelatedPosts(cachedPost.relatedPosts ?? []);
+          
+          try {
+            const storedCompare = localStorage.getItem("compared_posts");
+            const compareList = storedCompare ? JSON.parse(storedCompare) : [];
+            if (Array.isArray(compareList)) {
+              setIsCompared(compareList.some((item: any) => item.id === cachedPost.id));
+            }
+          } catch (e) {}
+
           setIsLoading(false);
         }
 
@@ -184,6 +199,21 @@ export default function PostDetailPage() {
   const handleScrollToMap = () => {
     mapSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
+
+  useEffect(() => {
+    if (!post) return;
+    const handleCompareUpdate = () => {
+      try {
+        const stored = localStorage.getItem("compared_posts");
+        const list = stored ? JSON.parse(stored) : [];
+        setIsCompared(Array.isArray(list) && list.some((item: any) => item.id === post.id));
+      } catch {
+        setIsCompared(false);
+      }
+    };
+    window.addEventListener("compare_list_updated", handleCompareUpdate);
+    return () => window.removeEventListener("compare_list_updated", handleCompareUpdate);
+  }, [post]);
 
   const handleSaveToggle = async () => {
     const rawValue = window.localStorage.getItem(savedKey);
@@ -296,6 +326,41 @@ export default function PostDetailPage() {
     }
   };
 
+  const handleCompareToggle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!post) return;
+
+    try {
+      const stored = localStorage.getItem("compared_posts");
+      let list = stored ? JSON.parse(stored) : [];
+      if (!Array.isArray(list)) list = [];
+
+      const exists = list.some((item: any) => item.id === post.id);
+      if (exists) {
+        list = list.filter((item: any) => item.id !== post.id);
+        setIsCompared(false);
+        toast.success("Đã bỏ so sánh bất động sản.");
+      } else {
+        if (list.length >= 3) {
+          toast.warning("Chỉ có thể so sánh tối đa 3 bất động sản cùng lúc.");
+          return;
+        }
+        if (list.length > 0 && list[0].postType !== post.postType) {
+          toast.warning("Không thể so sánh bất động sản Bán với bất động sản Cho thuê.");
+          return;
+        }
+        list.push(post);
+        setIsCompared(true);
+        toast.success("Đã thêm vào danh sách so sánh.");
+      }
+      localStorage.setItem("compared_posts", JSON.stringify(list));
+      window.dispatchEvent(new Event("compare_list_updated"));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const handleMessageClick = async () => {
     if (!user) {
       router.push(`/auth/login?redirectTo=${encodeURIComponent(window.location.pathname + window.location.search)}`);
@@ -365,7 +430,7 @@ export default function PostDetailPage() {
         <div className="glass-card p-8 text-center">
           <p className="text-lg text-[var(--danger-foreground)]">{error}</p>
           <button type="button" onClick={() => router.push("/posts")} className="btn-primary mt-6">
-            Quay lai danh sach
+            Quay lại danh sách
           </button>
         </div>
       </div>
@@ -467,7 +532,7 @@ export default function PostDetailPage() {
 
   return (
     <div className="container mx-auto space-y-5 px-4 pt-5 pb-28 lg:space-y-6 lg:px-8 lg:py-10">
-      <div className="hidden md:flex flex-wrap items-center gap-2 text-sm leading-6 text-[var(--muted-foreground)]">
+      <div className="hidden lg:flex flex-wrap items-center gap-2 text-sm leading-6 text-[var(--muted-foreground)]">
         <Link href="/" className="transition hover:text-[var(--foreground)]">
           Trang chủ
         </Link>
@@ -477,6 +542,17 @@ export default function PostDetailPage() {
         </Link>
         <span>/</span>
         <span className="line-clamp-2 text-[var(--foreground)]">{post.title}</span>
+      </div>
+
+      <div className="lg:hidden">
+        <button
+          type="button"
+          onClick={() => router.push("/posts")}
+          className="theme-surface-soft inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)]"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Quay lại danh sách
+        </button>
       </div>
 
       {error && (
@@ -617,9 +693,13 @@ export default function PostDetailPage() {
                   <Bookmark className={`h-4 w-4 ${post.isSaved ? "fill-[var(--accent)] text-[var(--accent)]" : "text-[var(--accent)]"}`} />
                   {post.isSaved ? "Đã lưu" : "Lưu"}
                 </button>
-                <button type="button" className="theme-surface-soft inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)] sm:px-4 sm:py-3">
-                  <Building2 className="h-4 w-4 text-[var(--accent)]" />
-                  So sánh
+                <button
+                  type="button"
+                  onClick={handleCompareToggle}
+                  className={`theme-surface-soft inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm transition hover:bg-[var(--surface-muted)] sm:px-4 sm:py-3 ${isCompared ? "text-[var(--accent)]" : "text-[var(--secondary-foreground)]"}`}
+                >
+                  <Scale className="h-4 w-4" />
+                  {isCompared ? "Đã so sánh" : "So sánh"}
                 </button>
                 {!isOwnPost ? (
                   <button
@@ -782,19 +862,43 @@ export default function PostDetailPage() {
           {post.features && post.features.length > 0 && (
             <div className="glass-card p-6">
               <h2 className="text-2xl font-semibold text-[var(--foreground)]">Tiện ích & Đặc trưng</h2>
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-                {post.features.map((feature) => (
-                  <div
-                    key={feature.id}
-                    className="theme-surface-muted flex items-center gap-3 rounded-2xl p-3.5 text-[var(--secondary-foreground)] transition-all duration-300 hover:border-[var(--accent-border)] hover:bg-[var(--surface)]"
-                  >
-                    <div className="rounded-xl bg-[var(--accent-soft)] p-2 text-[var(--accent)]">
-                      <FeatureIcon name={feature.icon || "help-circle"} className="h-5 w-5" />
+              <div className="relative mt-4">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+                  {(showAllFeatures ? post.features : post.features.slice(0, 8)).map((feature) => (
+                    <div
+                      key={feature.id}
+                      className="theme-surface-muted flex items-center gap-3 rounded-2xl p-3.5 text-[var(--secondary-foreground)] transition-all duration-300 hover:border-[var(--accent-border)] hover:bg-[var(--surface)]"
+                    >
+                      <div className="rounded-xl bg-[var(--accent-soft)] p-2 text-[var(--accent)]">
+                        <FeatureIcon name={feature.icon || "help-circle"} className="h-5 w-5" />
+                      </div>
+                      <span className="text-sm font-medium">{feature.name}</span>
                     </div>
-                    <span className="text-sm font-medium">{feature.name}</span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
+              {post.features.length > 8 && (
+                <div className={`relative flex justify-center ${!showAllFeatures ? "mt-2 pt-6" : "mt-5"}`}>
+                  {!showAllFeatures && (
+                    <div className="pointer-events-none absolute bottom-0 left-0 h-20 w-full bg-gradient-to-t from-[var(--surface)] to-transparent opacity-80" />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowAllFeatures(!showAllFeatures)}
+                    className="relative z-10 inline-flex items-center gap-2 rounded-full bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--accent)] shadow-sm border border-[var(--border)] transition-colors hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
+                  >
+                    {showAllFeatures ? (
+                      <>
+                        Thu gọn <ChevronUp className="h-4 w-4" />
+                      </>
+                    ) : (
+                      <>
+                        Xem thêm ({post.features.length - 8}) <ChevronDown className="h-4 w-4" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -946,7 +1050,7 @@ export default function PostDetailPage() {
             <button
               type="button"
               onClick={() => router.push("/posts")}
-              className="theme-surface-soft inline-flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)]"
+              className="hidden lg:inline-flex theme-surface-soft items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)]"
             >
               <ArrowLeft className="h-4 w-4" />
               Quay lại danh sách
@@ -1057,6 +1161,13 @@ export default function PostDetailPage() {
             className="theme-surface-soft inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)] disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Bookmark className={`h-5 w-5 ${post.isSaved ? "fill-[var(--accent)] text-[var(--accent)]" : "text-[var(--accent)]"}`} />
+          </button>
+          <button
+            type="button"
+            onClick={handleCompareToggle}
+            className="theme-surface-soft inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)]"
+          >
+            <Scale className={`h-5 w-5 ${isCompared ? "text-[var(--accent)]" : "text-[var(--accent)]"}`} />
           </button>
           <button
             type="button"

@@ -405,11 +405,6 @@ export default function ProfilePostsPage() {
           >
             Giới thiệu
           </button>
-          {isOwnProfile ? (
-            <button className="flex-1 md:flex-none whitespace-nowrap border-b-2 border-transparent px-2 py-3.5 sm:px-6 sm:py-4 text-sm sm:text-base font-medium text-[var(--muted-foreground)] transition-colors hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]">
-              Lịch sử xem
-            </button>
-          ) : null}
         </div>
       </div>
 
