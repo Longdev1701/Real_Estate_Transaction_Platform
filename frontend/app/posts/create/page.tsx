@@ -20,6 +20,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 
 import { api } from "@/lib/api";
+import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
 import { FeatureIcon } from "@/lib/feature-icons";
 import { compressPropertyImage } from "@/lib/image-compression";
 import { PROPERTY_TYPES, propertyTypeLabels } from "@/lib/posts";
@@ -197,9 +198,19 @@ export default function CreatePostPage() {
 
   useEffect(() => {
     const fetchFeatures = async () => {
+      const cacheKey = `features:${propertyType}`;
+      const cached = readSessionCache<Feature[]>(cacheKey);
+      if (cached) {
+        setFeatures(cached);
+        const availableIds = new Set(cached.map((f) => f.id));
+        setSelectedFeatureIds((prev) => prev.filter((id) => availableIds.has(id)));
+        return;
+      }
+
       try {
         const response = await api.get<{ data: Feature[] }>(`/features?propertyType=${propertyType}`);
         setFeatures(response.data.data);
+        writeSessionCache(cacheKey, response.data.data, { ttlMs: 30 * 60 * 1000 });
         const availableIds = new Set(response.data.data.map((f) => f.id));
         setSelectedFeatureIds((prev) => prev.filter((id) => availableIds.has(id)));
       } catch (err) {

@@ -891,46 +891,34 @@ export default function PostDetailPage() {
             </div>
           </div>
 
-          {post.features && post.features.length > 0 && (
-            <div className="glass-card p-6">
+          {groupedFeatures && groupedFeatures.length > 0 && (
+            <div className="glass-card p-6 space-y-6">
               <h2 className="text-2xl font-semibold text-[var(--foreground)]">Tiện ích & Đặc trưng</h2>
-              <div className="relative mt-4">
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
-                  {(showAllFeatures ? post.features : post.features.slice(0, 8)).map((feature) => (
-                    <div
-                      key={feature.id}
-                      className="theme-surface-muted flex items-center gap-3 rounded-2xl p-3.5 text-[var(--secondary-foreground)] transition-all duration-300 hover:border-[var(--accent-border)] hover:bg-[var(--surface)]"
-                    >
-                      <div className="rounded-xl bg-[var(--accent-soft)] p-2 text-[var(--accent)]">
-                        <FeatureIcon name={feature.icon || "help-circle"} className="h-5 w-5" />
-                      </div>
-                      <span className="text-sm font-medium">{feature.name}</span>
+              <div className="space-y-6">
+                {groupedFeatures.map(([category, list]) => (
+                  <div key={category} className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
+                        {category}
+                      </h3>
+                      <span className="h-px flex-1 bg-[var(--border)]" />
                     </div>
-                  ))}
-                </div>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+                      {list.map((feature) => (
+                        <div
+                          key={feature.id}
+                          className="theme-surface-muted flex items-center gap-3 rounded-2xl p-3.5 text-[var(--secondary-foreground)] transition-all duration-300 hover:border-[var(--accent-border)] hover:bg-[var(--surface)]"
+                        >
+                          <div className="rounded-xl bg-[var(--accent-soft)] p-2 text-[var(--accent)]">
+                            <FeatureIcon name={feature.icon || "help-circle"} className="h-5 w-5" />
+                          </div>
+                          <span className="text-sm font-medium">{feature.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
-              {post.features.length > 8 && (
-                <div className={`relative flex justify-center ${!showAllFeatures ? "mt-2 pt-6" : "mt-5"}`}>
-                  {!showAllFeatures && (
-                    <div className="pointer-events-none absolute bottom-0 left-0 h-20 w-full bg-gradient-to-t from-[var(--surface)] to-transparent opacity-80" />
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setShowAllFeatures(!showAllFeatures)}
-                    className="relative z-10 inline-flex items-center gap-2 rounded-full bg-[var(--surface)] px-4 py-2 text-sm font-semibold text-[var(--accent)] shadow-sm border border-[var(--border)] transition-colors hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
-                  >
-                    {showAllFeatures ? (
-                      <>
-                        Thu gọn <ChevronUp className="h-4 w-4" />
-                      </>
-                    ) : (
-                      <>
-                        Xem thêm ({post.features.length - 8}) <ChevronDown className="h-4 w-4" />
-                      </>
-                    )}
-                  </button>
-                </div>
-              )}
             </div>
           )}
 
