@@ -178,19 +178,11 @@ export default function ProfilePostsPage() {
       return;
     }
 
-    const postId = myPosts.length > 0 ? myPosts[0].id : null;
-    
-    if (!postId) {
-      toast.info("Người dùng này chưa có bài đăng nào để có thể bắt đầu cuộc trò chuyện. Hãy đợi họ đăng tin bài nhé!");
-      return;
-    }
-
     if (isStartingConversation) return;
 
     try {
       setIsStartingConversation(true);
       const response = await api.post("/conversations", {
-        postId: postId,
         sellerId: targetAuthorId
       });
       const conversation = response.data.data.conversation;

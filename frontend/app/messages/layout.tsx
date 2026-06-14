@@ -25,7 +25,7 @@ export interface ConversationListItem {
   id: string;
   buyer: { id: string; fullName: string; avatarUrl: string | null };
   seller: { id: string; fullName: string; avatarUrl: string | null };
-  post: { id: string; title: string; price: number; images: { imageUrl: string }[] };
+  post: { id: string; title: string; price: number; images: { imageUrl: string }[] } | null;
   messages: { id: string; content: string; createdAt: string; messageType: string; isRead: boolean }[];
   _count: { messages: number };
 }
@@ -363,7 +363,8 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
       const otherUser = conversation.buyer.id === user.id ? conversation.seller : conversation.buyer;
       const matchesSearch =
         otherUser.fullName.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-        conversation.post.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
+        conversation.post?.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+        false;
       const matchesTab = activeTab === "all" || conversation._count.messages > 0;
       return matchesSearch && matchesTab;
     });
@@ -593,7 +594,9 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
                         <p className={`line-clamp-1 break-all text-[14px] ${isTyping ? "font-medium text-[var(--accent)]" : "text-[var(--secondary-foreground)]"}`}>
                           {isTyping ? "Đang nhập..." : formatConversationPreview(lastMessage)}
                         </p>
-                        <p className="mt-1 truncate text-xs text-[var(--muted-foreground)]">{conversation.post.title}</p>
+                        <p className="mt-1 truncate text-xs text-[var(--muted-foreground)]">
+                          {conversation.post?.title || "Chưa gắn bất động sản"}
+                        </p>
                       </div>
 
                       {unreadCount > 0 && (

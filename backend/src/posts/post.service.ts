@@ -960,7 +960,7 @@ export const deletePostImage = async (
     throw new AppError("Post image not found.", 404);
   }
 
-  if (!canManagePost(actor, image.post.authorId)) {
+  if (!image.post || !canManagePost(actor, image.post.authorId)) {
     throw new AppError("You do not have permission to delete this image.", 403);
   }
 
