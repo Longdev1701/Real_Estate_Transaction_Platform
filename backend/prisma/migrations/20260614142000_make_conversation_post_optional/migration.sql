@@ -1,0 +1,2 @@
+ALTER TABLE "Conversation"
+ALTER COLUMN "postId" DROP NOT NULL;

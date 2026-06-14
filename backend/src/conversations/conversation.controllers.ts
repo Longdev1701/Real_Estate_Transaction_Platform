@@ -7,7 +7,7 @@ import { uploadChatImage as uploadChatImageService } from "../services/upload.se
 import { emitToUser } from "../utils/realtime.helper.js";
 
 const createConversationSchema = z.object({
-  postId: z.string(),
+  postId: z.string().optional().nullable(),
   sellerId: z.string()
 });
 
@@ -73,26 +73,30 @@ export const createOrGetConversation = async (req: Request, res: Response, next:
       throw new AppError("You cannot message yourself.", 400);
     }
 
-    const post = await prisma.propertyPost.findUnique({
-      where: { id: postId },
-      select: {
-        id: true,
-        authorId: true
+    const normalizedPostId = postId ?? null;
+
+    if (normalizedPostId) {
+      const post = await prisma.propertyPost.findUnique({
+        where: { id: normalizedPostId },
+        select: {
+          id: true,
+          authorId: true
+        }
+      });
+
+      if (!post) {
+        throw new AppError("Property post not found.", 404);
       }
-    });
 
-    if (!post) {
-      throw new AppError("Property post not found.", 404);
-    }
-
-    if (post.authorId !== targetUserId) {
-      throw new AppError("Seller does not own this property post.", 400);
+      if (post.authorId !== targetUserId) {
+        throw new AppError("Seller does not own this property post.", 400);
+      }
     }
 
     const [buyerId, sellerId] = normalizeConversationParticipants(currentUserId, targetUserId);
 
     // Persist each user pair in a canonical order so the same two users always share one conversation.
-    let conversation = await prisma.conversation.findFirst({
+    let conversation: any = await prisma.conversation.findFirst({
       where: {
         buyerId,
         sellerId
@@ -104,12 +108,22 @@ export const createOrGetConversation = async (req: Request, res: Response, next:
       try {
         conversation = await prisma.conversation.create({
           data: {
-            postId,
-            buyerId,
-            sellerId
+            buyer: {
+              connect: { id: buyerId }
+            },
+            seller: {
+              connect: { id: sellerId }
+            },
+            ...(normalizedPostId
+              ? {
+                  post: {
+                    connect: { id: normalizedPostId }
+                  }
+                }
+              : {})
           },
           include: conversationInclude
-        });
+        } as any);
 
         // Notify the target user that a new conversation has been initiated.
         emitToUser(targetUserId, "conversation_created", { conversation });
@@ -129,18 +143,18 @@ export const createOrGetConversation = async (req: Request, res: Response, next:
         }
       }
     } else if (
-      conversation.postId !== postId ||
+      (normalizedPostId !== null && conversation.postId !== normalizedPostId) ||
       conversation.deletedByIds.includes(currentUserId)
     ) {
-      const nextDeletedByIds = conversation.deletedByIds.filter((id) => id !== currentUserId);
+      const nextDeletedByIds = conversation.deletedByIds.filter((id: string) => id !== currentUserId);
       conversation = await prisma.conversation.update({
         where: { id: conversation.id },
         data: {
-          postId,
+          ...(normalizedPostId !== null ? { postId: normalizedPostId } : {}),
           deletedByIds: nextDeletedByIds
         },
         include: conversationInclude
-      });
+      } as any);
 
       emitToUser(buyerId, "conversation_updated", { conversation });
       emitToUser(sellerId, "conversation_updated", { conversation });

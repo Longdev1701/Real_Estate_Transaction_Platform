@@ -65,7 +65,7 @@ type ConversationData = {
     propertyType: string;
     city: string;
     images: { imageUrl: string }[];
-  };
+  } | null;
 };
 
 type SharedAsset = {
@@ -923,7 +923,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
     });
   };
 
-  if (!hasHydrated || !user || !conversation || !conversation.buyer || !conversation.seller || !conversation.post) {
+  if (!hasHydrated || !user || !conversation || !conversation.buyer || !conversation.seller) {
     if (hasHydrated && user && loadError) {
       return (
         <div className="theme-message-surface flex h-full min-h-0 flex-1 items-center justify-center p-6">
@@ -940,7 +940,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
       );
     }
 
-    if (hasHydrated && user && (!conversation || !conversation.buyer || !conversation.seller || !conversation.post) && !loadError) {
+    if (hasHydrated && user && (!conversation || !conversation.buyer || !conversation.seller) && !loadError) {
       return (
         <div className="theme-message-surface relative flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-[26px] border border-[var(--border)]">
           <header className="flex h-[78px] shrink-0 items-center border-b border-[var(--border)] bg-[var(--surface-muted)] px-5 lg:px-6">
@@ -1062,47 +1062,56 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                   </div>
 
                   <div className="mx-auto mb-5 w-full max-w-[20.5rem] overflow-hidden rounded-[18px] border border-[var(--border)] bg-[var(--surface-muted)] shadow-[var(--shadow-strong)] sm:max-w-[22.5rem]">
-                    <div className="flex flex-col gap-3 p-3">
-                      <div className="theme-post-gallery h-24 w-full overflow-hidden rounded-[14px] sm:h-28">
-                        <FallbackMedia
-                          src={conversation.post.images[0]?.imageUrl}
-                          alt={conversation.post.title}
-                          className="h-full w-full object-cover"
-                          wrapperClassName="h-full w-full"
-                        />
+                    {conversation.post ? (
+                      <div className="flex flex-col gap-3 p-3">
+                        <div className="theme-post-gallery h-24 w-full overflow-hidden rounded-[14px] sm:h-28">
+                          <FallbackMedia
+                            src={conversation.post.images[0]?.imageUrl}
+                            alt={conversation.post.title}
+                            className="h-full w-full object-cover"
+                            wrapperClassName="h-full w-full"
+                          />
+                        </div>
+
+                        <div className="flex min-w-0 flex-1 flex-col justify-between gap-3">
+                          <div>
+                            <p className="text-xs font-medium text-[var(--accent)] sm:text-sm">Bất động sản đang trao đổi</p>
+                            <h3 className="mt-1 line-clamp-2 text-[1.05rem] font-semibold leading-tight text-[var(--foreground)] sm:text-[1.15rem]">{conversation.post.title}</h3>
+                            <p className="mt-1.5 text-[1.1rem] font-semibold text-[var(--accent)] sm:text-[1.25rem]">{formatPrice(conversation.post.price)}</p>
+                          </div>
+
+                          <div className="grid gap-2 text-[13px] text-[var(--secondary-foreground)] sm:grid-cols-2">
+                            <div className="rounded-[16px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5">
+                              {conversation.post.propertyType}
+                            </div>
+                            <div className="rounded-[16px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5">
+                              {conversation.post.area} m²
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col gap-2.5">
+                            <div className="flex items-center gap-2 text-[13px] text-[var(--muted-foreground)]">
+                              <MapPin className="h-3.5 w-3.5" />
+                              <span>{conversation.post.city}</span>
+                            </div>
+
+                            <Link
+                              href={`/posts/${conversation.post.id}`}
+                              className="inline-flex min-h-10 w-full items-center justify-center rounded-[16px] border border-[var(--accent-border)] px-4 py-2 text-sm font-medium text-[var(--accent)] transition hover:bg-[var(--accent-soft)] hover:text-[var(--foreground)]"
+                            >
+                              Xem chi tiết
+                            </Link>
+                          </div>
+                        </div>
                       </div>
-
-                      <div className="flex min-w-0 flex-1 flex-col justify-between gap-3">
-                        <div>
-                          <p className="text-xs font-medium text-[var(--accent)] sm:text-sm">Bất động sản đang trao đổi</p>
-                          <h3 className="mt-1 line-clamp-2 text-[1.05rem] font-semibold leading-tight text-[var(--foreground)] sm:text-[1.15rem]">{conversation.post.title}</h3>
-                          <p className="mt-1.5 text-[1.1rem] font-semibold text-[var(--accent)] sm:text-[1.25rem]">{formatPrice(conversation.post.price)}</p>
-                        </div>
-
-                        <div className="grid gap-2 text-[13px] text-[var(--secondary-foreground)] sm:grid-cols-2">
-                          <div className="rounded-[16px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5">
-                            {conversation.post.propertyType}
-                          </div>
-                          <div className="rounded-[16px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5">
-                            {conversation.post.area} m²
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col gap-2.5">
-                          <div className="flex items-center gap-2 text-[13px] text-[var(--muted-foreground)]">
-                            <MapPin className="h-3.5 w-3.5" />
-                            <span>{conversation.post.city}</span>
-                          </div>
-
-                          <Link
-                            href={`/posts/${conversation.post.id}`}
-                            className="inline-flex min-h-10 w-full items-center justify-center rounded-[16px] border border-[var(--accent-border)] px-4 py-2 text-sm font-medium text-[var(--accent)] transition hover:bg-[var(--accent-soft)] hover:text-[var(--foreground)]"
-                          >
-                            Xem chi tiết
-                          </Link>
-                        </div>
+                    ) : (
+                      <div className="p-5 text-center">
+                        <p className="text-sm font-medium text-[var(--foreground)]">Chưa có bất động sản đang trao đổi</p>
+                        <p className="mt-2 text-xs leading-6 text-[var(--muted-foreground)]">
+                          Cuộc trò chuyện này được bắt đầu trực tiếp giữa hai người dùng và chưa gắn với bài đăng nào.
+                        </p>
                       </div>
-                    </div>
+                    )}
                   </div>
 
                   {isLoadingMoreMessages && (
@@ -1420,34 +1429,40 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                   <div className="rounded-[30px] border border-[var(--border)] bg-[var(--surface-muted)] p-5">
                     <p className="text-lg font-semibold text-[var(--foreground)]">Bất động sản đang trao đổi</p>
 
-                    <div className="theme-message-compose mt-4 overflow-hidden rounded-[24px]">
-                      <div className="h-40 overflow-hidden">
-                        <FallbackMedia
-                          src={conversation.post.images[0]?.imageUrl}
-                          alt={conversation.post.title}
-                          className="h-full w-full object-cover"
-                          wrapperClassName="h-full w-full"
-                        />
-                      </div>
+                    {conversation.post ? (
+                      <div className="theme-message-compose mt-4 overflow-hidden rounded-[24px]">
+                        <div className="h-40 overflow-hidden">
+                          <FallbackMedia
+                            src={conversation.post.images[0]?.imageUrl}
+                            alt={conversation.post.title}
+                            className="h-full w-full object-cover"
+                            wrapperClassName="h-full w-full"
+                          />
+                        </div>
 
-                      <div className="space-y-3 p-4">
-                        <h4 className="line-clamp-2 text-lg font-medium text-[var(--foreground)]">{conversation.post.title}</h4>
-                        <p className="text-2xl font-semibold text-[var(--accent)]">{formatPrice(conversation.post.price)}</p>
-                        <p className="text-sm text-[var(--muted-foreground)]">
-                          {conversation.post.area} m² • {conversation.post.propertyType}
-                        </p>
-                        <p className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
-                          <MapPin className="h-4 w-4" />
-                          <span>{conversation.post.city}</span>
-                        </p>
-                        <Link
-                          href={`/posts/${conversation.post.id}`}
-                          className="inline-flex w-full items-center justify-center rounded-2xl border border-[var(--border)] px-4 py-3 text-sm font-medium text-[var(--accent)] transition hover:bg-[var(--surface)] hover:text-[var(--foreground)]"
-                        >
-                          Xem chi tiết
-                        </Link>
+                        <div className="space-y-3 p-4">
+                          <h4 className="line-clamp-2 text-lg font-medium text-[var(--foreground)]">{conversation.post.title}</h4>
+                          <p className="text-2xl font-semibold text-[var(--accent)]">{formatPrice(conversation.post.price)}</p>
+                          <p className="text-sm text-[var(--muted-foreground)]">
+                            {conversation.post.area} m² • {conversation.post.propertyType}
+                          </p>
+                          <p className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
+                            <MapPin className="h-4 w-4" />
+                            <span>{conversation.post.city}</span>
+                          </p>
+                          <Link
+                            href={`/posts/${conversation.post.id}`}
+                            className="inline-flex w-full items-center justify-center rounded-2xl border border-[var(--border)] px-4 py-3 text-sm font-medium text-[var(--accent)] transition hover:bg-[var(--surface)] hover:text-[var(--foreground)]"
+                          >
+                            Xem chi tiết
+                          </Link>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="mt-4 rounded-[24px] border border-[var(--border)] bg-[var(--surface)] px-4 py-5 text-sm leading-6 text-[var(--muted-foreground)]">
+                        Chưa có bài đăng nào được gắn với cuộc trò chuyện này.
+                      </div>
+                    )}
                   </div>
 
                   <div className="rounded-[30px] border border-[var(--border)] bg-[var(--surface-muted)] p-5">

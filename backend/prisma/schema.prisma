@@ -184,8 +184,8 @@ model Conversation {
   sellerId String
   seller   User   @relation("SellerConversation", fields: [sellerId], references: [id], onDelete: Cascade)
 
-  postId String
-  post   PropertyPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId String?
+  post   PropertyPost? @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   messages Message[]
 
