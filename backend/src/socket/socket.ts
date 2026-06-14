@@ -143,8 +143,14 @@ export function initializeSocket(httpServer: HTTPServer) {
     });
 
     socket.on("join_room", (conversationId: string) => {
+      if (!conversationId || socket.rooms.has(conversationId)) return;
       socket.join(conversationId);
       console.log(`User ${user.id} joined conversation: ${conversationId}`);
+    });
+
+    socket.on("leave_room", (conversationId: string) => {
+      if (!conversationId || !socket.rooms.has(conversationId)) return;
+      socket.leave(conversationId);
     });
 
     socket.on("join_post_comments", (postId: string) => {

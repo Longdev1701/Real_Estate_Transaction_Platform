@@ -547,10 +547,6 @@ export default function NotificationsPage() {
                 );
               })}
 
-              <button type="button" className="theme-surface-soft theme-link flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-xs font-medium transition hover:bg-[var(--hover)]">
-                Xem tất cả thống kê
-                <ChevronRight className="h-4.5 w-4.5" />
-              </button>
             </div>
           </section>
         </aside>

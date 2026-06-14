@@ -277,6 +277,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
   const bottomSnapInProgressRef = useRef(false);
   const bottomSnapTimeoutsRef = useRef<number[]>([]);
   const isTypingRef = useRef(false);
+  const joinedConversationIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -605,7 +606,13 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
       toast.error(error.message || "Không thể gửi tin nhắn. Vui lòng thử lại.");
     };
 
-    socket.emit("join_room", conversationId);
+    if (joinedConversationIdRef.current !== conversationId) {
+      if (joinedConversationIdRef.current) {
+        socket.emit("leave_room", joinedConversationIdRef.current);
+      }
+      socket.emit("join_room", conversationId);
+      joinedConversationIdRef.current = conversationId;
+    }
     socket.emit("check_online_status", otherUserId);
 
     socket.on("online_status_result", handleOnlineStatusResult);
@@ -622,6 +629,10 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
     socket.on("error", handleSocketError);
 
     return () => {
+      if (joinedConversationIdRef.current === conversationId) {
+        socket.emit("leave_room", conversationId);
+        joinedConversationIdRef.current = null;
+      }
       socket.off("online_status_result", handleOnlineStatusResult);
       socket.off("user_online", handleUserOnline);
       socket.off("user_offline", handleUserOffline);
@@ -635,7 +646,17 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
       socket.off("conversation_updated", handleConversationUpdated);
       socket.off("error", handleSocketError);
     };
-  }, [conversation, conversationId, isConnected, playDing, router, socket, user]);
+  }, [
+    conversation?.buyer?.id,
+    conversation?.seller?.id,
+    conversation?.id,
+    conversationId,
+    isConnected,
+    playDing,
+    router,
+    socket,
+    user?.id,
+  ]);
 
   useLayoutEffect(() => {
     if (shouldStickToBottomRef.current && messages.length > 0) {
