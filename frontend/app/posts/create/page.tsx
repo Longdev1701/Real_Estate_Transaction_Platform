@@ -27,7 +27,7 @@ import {
 } from "@/lib/administrative-divisions";
 import { api } from "@/lib/api";
 import { FeatureIcon } from "@/lib/feature-icons";
-import { compressPropertyImage } from "@/lib/image-compression";
+import { compressPropertyImage, yieldToBrowser } from "@/lib/image-compression";
 import {
   acceptedPropertyImageInput,
   applyPostDraftValues,
@@ -458,24 +458,26 @@ export default function CreatePostPage() {
     }>;
 
     try {
-      processedFiles = await Promise.all(
-        appendedFiles.map(async (file) => {
-          const originalValidation = getPropertyImageValidation(file);
+      processedFiles = [];
 
-          if (!originalValidation.isMimeValid && !originalValidation.isExtensionValid) {
-            return {
-              file,
-              validation: originalValidation,
-            };
-          }
+      for (const file of appendedFiles) {
+        const originalValidation = getPropertyImageValidation(file);
 
+        if (!originalValidation.isMimeValid && !originalValidation.isExtensionValid) {
+          processedFiles.push({
+            file,
+            validation: originalValidation,
+          });
+        } else {
           const compressedFile = await compressPropertyImage(file);
-          return {
+          processedFiles.push({
             file: compressedFile,
             validation: getPropertyImageValidation(compressedFile),
-          };
-        }),
-      );
+          });
+        }
+
+        await yieldToBrowser();
+      }
     } catch (error) {
       console.error("Failed to prepare images before upload:", error);
       setImageError("Không thể xử lý ảnh vừa chọn. Vui lòng thử lại.");

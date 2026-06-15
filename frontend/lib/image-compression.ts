@@ -45,6 +45,16 @@ const canvasToBlob = (
     }, type, quality);
   });
 
+export const yieldToBrowser = () =>
+  new Promise<void>((resolve) => {
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(() => resolve());
+      return;
+    }
+
+    setTimeout(resolve, 0);
+  });
+
 export async function compressPropertyImage(file: File): Promise<File> {
   const image = await loadImage(file);
   const longestSide = Math.max(image.width, image.height);
