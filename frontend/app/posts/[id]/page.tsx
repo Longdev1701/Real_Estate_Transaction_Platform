@@ -54,6 +54,9 @@ import { confirm } from "@/stores/confirm.store";
 import { toast } from "@/stores/toast.store";
 import dynamic from "next/dynamic";
 import CommentSection from "@/components/comment/CommentSection";
+import { PostImageViewer } from "@/components/post/PostImageViewer";
+import { AnimatedSidebar, PulseButton } from "@/components/post/AnimatedSidebar";
+import { RelatedPostsCarousel } from "@/components/post/RelatedPostsCarousel";
 import { AppealBanDialog } from "@/components/post/AppealBanDialog";
 import { ReportPostDialog } from "@/components/post/ReportPostDialog";
 
@@ -937,7 +940,7 @@ export default function PostDetailPage() {
           <CommentSection postId={post.id} postAuthorId={post.author.id} />
         </section>
 
-        <aside className="space-y-5 min-w-0">
+        <AnimatedSidebar className="space-y-5 min-w-0">
           <div className="lg:sticky lg:top-24 space-y-5">
             {canManagePost ? (
               <div className="hidden lg:block glass-card relative overflow-hidden border-t-4 border-t-[var(--accent)] p-6">
@@ -996,15 +999,14 @@ export default function PostDetailPage() {
                 </div>
 
                 <div className="mt-5 space-y-2.5 relative">
-                  <button
-                    type="button"
+                  <PulseButton
                     onClick={handleMessageClick}
                     disabled={isStartingConversation}
                     className="theme-button-primary flex w-full items-center justify-center gap-2 rounded-xl py-3 font-semibold transition disabled:opacity-60"
                   >
                     <MessageCircle className="h-4.5 w-4.5 text-[var(--primary-foreground)]" />
                     {isStartingConversation ? "Đang kết nối..." : "Nhắn tin trao đổi"}
-                  </button>
+                  </PulseButton>
                   {conversationError && (
                     <p className="mt-2 rounded-xl border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-2 text-xs text-[var(--danger-foreground)]">
                       {conversationError}
@@ -1034,39 +1036,7 @@ export default function PostDetailPage() {
                 </Link>
               </div>
 
-              <div className="flex gap-3 overflow-x-auto pb-4 snap-x snap-mandatory sm:grid sm:grid-cols-1 sm:overflow-visible sm:pb-0 sm:snap-none scrollbar-hidden -mx-5 px-5 sm:mx-0 sm:px-0">
-                {relatedPosts.length === 0 ? (
-                  <div className="flex min-h-[200px] items-center justify-center rounded-2xl border border-dashed border-[var(--border)]">
-                    <p className="text-sm text-[var(--muted-foreground)]">Chưa có bài đăng tương tự.</p>
-                  </div>) : (
-                  relatedPosts.map((item) => (
-                    <Link
-                      key={item.id}
-                      href={`/posts/${item.id}`}
-                      className="flex w-[240px] shrink-0 snap-center flex-col gap-3 rounded-2xl border border-transparent bg-[var(--surface-muted)] sm:bg-transparent p-2 transition hover:border-[var(--accent-border)] hover:bg-[var(--surface-muted)] sm:w-auto sm:flex-row sm:p-1"
-                    >
-                      <img
-                        src={item.images[0]?.imageUrl || imageFallback}
-                        alt={item.title}
-                        loading="lazy"
-                        className="h-36 w-full rounded-xl object-cover sm:h-24 sm:w-28"
-                      />
-                      <div className="min-w-0 flex-1 flex flex-col justify-between">
-                        <div>
-                          <p className="line-clamp-2 text-sm font-medium text-[var(--foreground)] sm:text-base">{item.title}</p>
-                          <p className="mt-1 text-xs text-[var(--muted-foreground)] sm:text-sm">{formatLocation(item)}</p>
-                        </div>
-                        <div className="mt-2 flex flex-wrap items-center justify-between gap-1">
-                          <span className="min-w-0 truncate font-semibold text-[var(--accent)] tabular-nums" title={formatPrice(item.price)}>
-                            {formatCompactPrice(item.price)}
-                          </span>
-                          <span className="text-xs text-[var(--muted-foreground)] sm:text-sm">{formatArea(item.area)}</span>
-                        </div>
-                      </div>
-                    </Link>
-                  ))
-                )}
-              </div>
+              <RelatedPostsCarousel posts={relatedPosts} />
             </div>
 
             <button
@@ -1078,91 +1048,17 @@ export default function PostDetailPage() {
               Quay lại danh sách
             </button>
           </div>
-        </aside>
+        </AnimatedSidebar>
       </div>
 
-      {isFullscreen && (
-        <div
-          className="theme-media-backdrop fixed inset-0 z-[9999] flex flex-col items-center justify-center p-4 backdrop-blur-md"
-          onClick={() => setIsFullscreen(false)}
-        >
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsFullscreen(false);
-            }}
-            className="theme-media-control absolute right-4 top-4 z-10 inline-flex h-10 w-10 items-center justify-center rounded-full transition"
-            aria-label="Đóng ảnh"
-          >
-            <X className="h-5 w-5" />
-          </button>
-
-          {images.length > 1 && (
-            <>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedImage((current) => (current === 0 ? images.length - 1 : current - 1));
-                }}
-                className="theme-media-control absolute left-4 top-1/2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full transition"
-                aria-label="Ảnh trước"
-              >
-                <ChevronLeft className="h-6 w-6" />
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedImage((current) => (current === images.length - 1 ? 0 : current + 1));
-                }}
-                className="theme-media-control absolute right-4 top-1/2 z-10 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full transition"
-                aria-label="Ảnh tiếp theo"
-              >
-                <ChevronRight className="h-6 w-6" />
-              </button>
-            </>
-          )}
-
-          <div
-            className="flex max-h-[96vh] w-full max-w-[min(96vw,1800px)] flex-col items-center gap-4 px-6 pt-6 md:px-12 md:pt-8"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="relative flex flex-1 items-center justify-center overflow-hidden">
-              <img
-                src={activeImage}
-                alt={post.title}
-                className="max-h-[76vh] md:max-h-[84vh] max-w-full rounded-xl object-contain shadow-2xl animate-in fade-in zoom-in-95 duration-300"
-              />
-            </div>
-            <div className="theme-count-pill rounded-full px-4 py-1.5 text-sm font-medium">
-              {selectedImage + 1} / {images.length}
-            </div>
-            {images.length > 1 && (
-              <div className="scrollbar-hidden flex max-w-full gap-2 overflow-x-auto py-1">
-                {images.map((image, index) => (
-                  <button
-                    key={image.id}
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedImage(index);
-                    }}
-                    className={`h-12 w-20 shrink-0 overflow-hidden rounded-lg border transition ${
-                      selectedImage === index
-                        ? "border-[var(--accent)] scale-105 opacity-100"
-                        : "border-[var(--media-badge-border)] opacity-60 hover:opacity-100"
-                    }`}
-                  >
-                    <img src={image.imageUrl} alt={`${post.title} ${index + 1}`} className="h-full w-full object-cover" />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      <PostImageViewer
+        isOpen={isFullscreen}
+        images={images}
+        selectedImageIndex={selectedImage}
+        postTitle={post.title}
+        onClose={() => setIsFullscreen(false)}
+        onImageChange={setSelectedImage}
+      />
 
       {post ? (
         <ReportPostDialog

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { motion } from "framer-motion";
 import {
 
   Bookmark,
@@ -283,7 +284,7 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
       params.delete("commentPostId");
       const newSearch = params.toString();
       const newPath = window.location.pathname + (newSearch ? `?${newSearch}` : "");
-      router.replace(newPath, { scroll: false });
+      window.history.replaceState(null, "", newPath);
     }
   }, [searchParams, post.id, isClient, router]);
 
@@ -488,9 +489,11 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
 
   return (
     <>
-      <article
-        ref={cardRef}
-        className="theme-post-card animate-in overflow-hidden rounded-2xl fade-in slide-in-from-bottom-4 duration-500 backdrop-blur-xl"
+      <motion.article
+        ref={cardRef as any}
+        whileHover={{ y: -4, scale: 1.01 }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
+        className="theme-post-card animate-in overflow-hidden rounded-2xl fade-in slide-in-from-bottom-4 duration-500 backdrop-blur-xl hover:shadow-xl"
       >
         <div className="flex items-start justify-between gap-4 px-4 pb-3 pt-4 md:px-5">
           <div className="flex min-w-0 items-center gap-3">
@@ -790,7 +793,7 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
             </Link>
           </div>
         </div>
-      </article>
+      </motion.article>
 
       {isClient && isImageViewerOpen &&
         createPortal(
