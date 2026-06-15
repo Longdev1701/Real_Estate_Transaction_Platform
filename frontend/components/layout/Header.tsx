@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Bell, Bookmark, MessageCircle } from "lucide-react";
 
 import { api } from "@/lib/api";
@@ -68,7 +68,12 @@ export function Header() {
     };
   }, []);
 
-  useEffect(() => {
+    const pathnameRef = useRef(pathname);
+    useEffect(() => {
+      pathnameRef.current = pathname;
+    }, [pathname]);
+
+    useEffect(() => {
     if (!socket || !user) return;
 
     const handleNotificationCreated = (notification: NotificationItem) => {
@@ -79,6 +84,12 @@ export function Header() {
 
     const handleReceiveMessage = (message: any) => {
       if (message.senderId !== user.id) {
+        // Play notification sound if not on messages page
+        if (!pathnameRef.current?.startsWith("/messages")) {
+          const audio = new Audio("/sounds/discord-new-notification.mp3");
+          audio.play().catch((err) => console.error("Error playing audio:", err));
+        }
+
         // Debounce or just fetch to get the correct number of unread conversations
         setTimeout(() => {
           api.get<{ data: { unreadCount: number } }>("/conversations/unread-count")

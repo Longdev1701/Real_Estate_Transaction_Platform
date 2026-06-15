@@ -62,14 +62,17 @@ export function MobileBottomNav() {
     };
   }, [socket, user]);
 
-  // Ẩn thanh bottom nav trên một số trang như messages/[id], admin, auth, và chi tiết bài đăng
+  // Ẩn thanh bottom nav trên một số trang như messages/[id], admin, auth, và chi tiết/chỉnh sửa bài đăng
   const isPostDetail = pathname?.match(/^\/posts\/[a-zA-Z0-9-]+$/);
+  const isPostEdit = pathname?.match(/^\/posts\/[a-zA-Z0-9-]+\/edit$/);
+  
   if (
     pathname?.startsWith("/messages/") ||
     pathname?.startsWith("/admin") ||
     pathname?.startsWith("/auth") ||
     pathname === "/posts/create" ||
-    isPostDetail
+    isPostDetail ||
+    isPostEdit
   ) {
     return null;
   }

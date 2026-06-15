@@ -374,18 +374,16 @@ export default function CreatePostPage() {
       try {
         setDistricts(await fetchDistrictsByProvinceCode(code));
       } catch (err) {
-        console.error("Lỗi tải danh sách phường xã:", err);
+        console.error("Lỗi tải danh sách phường xã hoặc định vị:", err);
       }
     } else {
       setValue("city", "", { shouldValidate: true });
+      setValue("latitude", 0);
+      setValue("longitude", 0);
+      setGeocodeStatus("idle");
     }
     setValue("district", "", { shouldValidate: true });
     setValue("ward", "");
-
-    // Xóa tọa độ cũ
-    setValue("latitude", 0);
-    setValue("longitude", 0);
-    setGeocodeStatus("idle");
   };
 
   // Lắng nghe sự kiện đổi Quận/Huyện
@@ -402,17 +400,15 @@ export default function CreatePostPage() {
       try {
         setWards(await fetchWardsByDistrictCode(code));
       } catch (err) {
-        console.error("Lá»—i táº£i danh sÃ¡ch phÆ°á»ng xÃ£:", err);
+        console.error("Lỗi tải danh sách phường xã:", err);
       }
     } else {
       setValue("district", "", { shouldValidate: true });
+      setValue("latitude", 0);
+      setValue("longitude", 0);
+      setGeocodeStatus("idle");
     }
     setValue("ward", "");
-
-    // Xóa tọa độ cũ
-    setValue("latitude", 0);
-    setValue("longitude", 0);
-    setGeocodeStatus("idle");
   };
 
   // Lắng nghe sự kiện đổi Phường/Xã
@@ -785,10 +781,10 @@ export default function CreatePostPage() {
                     </button>
                   </div>
                 </div>
-                </div>
                 {errors.area && <p className="mt-1 text-xs text-[var(--danger-foreground)]">{errors.area.message}</p>}
               </div>
             </div>
+          </div>
           </div>
 
           {/* Card 2: Vị trí & Bản đồ */}
