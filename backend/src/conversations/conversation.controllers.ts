@@ -188,20 +188,10 @@ export const createOrGetConversation = async (req: Request, res: Response, next:
 
     if (!conversation) {
       try {
-        const createConversationData: Prisma.ConversationCreateInput = {
-          buyer: {
-            connect: { id: buyerId }
-          },
-          seller: {
-            connect: { id: sellerId }
-          },
-          ...(normalizedPostId
-            ? {
-                post: {
-                  connect: { id: normalizedPostId }
-                }
-              }
-            : {})
+        const createConversationData: Prisma.ConversationUncheckedCreateInput = {
+          buyerId,
+          sellerId,
+          ...(normalizedPostId ? { postId: normalizedPostId } : {})
         };
 
         conversation = await prisma.conversation.create({
