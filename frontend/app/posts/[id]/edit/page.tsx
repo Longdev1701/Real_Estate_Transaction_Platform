@@ -666,7 +666,10 @@ export default function EditPostPage() {
       await savePost(data);
     } catch (err) {
       const axiosError = err as AxiosError<{ message?: string }>;
-      addToast(axiosError.response?.data?.message ?? "Cập nhật bài đăng thất bại.", "error");
+      const message = axiosError.code === "ECONNABORTED"
+        ? "Cập nhật bài quá lâu. Vui lòng thử lại với ít ảnh hơn hoặc kiểm tra dịch vụ lưu trữ ảnh."
+        : axiosError.response?.data?.message ?? "Cập nhật bài đăng thất bại.";
+      addToast(message, "error");
     }
   };
 

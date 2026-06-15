@@ -589,7 +589,10 @@ export default function CreatePostPage() {
       router.push(createdPostId ? `/posts/${createdPostId}` : "/posts");
     } catch (err) {
       const axiosError = err as AxiosError<{ message?: string }>;
-      addToast(axiosError.response?.data?.message ?? "Đăng bài thất bại. Vui lòng kiểm tra lại thông tin.", "error");
+      const message = axiosError.code === "ECONNABORTED"
+        ? "Đăng bài quá lâu. Vui lòng thử lại với ít ảnh hơn hoặc kiểm tra dịch vụ lưu trữ ảnh."
+        : axiosError.response?.data?.message ?? "Đăng bài thất bại. Vui lòng kiểm tra lại thông tin.";
+      addToast(message, "error");
     }
   };
 

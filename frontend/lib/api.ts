@@ -4,6 +4,7 @@ import { useAuthStore } from "@/stores/auth.store";
 
 const isServer = typeof window === "undefined";
 const apiURL = process.env.NEXT_PUBLIC_API_URL;
+const apiTimeoutMs = Number(process.env.NEXT_PUBLIC_API_TIMEOUT_MS ?? 45_000);
 let baseURL = apiURL
   ? apiURL.replace(/\/$/, "").endsWith("/api")
     ? apiURL.replace(/\/$/, "")
@@ -29,6 +30,7 @@ type RefreshTokenResponse = {
 
 export const api = axios.create({
   baseURL,
+  timeout: apiTimeoutMs,
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
