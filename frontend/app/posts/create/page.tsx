@@ -19,11 +19,25 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 
+import {
+  fetchDistrictsByProvinceCode,
+  fetchWardsByDistrictCode,
+  findAdministrativeUnitFromDisplayParts,
+  splitAdministrativeDisplayName,
+} from "@/lib/administrative-divisions";
 import { api } from "@/lib/api";
-import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
 import { FeatureIcon } from "@/lib/feature-icons";
 import { compressPropertyImage } from "@/lib/image-compression";
+import {
+  acceptedPropertyImageInput,
+  applyPostDraftValues,
+  buildVietnamGeocodeQueries,
+  getPropertyImageValidation,
+  maxPropertyImageCount,
+} from "@/lib/post-form";
 import { PROPERTY_TYPES, propertyTypeLabels } from "@/lib/posts";
+import { useAdministrativeDivisions } from "@/hooks/useAdministrativeDivisions";
+import { usePropertyFeatures } from "@/hooks/usePropertyFeatures";
 import { useAuthStore } from "@/stores/auth.store";
 import { useToastStore } from "@/stores/toast.store";
 
@@ -53,56 +67,8 @@ type ImagePreview = {
   isSizeValid: boolean;
 };
 
-interface Province {
-  code: number;
-  name: string;
-}
-
-interface Feature {
-  id: string;
-  name: string;
-  icon: string | null;
-  category: string | null;
-}
-interface District {
-  code: number;
-  name: string;
-}
-interface Ward {
-  code: number;
-  name: string;
-}
-
-const acceptedExtensions = new Set([".jpg", ".jpeg", ".png", ".webp"]);
-const acceptedMimeTypes = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/jpg",
-  "image/pjpeg",
-]);
-const maxFileSizeInBytes = 5 * 1024 * 1024;
-const maxFiles = 10;
 const DRAFT_KEY = "trustestate-create-post-draft";
-
-const getFileExtension = (fileName: string) => {
-  const lastDotIndex = fileName.lastIndexOf(".");
-  return lastDotIndex === -1 ? "" : fileName.slice(lastDotIndex).toLowerCase();
-};
-
-const getImageValidation = (file: File) => {
-  const extension = getFileExtension(file.name);
-  const isMimeValid = acceptedMimeTypes.has(file.type);
-  const isExtensionValid = acceptedExtensions.has(extension);
-  const isSizeValid = file.size <= maxFileSizeInBytes;
-
-  return {
-    isMimeValid,
-    isExtensionValid,
-    isSizeValid,
-    isUploadable: isSizeValid && (isMimeValid || isExtensionValid),
-  };
-};
+const maxFiles = maxPropertyImageCount;
 
 import dynamic from "next/dynamic";
 
@@ -124,22 +90,10 @@ export default function CreatePostPage() {
   const [imagePreviews, setImagePreviews] = useState<ImagePreview[]>([]);
   const [fileInputKey, setFileInputKey] = useState(0);
   const [isGeocoding, setIsGeocoding] = useState(false);
-  const [geocodeStatus, setGeocodeStatus] = useState<"idle" | "success" | "failed">("idle");
+  const [, setGeocodeStatus] = useState<"idle" | "success" | "failed">("idle");
   const [draftLoaded, setDraftLoaded] = useState(false);
   const [showDraftToast, setShowDraftToast] = useState(false);
   const [avatarImageId, setAvatarImageId] = useState<string | null>(null);
-
-  // States cho đặc trưng bất động sản
-  const [features, setFeatures] = useState<Feature[]>([]);
-  const [selectedFeatureIds, setSelectedFeatureIds] = useState<string[]>([]);
-
-  // States cho Tỉnh/Huyện/Xã
-  const [adminTree, setAdminTree] = useState<any[]>([]);
-  const [provinces, setProvinces] = useState<Province[]>([]);
-  const [districts, setDistricts] = useState<District[]>([]);
-  const [wards, setWards] = useState<Ward[]>([]);
-  const [selProvinceCode, setSelProvinceCode] = useState<string>("");
-  const [selDistrictCode, setSelDistrictCode] = useState<string>("");
 
   const previewsRef = useRef<ImagePreview[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -195,97 +149,56 @@ export default function CreatePostPage() {
   const latitude = watch("latitude");
   const longitude = watch("longitude");
   const propertyType = watch("propertyType");
-
-  useEffect(() => {
-    const fetchFeatures = async () => {
-      const cacheKey = `features:${propertyType}`;
-      const cached = readSessionCache<Feature[]>(cacheKey);
-      if (cached) {
-        setFeatures(cached);
-        const availableIds = new Set(cached.map((f) => f.id));
-        setSelectedFeatureIds((prev) => prev.filter((id) => availableIds.has(id)));
-        return;
-      }
-
-      try {
-        const response = await api.get<{ data: Feature[] }>(`/features?propertyType=${propertyType}`);
-        setFeatures(response.data.data);
-        writeSessionCache(cacheKey, response.data.data, { ttlMs: 30 * 60 * 1000 });
-        const availableIds = new Set(response.data.data.map((f) => f.id));
-        setSelectedFeatureIds((prev) => prev.filter((id) => availableIds.has(id)));
-      } catch (err) {
-        console.error("Lỗi tải đặc trưng:", err);
-      }
-    };
-    if (propertyType) {
-      fetchFeatures();
-    }
-  }, [propertyType]);
-
-  const toggleFeature = (id: string) => {
-    setSelectedFeatureIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
-  };
-
+  const { features, selectedFeatureIds, setSelectedFeatureIds, toggleFeature } =
+    usePropertyFeatures(propertyType);
+  const {
+    provinces,
+    districts,
+    wards,
+    selectedProvinceCode: selectedProvinceCode,
+    selectedDistrictCode: selectedDistrictCode,
+    ensureProvincesLoaded,
+    syncSelectionByNames,
+    handleWardChange: updateAdministrativeWard,
+    setSelectedProvinceCode,
+    setSelectedDistrictCode,
+    setDistricts,
+    setWards,
+  } = useAdministrativeDivisions<CreatePostFormInput>({
+    setValue,
+    onLocationReset: () => setGeocodeStatus("idle"),
+  });
+  const selProvinceCode = selectedProvinceCode;
+  const selDistrictCode = selectedDistrictCode;
+  const setSelProvinceCode = setSelectedProvinceCode;
+  const setSelDistrictCode = setSelectedDistrictCode;
   const groupedFeatures = useMemo(() => {
-    const groups: Record<string, Feature[]> = {};
-    features.forEach((feature) => {
-      const cat = feature.category || "Đặc trưng khác";
-      if (!groups[cat]) {
-        groups[cat] = [];
-      }
-      groups[cat].push(feature);
-    });
-    return groups;
-  }, [features]);
+    const groups = new Map<string, (typeof features)[number][]>();
 
+    features.forEach((feature) => {
+      const category = feature.category || "Đặc trưng khác";
+      groups.set(category, [...(groups.get(category) ?? []), feature]);
+    });
+
+    return Array.from(groups.entries());
+  }, [features]);
   // Load provinces and draft on mount
   useEffect(() => {
     const initialize = async () => {
       try {
-        const pRes = await fetch("https://esgoo.net/api-tinhthanh/1/0.htm");
-        const pDataObj = await pRes.json();
-
-        const pData: Province[] = (pDataObj.data || []).map((p: any) => ({ code: Number(p.id), name: p.full_name }));
-        setProvinces(pData);
+        await ensureProvincesLoaded();
 
         const draft = localStorage.getItem(DRAFT_KEY);
         if (draft) {
-          const parsed = JSON.parse(draft);
+          const parsed = JSON.parse(draft) as Partial<Record<string, unknown>>;
 
-          // Set các trường văn bản trước
-          Object.entries(parsed).forEach(([key, val]) => {
-            if (val !== undefined && val !== null && val !== "") {
-              setValue(key as any, val);
-            }
+          applyPostDraftValues(parsed, setValue);
+          await syncSelectionByNames({
+            city: typeof parsed.city === "string" ? parsed.city : null,
+            district: typeof parsed.district === "string" ? parsed.district : null,
+            ward: typeof parsed.ward === "string" ? parsed.ward : null,
           });
 
-          // Khôi phục các select theo cấp bậc
-          if (parsed.city) {
-            const matchProv = pData.find((p) => p.name === parsed.city);
-            if (matchProv) {
-              setSelProvinceCode(String(matchProv.code));
-
-              try {
-                const cRes = await fetch(`https://esgoo.net/api-tinhthanh/2/${matchProv.code}.htm`);
-                const cDataObj = await cRes.json();
-                const distList: District[] = (cDataObj.data || [])
-                  .map((c: any) => ({ code: Number(c.id), name: c.full_name.replace(/\n/g, "").trim() }))
-                  .sort((a: District, b: District) => a.name.localeCompare(b.name, 'vi'));
-                setDistricts(distList);
-
-                const matchDist = distList.find((d) => d.name === parsed.district);
-                if (matchDist) {
-                  setSelDistrictCode(String(matchDist.code));
-                  // API mới không có data3 (phường/xã)
-                  setWards([]);
-                }
-              } catch (e) {
-                console.error("Lỗi fetch communes", e);
-              }
-            }
-          }
           setShowDraftToast(true);
           setTimeout(() => setShowDraftToast(false), 5000);
         }
@@ -296,7 +209,7 @@ export default function CreatePostPage() {
       }
     };
     initialize();
-  }, [setValue]);
+  }, [ensureProvincesLoaded, setValue, syncSelectionByNames]);
 
   // Save draft when form fields change
   useEffect(() => {
@@ -327,12 +240,12 @@ export default function CreatePostPage() {
     setGeocodeStatus("idle");
 
     // Các mức độ tìm kiếm từ chi tiết đến khái quát để tránh bị trống hoặc định vị sai vùng miền
-    const queries = [
-      [address, ward, district, city, "Việt Nam"].filter(Boolean).join(", "),
-      [ward, district, city, "Việt Nam"].filter(Boolean).join(", "),
-      [district, city, "Việt Nam"].filter(Boolean).join(", "),
-      [city, "Việt Nam"].filter(Boolean).join(", ")
-    ];
+    const queries = buildVietnamGeocodeQueries({
+      address,
+      ward,
+      district,
+      city,
+    });
 
     try {
       let found = false;
@@ -364,31 +277,24 @@ export default function CreatePostPage() {
 
           const displayName = data[0].display_name;
           if (displayName) {
-            const nameParts = displayName.split(',').map((s: string) => s.trim());
+            const nameParts = splitAdministrativeDisplayName(displayName);
 
-            const matchProv = provinces.find(p => {
-              const baseProv = p.name.replace(/^(Thành phố|Tỉnh)\s+/i, "");
-              return nameParts.some((part: string) => part === p.name || part === baseProv || part.includes(p.name) || (baseProv.length > 2 && part.includes(baseProv)));
-            });
+            const matchProv = findAdministrativeUnitFromDisplayParts(provinces, nameParts);
 
             if (matchProv) {
               const provCodeStr = String(matchProv.code);
               let currentDistricts = districts;
 
-              if (selProvinceCode !== provCodeStr) {
-                setSelProvinceCode(provCodeStr);
+              if (selectedProvinceCode !== provCodeStr) {
+                setSelectedProvinceCode(provCodeStr);
                 setValue("city", matchProv.name, { shouldValidate: true });
-                setSelDistrictCode("");
+                setSelectedDistrictCode("");
                 setValue("district", "", { shouldValidate: true });
                 setValue("ward", "", { shouldValidate: true });
                 setWards([]);
 
                 try {
-                  const res = await fetch(`https://esgoo.net/api-tinhthanh/2/${provCodeStr}.htm`);
-                  const data = await res.json();
-                  const distList: District[] = (data.data || [])
-                    .map((c: any) => ({ code: Number(c.id), name: c.full_name.replace(/\n/g, "").trim() }))
-                    .sort((a: District, b: District) => a.name.localeCompare(b.name, 'vi'));
+                  const distList = await fetchDistrictsByProvinceCode(provCodeStr);
                   setDistricts(distList);
                   currentDistricts = distList;
                 } catch (e) {
@@ -396,28 +302,28 @@ export default function CreatePostPage() {
                 }
               }
 
-              const matchDist = currentDistricts.find(d => {
-                const baseDist = d.name.replace(/^(Quận|Huyện|Thị xã|Thành phố)\s+/i, "");
-                return nameParts.some((part: string) => part === d.name || part === baseDist || part.includes(d.name) || (baseDist.length > 2 && part.includes(baseDist)));
-              });
+              const matchDist = findAdministrativeUnitFromDisplayParts(currentDistricts, nameParts);
 
               if (matchDist) {
                 const distCodeStr = String(matchDist.code);
                 let currentWards = wards;
 
-                if (selDistrictCode !== distCodeStr || selProvinceCode !== provCodeStr) {
-                  setSelDistrictCode(distCodeStr);
+                if (selectedDistrictCode !== distCodeStr || selectedProvinceCode !== provCodeStr) {
+                  setSelectedDistrictCode(distCodeStr);
                   setValue("district", matchDist.name, { shouldValidate: true });
                   setValue("ward", "", { shouldValidate: true });
 
-                  setWards([]);
-                  currentWards = [];
+                  try {
+                    currentWards = await fetchWardsByDistrictCode(distCodeStr);
+                    setWards(currentWards);
+                  } catch (e) {
+                    console.error("Loi fetch wards:", e);
+                    currentWards = [];
+                    setWards([]);
+                  }
                 }
 
-                const matchWard = currentWards.find(w => {
-                  const baseWard = w.name.replace(/^(Phường|Xã|Thị trấn)\s+/i, "");
-                  return nameParts.some((part: string) => part === w.name || part === baseWard || part.includes(w.name) || (baseWard.length > 2 && part.includes(baseWard)));
-                });
+                const matchWard = findAdministrativeUnitFromDisplayParts(currentWards, nameParts);
 
                 if (matchWard) {
                   setValue("ward", matchWard.name, { shouldValidate: true });
@@ -466,12 +372,7 @@ export default function CreatePostPage() {
       setValue("city", name, { shouldValidate: true });
 
       try {
-        const res = await fetch(`https://esgoo.net/api-tinhthanh/2/${code}.htm`);
-        const data = await res.json();
-        const dataList: District[] = (data.data || [])
-          .map((c: any) => ({ code: Number(c.id), name: c.full_name.replace(/\n/g, "").trim() }))
-          .sort((a: District, b: District) => a.name.localeCompare(b.name, 'vi'));
-        setDistricts(dataList);
+        setDistricts(await fetchDistrictsByProvinceCode(code));
       } catch (err) {
         console.error("Lỗi tải danh sách phường xã:", err);
       }
@@ -498,7 +399,11 @@ export default function CreatePostPage() {
       setValue("district", name, { shouldValidate: true });
 
       // API mới không có phường xã
-      setWards([]);
+      try {
+        setWards(await fetchWardsByDistrictCode(code));
+      } catch (err) {
+        console.error("Lá»—i táº£i danh sÃ¡ch phÆ°á»ng xÃ£:", err);
+      }
     } else {
       setValue("district", "", { shouldValidate: true });
     }
@@ -513,7 +418,7 @@ export default function CreatePostPage() {
   // Lắng nghe sự kiện đổi Phường/Xã
   const handleWardChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const name = e.target.value;
-    setValue("ward", name);
+    updateAdministrativeWard(name);
 
     // Tự động định vị nếu đầy đủ thông tin
     if (address && district && city) {
@@ -539,25 +444,27 @@ export default function CreatePostPage() {
     setImageError(null);
     const incomingFiles = Array.from(files);
     const currentImageCount = previewsRef.current.length;
-    const appendedFiles = incomingFiles.slice(0, maxFiles - currentImageCount);
+    const appendedFiles = incomingFiles.slice(0, maxPropertyImageCount - currentImageCount);
     const skippedCount = Math.max(0, incomingFiles.length - appendedFiles.length);
 
     if (appendedFiles.length === 0) {
       setImageError(
-        skippedCount > 0 ? `Chỉ được chọn tối đa ${maxFiles} ảnh. ${skippedCount} ảnh đã bị bỏ qua.` : null,
+        skippedCount > 0
+          ? `Chỉ được chọn tối đa ${maxPropertyImageCount} ảnh. ${skippedCount} ảnh đã bị bỏ qua.`
+          : null,
       );
       return;
     }
 
     let processedFiles: Array<{
       file: File;
-      validation: ReturnType<typeof getImageValidation>;
+      validation: ReturnType<typeof getPropertyImageValidation>;
     }>;
 
     try {
       processedFiles = await Promise.all(
         appendedFiles.map(async (file) => {
-          const originalValidation = getImageValidation(file);
+          const originalValidation = getPropertyImageValidation(file);
 
           if (!originalValidation.isMimeValid && !originalValidation.isExtensionValid) {
             return {
@@ -569,7 +476,7 @@ export default function CreatePostPage() {
           const compressedFile = await compressPropertyImage(file);
           return {
             file: compressedFile,
-            validation: getImageValidation(compressedFile),
+            validation: getPropertyImageValidation(compressedFile),
           };
         }),
       );
@@ -611,7 +518,7 @@ export default function CreatePostPage() {
       const messages = [
         invalidTypeCount > 0 ? `${invalidTypeCount} ảnh sai định dạng` : null,
         oversizedCount > 0 ? `${oversizedCount} ảnh vượt 5MB` : null,
-        skippedCount > 0 ? `${skippedCount} ảnh vượt giới hạn ${maxFiles}` : null,
+        skippedCount > 0 ? `${skippedCount} ảnh vượt giới hạn ${maxPropertyImageCount}` : null,
       ].filter(Boolean);
 
       setImageError(`Đã thêm ${uploadableCount} ảnh hợp lệ. ${messages.join(", ")}.`);
@@ -725,16 +632,16 @@ export default function CreatePostPage() {
                 reset({
                   title: "",
                   description: "",
-                  price: "" as any,
-                  area: "" as any,
+                  price: "",
+                  area: "",
                   address: "",
                   city: "",
                   district: "",
                   ward: "",
                   propertyType: "HOUSE",
                   postType: "SELL",
-                  latitude: "" as any,
-                  longitude: "" as any,
+                  latitude: "",
+                  longitude: "",
                 });
                 setImagePreviews([]);
                 setAvatarImageId(null);
@@ -1006,11 +913,7 @@ export default function CreatePostPage() {
                           setWards([]);
 
                           try {
-                            const res = await fetch(`https://esgoo.net/api-tinhthanh-new/1/0.htm/2025-07-01/provinces/${provCodeStr}/communes`);
-                            const data = await res.json();
-                            const distList: District[] = (data.communes || [])
-                              .map((c: any) => ({ code: c.code, name: c.name.replace(/\n/g, "").trim() }))
-                              .sort((a: District, b: District) => a.name.localeCompare(b.name, 'vi'));
+                            const distList = await fetchDistrictsByProvinceCode(provCodeStr);
                             setDistricts(distList);
                             currentDistricts = distList;
                           } catch (e) {
@@ -1076,7 +979,7 @@ export default function CreatePostPage() {
             <div className="theme-post-form-shell p-4 sm:p-5">
               <h2 className="mb-4 shrink-0 border-b border-[var(--border)] pb-2 text-base font-semibold text-[var(--accent)]">Đặc trưng bất động sản</h2>
               <div className="space-y-4">
-                  {Object.entries(groupedFeatures).map(([category, list]) => (
+                  {groupedFeatures.map(([category, list]) => (
                     <div key={category} className="space-y-2">
                       <h4 className="text-[11px] font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">{category}</h4>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -1143,7 +1046,7 @@ export default function CreatePostPage() {
                 key={fileInputKey}
                 ref={fileInputRef}
                 type="file"
-                accept="image/jpeg,image/png,image/webp,image/jpg"
+                accept={acceptedPropertyImageInput}
                 multiple
                 className="hidden"
                 onChange={(event) => {
@@ -1284,3 +1187,4 @@ export default function CreatePostPage() {
     </div>
   );
 }
+
