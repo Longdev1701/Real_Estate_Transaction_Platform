@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import { prisma } from "../prisma/prisma.service.js";
@@ -59,10 +60,91 @@ const getConversationDeletedAt = (conversation: {
   return conversation[deletedAtField] ?? null;
 };
 
-const isMessageVisibleToUser = (
-  message: { createdAt: Date },
-  deletedAt: Date | null
-) => !deletedAt || message.createdAt > deletedAt;
+const senderSelect = {
+  select: { id: true, fullName: true, avatarUrl: true }
+} as const;
+
+type ConversationWithRelations = Prisma.ConversationGetPayload<{
+  include: typeof conversationInclude;
+}>;
+
+type ConversationParticipantVisibility = {
+  id: string;
+  buyerId: string;
+  sellerId: string;
+  buyerDeletedAt?: Date | null;
+  sellerDeletedAt?: Date | null;
+};
+
+type ConversationAccessRecord = {
+  buyerId: string;
+  sellerId: string;
+  deletedByIds: string[];
+  buyerDeletedAt?: Date | null;
+  sellerDeletedAt?: Date | null;
+};
+
+type LatestConversationMessage = Prisma.MessageGetPayload<{
+  include: {
+    sender: typeof senderSelect;
+  };
+}>;
+
+const isUniqueConstraintError = (
+  error: unknown,
+): error is Prisma.PrismaClientKnownRequestError =>
+  error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+
+const buildVisibleConversationFilters = (
+  conversations: ConversationParticipantVisibility[],
+  userId: string
+): Prisma.MessageWhereInput[] =>
+  conversations.map((conversation) => {
+    const deletedAt = getConversationDeletedAt(conversation, userId);
+    return deletedAt
+      ? {
+          conversationId: conversation.id,
+          createdAt: { gt: deletedAt }
+        }
+      : {
+          conversationId: conversation.id
+        };
+  });
+
+const getLatestVisibleMessageIdsByConversation = async (
+  conversations: ConversationParticipantVisibility[],
+  userId: string
+) => {
+  if (conversations.length === 0) {
+    return [];
+  }
+
+  const visibilityRows = conversations.map((conversation) =>
+    Prisma.sql`(CAST(${conversation.id} AS text), CAST(${getConversationDeletedAt(conversation, userId)} AS timestamp))`
+  );
+
+  return prisma.$queryRaw<Array<{ id: string; conversationId: string }>>(Prisma.sql`
+    WITH visible_conversations("conversationId", "deletedAt") AS (
+      VALUES ${Prisma.join(visibilityRows)}
+    ),
+    ranked_messages AS (
+      SELECT
+        m."id",
+        m."conversationId",
+        ROW_NUMBER() OVER (
+          PARTITION BY m."conversationId"
+          ORDER BY m."createdAt" DESC, m."id" DESC
+        ) AS rn
+      FROM "Message" m
+      INNER JOIN visible_conversations vc
+        ON vc."conversationId" = m."conversationId"
+      WHERE vc."deletedAt" IS NULL OR m."createdAt" > vc."deletedAt"
+    )
+    SELECT "id", "conversationId"
+    FROM ranked_messages
+    WHERE rn = 1
+  `);
+};
 
 export const createOrGetConversation = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -96,7 +178,7 @@ export const createOrGetConversation = async (req: Request, res: Response, next:
     const [buyerId, sellerId] = normalizeConversationParticipants(currentUserId, targetUserId);
 
     // Persist each user pair in a canonical order so the same two users always share one conversation.
-    let conversation: any = await prisma.conversation.findFirst({
+    let conversation: ConversationWithRelations | null = await prisma.conversation.findFirst({
       where: {
         buyerId,
         sellerId
@@ -106,30 +188,32 @@ export const createOrGetConversation = async (req: Request, res: Response, next:
 
     if (!conversation) {
       try {
-        conversation = await prisma.conversation.create({
-          data: {
-            buyer: {
-              connect: { id: buyerId }
-            },
-            seller: {
-              connect: { id: sellerId }
-            },
-            ...(normalizedPostId
-              ? {
-                  post: {
-                    connect: { id: normalizedPostId }
-                  }
-                }
-              : {})
+        const createConversationData: Prisma.ConversationCreateInput = {
+          buyer: {
+            connect: { id: buyerId }
           },
+          seller: {
+            connect: { id: sellerId }
+          },
+          ...(normalizedPostId
+            ? {
+                post: {
+                  connect: { id: normalizedPostId }
+                }
+              }
+            : {})
+        };
+
+        conversation = await prisma.conversation.create({
+          data: createConversationData,
           include: conversationInclude
-        } as any);
+        });
 
         // Notify the target user that a new conversation has been initiated.
         emitToUser(targetUserId, "conversation_created", { conversation });
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Handle race condition: if another request created the same conversation
-        if (error?.code === "P2002") {
+        if (isUniqueConstraintError(error)) {
           conversation = await prisma.conversation.findFirst({
             where: { buyerId, sellerId },
             include: conversationInclude
@@ -147,14 +231,16 @@ export const createOrGetConversation = async (req: Request, res: Response, next:
       conversation.deletedByIds.includes(currentUserId)
     ) {
       const nextDeletedByIds = conversation.deletedByIds.filter((id: string) => id !== currentUserId);
+      const updateConversationData: Prisma.ConversationUpdateInput = {
+        ...(normalizedPostId !== null ? { postId: normalizedPostId } : {}),
+        deletedByIds: nextDeletedByIds
+      };
+
       conversation = await prisma.conversation.update({
         where: { id: conversation.id },
-        data: {
-          ...(normalizedPostId !== null ? { postId: normalizedPostId } : {}),
-          deletedByIds: nextDeletedByIds
-        },
+        data: updateConversationData,
         include: conversationInclude
-      } as any);
+      });
 
       emitToUser(buyerId, "conversation_updated", { conversation });
       emitToUser(sellerId, "conversation_updated", { conversation });
@@ -173,7 +259,7 @@ export const getConversations = async (req: Request, res: Response, next: NextFu
     const limit = parseInt(req.query.limit as string) || 20;
     const skip = (page - 1) * limit;
 
-    const [conversations, total] = await Promise.all([
+    const [conversations, total] = await prisma.$transaction([
       prisma.conversation.findMany({
         where: {
           OR: [
@@ -202,57 +288,42 @@ export const getConversations = async (req: Request, res: Response, next: NextFu
       })
     ]);
 
-    const conversationIds = conversations.map((conversation) => conversation.id);
-    const [unreadMessages, recentMessages] = conversationIds.length > 0
-      ? await Promise.all([
-          prisma.message.findMany({
-            where: {
-              conversationId: { in: conversationIds },
-              isRead: false,
-              NOT: { senderId: userId }
-            },
-            select: {
-              id: true,
-              conversationId: true,
-              createdAt: true
-            },
-            orderBy: { createdAt: "desc" }
-          }),
-          prisma.message.findMany({
-            where: {
-              conversationId: { in: conversationIds }
-            },
-            include: {
-              sender: {
-                select: { id: true, fullName: true, avatarUrl: true }
-              }
-            },
-            orderBy: [
-              { conversationId: "asc" },
-              { createdAt: "desc" }
-            ]
-          })
-        ])
-      : [[], []];
+    const visibleConversationFilters = buildVisibleConversationFilters(conversations, userId);
+    const unreadCountRows = visibleConversationFilters.length > 0
+      ? await prisma.message.groupBy({
+          by: ["conversationId"],
+          where: {
+            isRead: false,
+            senderId: { not: userId },
+            OR: visibleConversationFilters
+          },
+          _count: {
+            _all: true
+          }
+        })
+      : [];
+    const latestVisibleMessageIds = visibleConversationFilters.length > 0
+      ? await getLatestVisibleMessageIdsByConversation(conversations, userId)
+      : [];
 
-    const deletionCutoffs = new Map(
-      conversations.map((conversation) => [conversation.id, getConversationDeletedAt(conversation, userId)])
+    const latestMessageIds = latestVisibleMessageIds.map((message) => message.id);
+    const latestMessages: LatestConversationMessage[] = latestMessageIds.length > 0
+      ? await prisma.message.findMany({
+          where: {
+            id: { in: latestMessageIds }
+          },
+          include: {
+            sender: senderSelect
+          }
+        })
+      : [];
+
+    const unreadCounts = new Map(
+      unreadCountRows.map((row) => [row.conversationId, row._count._all])
     );
-
-    const unreadCounts = new Map<string, number>();
-    for (const message of unreadMessages) {
-      const deletedAt = deletionCutoffs.get(message.conversationId) ?? null;
-      if (!isMessageVisibleToUser(message, deletedAt)) continue;
-      unreadCounts.set(message.conversationId, (unreadCounts.get(message.conversationId) ?? 0) + 1);
-    }
-
-    const latestVisibleMessages = new Map<string, typeof recentMessages[number]>();
-    for (const message of recentMessages) {
-      if (latestVisibleMessages.has(message.conversationId)) continue;
-      const deletedAt = deletionCutoffs.get(message.conversationId) ?? null;
-      if (!isMessageVisibleToUser(message, deletedAt)) continue;
-      latestVisibleMessages.set(message.conversationId, message);
-    }
+    const latestVisibleMessages = new Map(
+      latestMessages.map((message) => [message.conversationId, message])
+    );
 
     const normalizedConversations = conversations.map((conversation) => {
       return {
@@ -293,29 +364,22 @@ export const getUnreadCount = async (req: Request, res: Response, next: NextFunc
       }
     });
 
-    const conversationIds = conversations.map((conversation) => conversation.id);
-    const unreadMessages = conversationIds.length > 0
-      ? await prisma.message.findMany({
+    const visibleConversationFilters = buildVisibleConversationFilters(conversations, userId);
+    const unreadCountRows = visibleConversationFilters.length > 0
+      ? await prisma.message.groupBy({
+          by: ["conversationId"],
           where: {
-            conversationId: { in: conversationIds },
             isRead: false,
-            NOT: { senderId: userId }
+            senderId: { not: userId },
+            OR: visibleConversationFilters
           },
-          select: {
-            conversationId: true,
-            createdAt: true
+          _count: {
+            _all: true
           }
         })
       : [];
 
-    const deletionCutoffs = new Map(
-      conversations.map((conversation) => [conversation.id, getConversationDeletedAt(conversation, userId)])
-    );
-
-    const unreadCount = unreadMessages.reduce((sum, message) => {
-      const deletedAt = deletionCutoffs.get(message.conversationId) ?? null;
-      return sum + (isMessageVisibleToUser(message, deletedAt) ? 1 : 0);
-    }, 0);
+    const unreadCount = unreadCountRows.reduce((sum, row) => sum + row._count._all, 0);
 
     sendSuccess(res, { unreadCount }, "Unread message count fetched successfully");
   } catch (error) {

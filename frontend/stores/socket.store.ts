@@ -10,6 +10,14 @@ interface SocketState {
 }
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL ?? "http://localhost:4000";
+type SocketAuthPayload = {
+  token?: string;
+};
+
+const readSocketAuth = (socket: Socket): SocketAuthPayload =>
+  typeof socket.auth === "object" && socket.auth !== null
+    ? (socket.auth as SocketAuthPayload)
+    : {};
 
 export const useSocketStore = create<SocketState>((set, get) => ({
   socket: null,
@@ -19,18 +27,32 @@ export const useSocketStore = create<SocketState>((set, get) => ({
     if (!accessToken) return;
 
     const currentSocket = get().socket;
-    
-    // If socket exists, update the token
+
+    // Reuse the same socket instance so pages don't pile up duplicate listeners.
     if (currentSocket) {
-      if (currentSocket.auth && (currentSocket.auth as any).token !== accessToken) {
-        (currentSocket.auth as any).token = accessToken;
-        currentSocket.disconnect().connect();
+      const currentAuth = readSocketAuth(currentSocket);
+
+      if (currentAuth.token !== accessToken) {
+        currentSocket.auth = { ...currentAuth, token: accessToken };
+
+        if (currentSocket.connected) {
+          currentSocket.disconnect();
+        }
+
+        currentSocket.connect();
+        return;
       }
+
+      if (!currentSocket.connected) {
+        currentSocket.connect();
+      }
+
       return;
     }
 
     const socket = io(SOCKET_URL, {
       auth: { token: accessToken },
+      autoConnect: false,
       transports: ["websocket"]
     });
 
@@ -56,6 +78,7 @@ export const useSocketStore = create<SocketState>((set, get) => ({
     });
 
     set({ socket });
+    socket.connect();
   },
   disconnect: () => {
     const { socket } = get();

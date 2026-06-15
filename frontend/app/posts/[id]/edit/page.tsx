@@ -29,10 +29,26 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 
+import {
+  fetchDistrictsByProvinceCode,
+  fetchProvinces,
+  fetchWardsByDistrictCode,
+  findAdministrativeUnitByName,
+  type District,
+  type Province,
+  type Ward,
+} from "@/lib/administrative-divisions";
 import { api } from "@/lib/api";
 import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
 import { FeatureIcon } from "@/lib/feature-icons";
 import { compressPropertyImage } from "@/lib/image-compression";
+import {
+  acceptedPropertyImageInput,
+  extractPostFeatureIds,
+  getPropertyImageValidation,
+  maxPropertyImageCount,
+  type PropertyFeature,
+} from "@/lib/post-form";
 import {
   POST_TYPES,
   PROPERTY_TYPES,
@@ -60,28 +76,6 @@ const editPostSchema = z.object({
   postType: z.enum(POST_TYPES),
 });
 
-interface Province {
-  code: number;
-  name: string;
-}
-
-interface District {
-  code: number;
-  name: string;
-}
-
-interface Ward {
-  code: number;
-  name: string;
-}
-
-interface Feature {
-  id: string;
-  name: string;
-  icon: string | null;
-  category: string | null;
-}
-
 type EditPostInput = z.input<typeof editPostSchema>;
 type EditPostValues = z.output<typeof editPostSchema>;
 type NewImagePreview = {
@@ -93,36 +87,7 @@ type NewImagePreview = {
 const imageFallback =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 800'><rect width='1200' height='800' fill='%230b1120'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-family='Arial' font-size='52'>TrustEstate</text></svg>";
 
-const acceptedExtensions = new Set([".jpg", ".jpeg", ".png", ".webp"]);
-const acceptedMimeTypes = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/jpg",
-  "image/pjpeg",
-]);
-const maxFileSizeInBytes = 5 * 1024 * 1024;
-const maxImages = 10;
-const acceptedImageTypes = "image/jpeg,image/png,image/webp,image/jpg";
-
-const getFileExtension = (fileName: string) => {
-  const lastDotIndex = fileName.lastIndexOf(".");
-  return lastDotIndex === -1 ? "" : fileName.slice(lastDotIndex).toLowerCase();
-};
-
-const getImageValidation = (file: File) => {
-  const extension = getFileExtension(file.name);
-  const isMimeValid = acceptedMimeTypes.has(file.type);
-  const isExtensionValid = acceptedExtensions.has(extension);
-  const isSizeValid = file.size <= maxFileSizeInBytes;
-
-  return {
-    isMimeValid,
-    isExtensionValid,
-    isSizeValid,
-    isUploadable: isSizeValid && (isMimeValid || isExtensionValid),
-  };
-};
+const maxImages = maxPropertyImageCount;
 
 const CreatePostMap = dynamic(() => import("@/components/map/CreatePostMap"), {
   ssr: false,
@@ -174,17 +139,15 @@ export default function EditPostPage() {
   const [avatarImageId, setAvatarImageId] = useState<string | null>(null);
 
   // States hành chính
-  const [adminTree, setAdminTree] = useState<any[]>([]);
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
   const [wards, setWards] = useState<Ward[]>([]);
   const [selProvinceCode, setSelProvinceCode] = useState<string>("");
   const [selDistrictCode, setSelDistrictCode] = useState<string>("");
-
-  // States cho đặc trưng bất động sản
-  const [features, setFeatures] = useState<Feature[]>([]);
+  const [features, setFeatures] = useState<PropertyFeature[]>([]);
   const [selectedFeatureIds, setSelectedFeatureIds] = useState<string[]>([]);
 
+  // States cho đặc trưng bất động sản
   const {
     register,
     handleSubmit,
@@ -224,14 +187,13 @@ export default function EditPostPage() {
 
         setPost(currentPost);
         setImages(currentPost.images);
-        
-        // Cập nhật avatarImageId ban đầu
         if (currentPost.images && currentPost.images.length > 0) {
-          // Lấy ảnh có order nhỏ nhất làm avatar ban đầu
           const sorted = [...currentPost.images].sort((a, b) => a.order - b.order);
           setAvatarImageId(sorted[0].id);
         }
-        setSelectedFeatureIds(currentPost.features?.map((f: any) => f.id) ?? []);
+
+        setSelectedFeatureIds(extractPostFeatureIds(currentPost));
+
         reset(buildDefaults(currentPost));
       } catch (err) {
         const axiosError = err as AxiosError<{ message?: string }>;
@@ -258,30 +220,23 @@ export default function EditPostPage() {
   useEffect(() => {
     const initializeAdminData = async () => {
       try {
-        const pRes = await fetch("https://esgoo.net/api-tinhthanh/1/0.htm");
-        const pDataObj = await pRes.json();
-
-        const pData: Province[] = (pDataObj.data || []).map((p: any) => ({ code: Number(p.id), name: p.full_name }));
+        const pData = await fetchProvinces();
         setProvinces(pData);
 
         if (post?.city) {
-          const matchProv = pData.find((p) => p.name === post.city);
+          const matchProv = findAdministrativeUnitByName(pData, post.city);
           if (matchProv) {
             setSelProvinceCode(String(matchProv.code));
 
             try {
-              const cRes = await fetch(`https://esgoo.net/api-tinhthanh/2/${matchProv.code}.htm`);
-              const cDataObj = await cRes.json();
-              const distList: District[] = (cDataObj.data || [])
-                .map((c: any) => ({ code: Number(c.id), name: c.full_name.replace(/\n/g, "").trim() }))
-                .sort((a: District, b: District) => a.name.localeCompare(b.name, 'vi'));
+              const distList = await fetchDistrictsByProvinceCode(matchProv.code);
               setDistricts(distList);
 
               if (post.district) {
-                const matchDist = distList.find((d) => d.name === post.district);
+                const matchDist = findAdministrativeUnitByName(distList, post.district);
                 if (matchDist) {
                   setSelDistrictCode(String(matchDist.code));
-                  setWards([]);
+                  setWards(await fetchWardsByDistrictCode(matchDist.code));
                 }
               }
             } catch (e) {
@@ -323,14 +278,14 @@ export default function EditPostPage() {
   useEffect(() => {
     const fetchFeatures = async () => {
       const cacheKey = `features:${watchedPropertyType}`;
-      const cached = readSessionCache<Feature[]>(cacheKey);
+      const cached = readSessionCache<PropertyFeature[]>(cacheKey);
       if (cached) {
         setFeatures(cached);
         return;
       }
 
       try {
-        const response = await api.get<{ data: Feature[] }>(`/features?propertyType=${watchedPropertyType}`);
+        const response = await api.get<{ data: PropertyFeature[] }>(`/features?propertyType=${watchedPropertyType}`);
         setFeatures(response.data.data);
         writeSessionCache(cacheKey, response.data.data, { ttlMs: 30 * 60 * 1000 });
       } catch (err) {
@@ -349,7 +304,7 @@ export default function EditPostPage() {
   };
 
   const groupedFeatures = useMemo(() => {
-    const groups: Record<string, Feature[]> = {};
+    const groups: Record<string, PropertyFeature[]> = {};
     features.forEach((feature) => {
       const cat = feature.category || "Đặc trưng khác";
       if (!groups[cat]) {
@@ -384,13 +339,13 @@ export default function EditPostPage() {
 
     let processedFiles: Array<{
       file: File;
-      validation: ReturnType<typeof getImageValidation>;
+      validation: ReturnType<typeof getPropertyImageValidation>;
     }>;
 
     try {
       processedFiles = await Promise.all(
         selectedFiles.map(async (file) => {
-          const originalValidation = getImageValidation(file);
+          const originalValidation = getPropertyImageValidation(file);
 
           if (!originalValidation.isMimeValid && !originalValidation.isExtensionValid) {
             return {
@@ -402,7 +357,7 @@ export default function EditPostPage() {
           const compressedFile = await compressPropertyImage(file);
           return {
             file: compressedFile,
-            validation: getImageValidation(compressedFile),
+            validation: getPropertyImageValidation(compressedFile),
           };
         }),
       );
@@ -488,24 +443,8 @@ export default function EditPostPage() {
       const name = provinces.find((p) => String(p.code) === code)?.name || "";
       setValue("city", name, { shouldValidate: true });
       try {
-        const res = await fetch(`https://esgoo.net/api-tinhthanh/2/${code}.htm`);
-        const data = await res.json();
-        const dataList: District[] = (data.data || [])
-          .map((c: any) => ({ code: Number(c.id), name: c.full_name.replace(/\n/g, "").trim() }))
-          .sort((a: District, b: District) => a.name.localeCompare(b.name, 'vi'));
-        setDistricts(dataList);
+        setDistricts(await fetchDistrictsByProvinceCode(code));
 
-        // Tự động định vị về trung tâm tỉnh/thành phố đó
-        const query = `${name}, Việt Nam`;
-        const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=vn&limit=1`);
-        const geoData = await geoRes.json();
-        if (geoData && geoData.length > 0) {
-          const lat = parseFloat(geoData[0].lat);
-          const lon = parseFloat(geoData[0].lon);
-          setValue("latitude", lat, { shouldValidate: true });
-          setValue("longitude", lon, { shouldValidate: true });
-          setGeocodeStatus("success");
-        }
       } catch (err) {
         console.error("Lỗi tải danh sách phường xã hoặc định vị:", err);
       }
@@ -527,24 +466,9 @@ export default function EditPostPage() {
     if (code) {
       const name = districts.find((d) => String(d.code) === code)?.name || "";
       setValue("district", name, { shouldValidate: true });
-      setWards([]);
+      // API mới không có phường xã
+      setWards(await fetchWardsByDistrictCode(code));
 
-      // Tự động định vị về trung tâm quận/huyện đó
-      const cityVal = watch("city");
-      try {
-        const query = `${name}, ${cityVal}, Việt Nam`;
-        const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=vn&limit=1`);
-        const geoData = await geoRes.json();
-        if (geoData && geoData.length > 0) {
-          const lat = parseFloat(geoData[0].lat);
-          const lon = parseFloat(geoData[0].lon);
-          setValue("latitude", lat, { shouldValidate: true });
-          setValue("longitude", lon, { shouldValidate: true });
-          setGeocodeStatus("success");
-        }
-      } catch (err) {
-        console.error("Lỗi định vị Quận/Huyện:", err);
-      }
     } else {
       setValue("district", "", { shouldValidate: true });
       setValue("latitude", 0);
@@ -586,10 +510,66 @@ export default function EditPostPage() {
         const data = await response.json();
 
         if (data && data.length > 0) {
-          const lat = parseFloat(data[0].lat);
-          const lon = parseFloat(data[0].lon);
-          setValue("latitude", lat, { shouldDirty: true, shouldValidate: true });
-          setValue("longitude", lon, { shouldDirty: true, shouldValidate: true });
+          setValue("latitude", parseFloat(data[0].lat), { shouldDirty: true, shouldValidate: true });
+          setValue("longitude", parseFloat(data[0].lon), { shouldDirty: true, shouldValidate: true });
+
+          const addr = data[0].address;
+          if (addr) {
+            const addressParts = [addr.house_number, addr.road].filter(Boolean);
+            const detailedAddress = addressParts.length > 0 ? addressParts.join(" ") : null;
+            if (detailedAddress) {
+              setValue("address", detailedAddress, { shouldValidate: true });
+            }
+          }
+
+          const displayName = data[0].display_name;
+          if (displayName) {
+            const nameParts = displayName.split(',').map((s: string) => s.trim());
+
+            const matchProv = provinces.find(p => {
+              const baseProv = p.name.replace(/^(Thành phố|Tỉnh)\s+/i, "");
+              return nameParts.some((part: string) => part === p.name || part === baseProv || part.includes(p.name) || (baseProv.length > 2 && part.includes(baseProv)));
+            });
+
+            if (matchProv) {
+              const provCodeStr = String(matchProv.code);
+              let currentDistricts = districts;
+
+              if (selProvinceCode !== provCodeStr) {
+                setSelProvinceCode(provCodeStr);
+                setValue("city", matchProv.name, { shouldValidate: true });
+                setSelDistrictCode("");
+                setValue("district", "", { shouldValidate: true });
+                setValue("ward", "", { shouldValidate: true });
+                setWards([]);
+
+                try {
+                  const distList = await fetchDistrictsByProvinceCode(provCodeStr);
+                  setDistricts(distList);
+                  currentDistricts = distList;
+                } catch (e) {
+                  console.error("Lỗi fetch communes:", e);
+                }
+              }
+
+              const matchDist = currentDistricts.find(d => {
+                const baseDist = d.name.replace(/^(Quận|Huyện|Thị xã|Thành phố)\s+/i, "");
+                return nameParts.some((part: string) => part === d.name || part === baseDist || part.includes(d.name) || (baseDist.length > 2 && part.includes(baseDist)));
+              });
+
+              if (matchDist) {
+                const distCodeStr = String(matchDist.code);
+
+                if (selDistrictCode !== distCodeStr || selProvinceCode !== provCodeStr) {
+                  setSelDistrictCode(distCodeStr);
+                  setValue("district", matchDist.name, { shouldValidate: true });
+                  setValue("ward", "", { shouldValidate: true });
+                  setWards([]);
+                }
+              }
+            }
+          }
+
 
           setGeocodeStatus("success");
           addToast("Đã lấy tọa độ bản đồ tự động dựa vào địa chỉ của bạn!", "success");
@@ -767,6 +747,7 @@ export default function EditPostPage() {
                 </select>
               </div>
 
+
               <div>
                 <label className="theme-post-label mb-1 block text-xs font-medium">Nhu cầu đăng bài</label>
                 <select {...register("postType")} className="input-dark py-2 text-sm">
@@ -856,6 +837,7 @@ export default function EditPostPage() {
                   </div>
                 </div>
                 {errors.area && <p className="mt-1 text-xs text-[var(--danger-foreground)]">{errors.area.message}</p>}
+
               </div>
             </div>
           </div>
@@ -1140,7 +1122,7 @@ export default function EditPostPage() {
             <input
               ref={fileInputRef}
               type="file"
-              accept={acceptedImageTypes}
+              accept={acceptedPropertyImageInput}
               multiple
               className="hidden"
               onChange={(event) => {

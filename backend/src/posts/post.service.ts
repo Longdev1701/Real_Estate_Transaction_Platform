@@ -8,8 +8,15 @@ import type { AuthenticatedUser } from "../types/auth.type.js";
 import { AppError } from "../middlewares/error.middleware.js";
 import { prisma } from "../prisma/prisma.service.js";
 import { redisClient } from "../config/redis.js";
-import { clearHomeCache } from "../home/home.service.js";
 import { deleteImageByUrl, uploadPostImages } from "../services/upload.service.js";
+import {
+  buildPostDetailCacheKey,
+  getLocalPostDetailCache,
+  getPostsListCache,
+  invalidatePostReadCaches,
+  setLocalPostDetailCache,
+  setPostsListCache,
+} from "./post-cache.service.js";
 import type {
   CreatePostInput,
   PostFilterInput,
@@ -132,49 +139,6 @@ type PostBanContext = {
 };
 
 const POSTS_CACHE_TTL_MS = 15_000;
-const postsCache = new Map<
-  string,
-  {
-    expiresAt: number;
-    data: {
-      items: Array<Record<string, unknown>>;
-      meta: {
-        page: number;
-        limit: number;
-        total: number | null;
-        totalPages: number | null;
-        hasMore: boolean;
-      };
-    };
-  }
->();
-
-const localPostDetailCache = new Map<string, { expiresAt: number; data: any }>();
-
-export const clearPostsCache = () => {
-  postsCache.clear();
-  localPostDetailCache.clear();
-};
-
-export const invalidatePostDetailCache = async (postId: string) => {
-  const cacheKey = `posts:detail:base:${postId}`;
-  localPostDetailCache.delete(cacheKey);
-  if (redisClient?.isOpen) {
-    try {
-      await redisClient.del(cacheKey);
-    } catch (err) {
-      console.warn("Failed to delete Redis cache key:", err);
-    }
-  }
-};
-
-const invalidateCaches = (postId?: string) => {
-  clearPostsCache();
-  clearHomeCache();
-  if (postId) {
-    invalidatePostDetailCache(postId).catch(console.error);
-  }
-};
 
 const ensureAuthenticated = (user?: AuthenticatedUser) => {
   if (!user) {
@@ -296,7 +260,7 @@ const toPaginationNumber = (
   return max === undefined ? minBounded : Math.min(max, minBounded);
 };
 
-const parseImageMetadata = (value: unknown) => {
+export const parseImageMetadata = (value: unknown) => {
   if (value === undefined || value === null || value === "") {
     return [];
   }
@@ -421,7 +385,7 @@ export const createPost = async (
       include: postInclude,
     });
 
-    invalidateCaches();
+    void invalidatePostReadCaches();
     return attachSavedStateToDetailItem(createdPost, actor);
   } catch (error) {
     await prisma.propertyPost.delete({
@@ -594,13 +558,13 @@ export const getPosts = async (
     : null;
 
   if (cacheKey) {
-    const cached = postsCache.get(cacheKey);
-    if (cached && cached.expiresAt > Date.now()) {
-      return cached.data;
+    const cached = getPostsListCache(cacheKey);
+    if (cached) {
+      return cached;
     }
   }
 
-  const [rawItems, total] = await Promise.all([
+  const [rawItems, total] = await prisma.$transaction([
     prisma.propertyPost.findMany({
       where,
       select: imageLimit
@@ -623,9 +587,7 @@ export const getPosts = async (
       skip,
       take: limit + 1,
     }),
-    prisma.propertyPost.count({
-      where,
-    }),
+    prisma.propertyPost.count({ where }),
   ]);
 
   const hasMore = rawItems.length > limit;
@@ -647,17 +609,14 @@ export const getPosts = async (
   };
 
   if (cacheKey) {
-    postsCache.set(cacheKey, {
-      data,
-      expiresAt: Date.now() + POSTS_CACHE_TTL_MS,
-    });
+    setPostsListCache(cacheKey, data, POSTS_CACHE_TTL_MS);
   }
 
   return data;
 };
 
 export const getPostById = async (id: string, user?: AuthenticatedUser) => {
-  const cacheKey = `posts:detail:base:${id}`;
+  const cacheKey = buildPostDetailCacheKey(id);
   let cachedBase: { post: any; relatedPosts: any[] } | null = null;
 
   if (redisClient?.isOpen) {
@@ -670,10 +629,7 @@ export const getPostById = async (id: string, user?: AuthenticatedUser) => {
       console.warn("Failed to read Redis cache key:", err);
     }
   } else {
-    const localCached = localPostDetailCache.get(cacheKey);
-    if (localCached && localCached.expiresAt > Date.now()) {
-      cachedBase = localCached.data;
-    }
+    cachedBase = getLocalPostDetailCache<typeof cachedBase>(cacheKey);
   }
 
   if (cachedBase) {
@@ -780,10 +736,7 @@ export const getPostById = async (id: string, user?: AuthenticatedUser) => {
         console.warn("Failed to set Redis cache key:", err);
       }
     } else {
-      localPostDetailCache.set(cacheKey, {
-        data: cacheData,
-        expiresAt: Date.now() + 5 * 60 * 1000,
-      });
+      setLocalPostDetailCache(cacheKey, cacheData, 5 * 60 * 1000);
     }
   }
 
@@ -848,7 +801,7 @@ export const updatePost = async (
     include: postInclude,
   });
 
-  invalidateCaches(id);
+  void invalidatePostReadCaches(id);
   return attachSavedStateToDetailItem(updatedPost, user);
 };
 
@@ -875,7 +828,7 @@ export const deletePost = async (id: string, user?: AuthenticatedUser) => {
     postImages.map((img) => deleteImageByUrl(img.imageUrl)),
   ).catch(console.error);
 
-  invalidateCaches(id);
+  void invalidatePostReadCaches(id);
 };
 
 export const addPostImages = async (
@@ -933,7 +886,7 @@ export const addPostImages = async (
     include: postInclude,
   });
 
-  invalidateCaches(postId);
+  void invalidatePostReadCaches(postId);
   return attachSavedStateToDetailItem(post, user);
 };
 
@@ -987,6 +940,6 @@ export const deletePostImage = async (
     throw error;
   }
 
-  invalidateCaches(postId);
+  void invalidatePostReadCaches(postId);
 };
 

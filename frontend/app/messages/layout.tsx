@@ -1,20 +1,9 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  Bell,
-  FileText,
-  Home,
-  MessageSquare,
-  MoreVertical,
-  Scale,
-  Search,
-  Settings,
-  SlidersHorizontal,
-  Trash2,
-} from "lucide-react";
+import { FileText, Home, MessageSquare, MoreVertical, Scale, Search, Trash2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth.store";
 import { useSocketStore } from "@/stores/socket.store";
@@ -29,6 +18,24 @@ export interface ConversationListItem {
   messages: { id: string; content: string; createdAt: string; messageType: string; isRead: boolean }[];
   _count: { messages: number };
 }
+
+type ConversationListResponse = {
+  data: {
+    conversations: ConversationListItem[];
+    pagination?: {
+      hasMore?: boolean;
+    };
+  };
+};
+
+type ConversationSocketPayload = {
+  conversation: ConversationListItem;
+};
+
+type RealtimeMessage = ConversationListItem["messages"][number] & {
+  conversationId: string;
+  senderId: string;
+};
 
 const navItems = [
   { href: "/", label: "Trang chủ", icon: Home },
@@ -99,7 +106,7 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
     }
   }, [hasHydrated, router, user]);
 
-  const fetchConversations = async (pageNum: number, isLoadMore = false) => {
+  const fetchConversations = useCallback(async (pageNum: number, isLoadMore = false) => {
     try {
       if (!isLoadMore) {
         const cached = user ? readSessionCache<ConversationListItem[]>(`conversations_${user.id}`) : null;
@@ -110,11 +117,13 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
         setIsLoadingMore(true);
       }
 
-      const { data } = await api.get(`/conversations?page=${pageNum}&limit=20`);
+      const { data } = await api.get<ConversationListResponse>(
+        `/conversations?page=${pageNum}&limit=20`,
+      );
 
       const activeConversationId = pathname?.split("/messages/")[1];
-      const processConvs = (convs: typeof data.data.conversations) =>
-        convs.map((c: any) =>
+      const processConvs = (convs: ConversationListItem[]) =>
+        convs.map((c) =>
           c.id === activeConversationId ? { ...c, _count: { messages: 0 } } : c
         );
 
@@ -134,7 +143,7 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
       setLoading(false);
       setIsLoadingMore(false);
     }
-  };
+  }, [pathname, user]);
 
   useEffect(() => {
     if (user) {
@@ -148,7 +157,7 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
       fetchConversations(1, false);
       setPage(1);
     }
-  }, [user]);
+  }, [fetchConversations, user]);
 
   useEffect(() => {
     if (user && conversations.length > 0) {
@@ -159,7 +168,7 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
   useEffect(() => {
     if (!socket || !isConnected) return;
 
-    const handleReceiveMessage = (message: any) => {
+    const handleReceiveMessage = (message: RealtimeMessage) => {
       setConversations((prev) => {
         const index = prev.findIndex((c) => c.id === message.conversationId);
         if (index === -1) {
@@ -255,7 +264,7 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
       }
     };
 
-    const handleConversationCreated = (data: { conversation: any }) => {
+    const handleConversationCreated = (data: ConversationSocketPayload) => {
       setConversations((prev) => {
         if (prev.some((c) => c.id === data.conversation.id)) return prev;
 
@@ -268,7 +277,7 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
       });
     };
 
-    const handleConversationUpdated = (data: { conversation: any }) => {
+    const handleConversationUpdated = (data: ConversationSocketPayload) => {
       setConversations((prev) => {
         const existingIndex = prev.findIndex((c) => c.id === data.conversation.id);
 

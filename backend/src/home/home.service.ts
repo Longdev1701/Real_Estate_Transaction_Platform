@@ -3,15 +3,19 @@ import { PostStatus, PostType, PropertyType } from "@prisma/client";
 import { prisma } from "../prisma/prisma.service.js";
 
 const HOME_CACHE_TTL_MS = 30_000;
+type HomeData = Awaited<ReturnType<typeof fetchHomeData>>;
+
 let homeCache:
   | {
       expiresAt: number;
-      data: Awaited<ReturnType<typeof fetchHomeData>>;
+      data: HomeData;
     }
   | null = null;
+let homeDataInFlight: Promise<HomeData> | null = null;
 
 export const clearHomeCache = () => {
   homeCache = null;
+  homeDataInFlight = null;
 };
 
 const postInclude = {
@@ -59,67 +63,64 @@ export const getHomeData = async () => {
     return homeCache.data;
   }
 
-  const data = await fetchHomeData();
-  homeCache = {
-    data,
-    expiresAt: now + HOME_CACHE_TTL_MS,
-  };
+  if (homeDataInFlight) {
+    return homeDataInFlight;
+  }
 
-  return data;
+  homeDataInFlight = fetchHomeData()
+    .then((data) => {
+      homeCache = {
+        data,
+        expiresAt: Date.now() + HOME_CACHE_TTL_MS,
+      };
+
+      return data;
+    })
+    .finally(() => {
+      homeDataInFlight = null;
+    });
+
+  return homeDataInFlight;
 };
 
 const fetchHomeData = async () => {
+  const activePostWhere = {
+    status: PostStatus.ACTIVE,
+  } as const;
+
   const [
     featuredPosts,
-    activePostCount,
-    sellPostCount,
-    rentPostCount,
+    activePostTypeCounts,
     userCount,
     propertyTypeCounts,
     cityCounts,
   ] = await prisma.$transaction([
     prisma.propertyPost.findMany({
-      where: {
-        status: PostStatus.ACTIVE,
-      },
+      where: activePostWhere,
       include: postInclude,
       orderBy: {
         createdAt: "desc",
       },
       take: 5,
     }),
-    prisma.propertyPost.count({
-      where: {
-        status: PostStatus.ACTIVE,
-      },
-    }),
-    prisma.propertyPost.count({
-      where: {
-        status: PostStatus.ACTIVE,
-        postType: PostType.SELL,
-      },
-    }),
-    prisma.propertyPost.count({
-      where: {
-        status: PostStatus.ACTIVE,
-        postType: PostType.RENT,
+    prisma.propertyPost.groupBy({
+      by: ["postType"],
+      where: activePostWhere,
+      _count: {
+        postType: true,
       },
     }),
     prisma.user.count(),
     prisma.propertyPost.groupBy({
       by: ["propertyType"],
-      where: {
-        status: PostStatus.ACTIVE,
-      },
+      where: activePostWhere,
       _count: {
         propertyType: true,
       },
     }),
     prisma.propertyPost.groupBy({
       by: ["city"],
-      where: {
-        status: PostStatus.ACTIVE,
-      },
+      where: activePostWhere,
       _count: {
         city: true,
       },
@@ -135,6 +136,12 @@ const fetchHomeData = async () => {
   const countByPropertyType = new Map(
     propertyTypeCounts.map((item) => [item.propertyType, item._count.propertyType]),
   );
+  const countByPostType = new Map(
+    activePostTypeCounts.map((item) => [item.postType, item._count.postType]),
+  );
+  const sellPostCount = countByPostType.get(PostType.SELL) ?? 0;
+  const rentPostCount = countByPostType.get(PostType.RENT) ?? 0;
+  const activePostCount = sellPostCount + rentPostCount;
 
   return {
     stats: {

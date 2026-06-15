@@ -88,6 +88,7 @@ export default function NotificationsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("7d");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filterAnchorTime, setFilterAnchorTime] = useState(() => Date.now());
   const cacheKey = user ? `notifications:list:${user.id}` : "notifications:list";
 
   useEffect(() => {
@@ -226,16 +227,22 @@ export default function NotificationsPage() {
   }, [items]);
 
   const filteredItems = useMemo(() => {
-    const now = Date.now();
     const maxAgeMs = timeFilter === "7d" ? 7 * 24 * 60 * 60 * 1000 : timeFilter === "30d" ? 30 * 24 * 60 * 60 * 1000 : null;
 
     return items.filter((item) => {
       const matchesType = typeFilter === "all" || item.type === typeFilter;
       const matchesStatus = statusFilter === "all" || (statusFilter === "unread" ? !item.isRead : item.isRead);
       const createdAt = new Date(item.createdAt).getTime();
-      const matchesTime = !maxAgeMs || (!Number.isNaN(createdAt) && now - createdAt <= maxAgeMs);
+      const itemAgeMs = !Number.isNaN(createdAt)
+        ? filterAnchorTime - createdAt
+        : Number.POSITIVE_INFINITY;
+      const matchesTime = !maxAgeMs || itemAgeMs <= maxAgeMs;
       return matchesType && matchesStatus && matchesTime;
     });
+  }, [filterAnchorTime, items, statusFilter, timeFilter, typeFilter]);
+
+  useEffect(() => {
+    setFilterAnchorTime(Date.now());
   }, [items, statusFilter, timeFilter, typeFilter]);
 
   const activeFilterCount =

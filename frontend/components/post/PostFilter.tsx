@@ -9,6 +9,13 @@ import {
 } from "lucide-react";
 
 import { api } from "@/lib/api";
+import {
+  fetchDistrictsByProvinceCode,
+  fetchProvinces as fetchAdministrativeProvinces,
+  findAdministrativeUnitByName,
+  type District,
+  type Province,
+} from "@/lib/administrative-divisions";
 import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
 import { FeatureIcon } from "@/lib/feature-icons";
 import { groupFeaturesByCategory } from "@/lib/feature-groups";
@@ -23,16 +30,6 @@ interface Feature {
   name: string;
   icon: string | null;
   category: string | null;
-}
-
-interface Province {
-  code: number;
-  name: string;
-}
-
-interface District {
-  code: number;
-  name: string;
 }
 
 const clampNumericText = (value: string) => value.replace(/\D/g, "");
@@ -136,18 +133,13 @@ export function PostFilter({
   }, [value.propertyType]);
 
   useEffect(() => {
-    const fetchProvinces = async () => {
+    const loadProvinces = async () => {
       try {
-        const response = await fetch("https://esgoo.net/api-tinhthanh/1/0.htm");
-        const payload = await response.json();
-        const nextProvinces: Province[] = (payload.data || []).map((province: any) => ({
-          code: Number(province.id),
-          name: province.full_name,
-        }));
+        const nextProvinces = await fetchAdministrativeProvinces();
         setProvinces(nextProvinces);
 
         if (value.city) {
-          const matchedProvince = nextProvinces.find((province) => province.name === value.city);
+          const matchedProvince = findAdministrativeUnitByName(nextProvinces, value.city);
           if (matchedProvince) {
             setSelectedProvinceCode(String(matchedProvince.code));
           }
@@ -159,7 +151,7 @@ export function PostFilter({
       }
     };
 
-    fetchProvinces();
+    void loadProvinces();
   }, []);
 
   useEffect(() => {
@@ -171,18 +163,11 @@ export function PostFilter({
       }
 
       try {
-        const response = await fetch(`https://esgoo.net/api-tinhthanh/2/${selectedProvinceCode}.htm`);
-        const payload = await response.json();
-        const nextDistricts: District[] = (payload.data || [])
-          .map((district: any) => ({
-            code: Number(district.id),
-            name: String(district.full_name).replace(/\n/g, "").trim(),
-          }))
-          .sort((left: District, right: District) => left.name.localeCompare(right.name, "vi"));
+        const nextDistricts = await fetchDistrictsByProvinceCode(selectedProvinceCode);
         setDistricts(nextDistricts);
 
         if (value.district) {
-          const matchedDistrict = nextDistricts.find((district) => district.name === value.district);
+          const matchedDistrict = findAdministrativeUnitByName(nextDistricts, value.district);
           setSelectedDistrictCode(matchedDistrict ? String(matchedDistrict.code) : "");
         }
       } catch (err) {
@@ -200,7 +185,7 @@ export function PostFilter({
       return;
     }
 
-    const matchedProvince = provinces.find((province) => province.name === value.city);
+    const matchedProvince = findAdministrativeUnitByName(provinces, value.city);
     setSelectedProvinceCode(matchedProvince ? String(matchedProvince.code) : "");
   }, [provinces, value.city]);
 
@@ -210,7 +195,7 @@ export function PostFilter({
       return;
     }
 
-    const matchedDistrict = districts.find((district) => district.name === value.district);
+    const matchedDistrict = findAdministrativeUnitByName(districts, value.district);
     setSelectedDistrictCode(matchedDistrict ? String(matchedDistrict.code) : "");
   }, [districts, value.district]);
 
