@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { createElement, useEffect, useRef, useState } from "react";
 import { Moon, Sun, SunMoon } from "lucide-react";
 
 import { useTheme, type ThemePreference } from "@/components/theme/ThemeProvider";
@@ -15,7 +15,7 @@ const themeOptions: Array<{
   { value: "dark", label: "Tối", icon: Moon },
 ];
 
-const getActiveIcon = (themePreference: ThemePreference) => {
+const getActiveIconComponent = (themePreference: ThemePreference) => {
   if (themePreference === "light") return Sun;
   if (themePreference === "dark") return Moon;
   return SunMoon;
@@ -25,7 +25,7 @@ export function ThemeToggle() {
   const { themePreference, setThemePreference } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement | null>(null);
-  const ActiveIcon = getActiveIcon(themePreference);
+  const activeIconComponent = getActiveIconComponent(themePreference);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -46,7 +46,7 @@ export function ThemeToggle() {
         className="rounded-xl p-2 text-[var(--muted-foreground)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--foreground)]"
         aria-label="Chọn chế độ nền"
       >
-        <ActiveIcon size={20} />
+        {createElement(activeIconComponent, { size: 20 })}
       </button>
 
       {isOpen ? (
