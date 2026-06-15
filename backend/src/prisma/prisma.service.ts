@@ -1,5 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 
+import { resolvePrismaDatabaseUrl } from "./prisma-connection.js";
+
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;
 };
@@ -7,6 +9,11 @@ const globalForPrisma = globalThis as unknown as {
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
+    datasources: {
+      db: {
+        url: resolvePrismaDatabaseUrl(),
+      },
+    },
     log: ["error", "warn"],
   });
 
@@ -14,19 +21,23 @@ if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
 
-// Pre-warm database and start keep-alive ping to prevent Supabase sleep
+const shouldEnableDatabaseKeepAlive = process.env.ENABLE_DB_KEEP_ALIVE === "true";
+
+// Pre-warm database and optionally keep the connection active when explicitly enabled.
 const warmUpAndKeepAlive = async () => {
   console.log("Database connection warm-up triggered...");
   try {
-    // Run a lightweight raw query
     await prisma.$queryRaw`SELECT 1`;
     console.log("Database connection is warm and ready.");
   } catch (error) {
     console.error("Database connection warm-up failed:", error);
   }
 
-  // Ping every 30 seconds (30,000 ms) to keep the connection pool hot and prevent Supabase from going to sleep
-  setInterval(async () => {
+  if (!shouldEnableDatabaseKeepAlive) {
+    return;
+  }
+
+  const keepAliveTimer = setInterval(async () => {
     try {
       await prisma.$queryRaw`SELECT 1`;
       console.log("Database keep-alive ping sent successfully.");
@@ -34,8 +45,12 @@ const warmUpAndKeepAlive = async () => {
       console.error("Database keep-alive ping failed:", error);
     }
   }, 30_000);
+
+  keepAliveTimer.unref();
 };
 
-// Start warming up immediately (asynchronous, doesn't block server startup)
-warmUpAndKeepAlive();
+// Skip warm-up side effects in automated tests.
+if (process.env.NODE_ENV !== "test") {
+  void warmUpAndKeepAlive();
+}
 

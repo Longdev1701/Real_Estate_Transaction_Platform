@@ -18,7 +18,7 @@ const normalizeCachedUser = (value: unknown): AuthenticatedUser | null => {
 };
 
 export const invalidateCachedAuthUser = async (userId: string) => {
-  authUserCache.delete(userId);
+  authUserCache.delete(getCacheKey(userId));
 
   if (redisClient?.isOpen) {
     await redisClient.del(getCacheKey(userId));
