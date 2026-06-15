@@ -15,7 +15,7 @@ interface PostDetailMapProps {
 const createCustomIcon = () => {
   return L.divIcon({
     html: `<div class="relative flex items-center justify-center w-10 h-10">
-      <div class="absolute w-8 h-8 rounded-full bg-blue-500 opacity-40 animate-ping"></div>
+      <div class="absolute w-8 h-8 rounded-full bg-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.7)]"></div>
       <div class="relative w-6 h-6 rounded-full bg-blue-600 border-2 border-white shadow-md flex items-center justify-center">
         <div class="w-2 h-2 rounded-full bg-white"></div>
       </div>
@@ -71,10 +71,10 @@ export default function PostDetailMap({ latitude, longitude }: PostDetailMapProp
       mapRef.current.innerHTML = "";
       (mapRef.current as any)._leaflet_id = null;
 
-      // Tối ưu hóa hiệu năng tối đa của Leaflet
+      // Khôi phục hiệu ứng chuyển động mượt mà khi tương tác bản đồ
       const map = L.map(mapRef.current, {
         zoomControl: false,
-        preferCanvas: true,          // Sử dụng Canvas thay vì SVG
+        preferCanvas: true,
         fadeAnimation: true,
         zoomAnimation: true,
         markerZoomAnimation: true
@@ -87,11 +87,11 @@ export default function PostDetailMap({ latitude, longitude }: PostDetailMapProp
       const tileLayer = L.tileLayer(initialTileUrl, {
         attribution: isSatellite ? GOOGLE_ATTRIBUTION : ATTRIBUTION,
         detectRetina: true,
-        maxZoom: 20,                 // Cho phép phóng to tối đa mức 20
-        maxNativeZoom: 18,           // Giới hạn tải ảnh gốc từ server ở mức 18, zoom lớn hơn sẽ tự động co giãn ảnh (tránh bị trắng map)
-        updateWhenZooming: false,    // Tắt tải tile trong quá trình zoom
-        updateWhenIdle: true,        // Chỉ tải tile khi di chuyển dừng hẳn
-        keepBuffer: 3                // Tải gạch đệm xung quanh để kéo mượt không vỡ hình
+        maxZoom: 20,
+        maxNativeZoom: 18,
+        updateWhenZooming: false,
+        updateWhenIdle: true,
+        keepBuffer: 3
       }).addTo(map);
       tileLayerRef.current = tileLayer;
 
@@ -101,19 +101,9 @@ export default function PostDetailMap({ latitude, longitude }: PostDetailMapProp
       }).addTo(map);
       markerInstance.current = marker;
 
-      // Thêm sự kiện click phóng to marker bất động sản
+      // Click vào marker sẽ dịch chuyển tức thời không chạy animation
       marker.on("click", () => {
-        const currentCenter = map.getCenter();
-        const dist = currentCenter.distanceTo(center); // tính bằng mét
-        
-        if (dist > 5000) { // Nếu xa hơn 5km, dịch chuyển tức thời để tránh tải chậm mảnh ảnh dọc đường
-          map.setView(center, 17);
-        } else {
-          map.flyTo(center, 17, {
-            animate: true,
-            duration: 1.2
-          });
-        }
+        map.setView(center, 17);
       });
     } catch (err) {
       console.error("Lỗi khi khởi tạo Leaflet Map: ", err);
@@ -142,23 +132,14 @@ export default function PostDetailMap({ latitude, longitude }: PostDetailMapProp
     markerInstance.current.setLatLng(newPos);
   }, [latitude, longitude]);
 
+  // Click nút xem vị trí sẽ dịch chuyển tức thời không chạy animation
   const handleFocusMarker = () => {
     if (mapInstance.current) {
       const lat = Number(latitude);
       const lng = Number(longitude);
       if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
         const targetPos: L.LatLngExpression = [lat, lng];
-        const currentCenter = mapInstance.current.getCenter();
-        const dist = currentCenter.distanceTo(targetPos);
-
-        if (dist > 5000) { // Nếu ở quá xa (>5km), jump thẳng thay vì flyTo để map load tức thì
-          mapInstance.current.setView(targetPos, 17);
-        } else {
-          mapInstance.current.flyTo(targetPos, 17, {
-            animate: true,
-            duration: 1.2
-          });
-        }
+        mapInstance.current.setView(targetPos, 17);
       }
     }
   };

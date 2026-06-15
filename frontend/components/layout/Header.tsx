@@ -137,7 +137,7 @@ export function Header() {
   }
 
   return (
-    <header className={`fixed top-0 z-[120] w-full overflow-visible transition-all duration-300 ${isScrolled ? "glass-panel border-b border-[var(--border)] shadow-sm" : "bg-transparent"}`}>
+    <header className={`fixed top-0 z-[2000] w-full overflow-visible transition-all duration-300 ${isScrolled ? "glass-panel border-b border-[var(--border)] shadow-sm" : "bg-transparent"}`}>
       <div className="container mx-auto flex h-20 items-center justify-between overflow-visible px-4 lg:px-8">
         <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center gap-2 text-2xl font-bold tracking-wider text-[var(--foreground)]">

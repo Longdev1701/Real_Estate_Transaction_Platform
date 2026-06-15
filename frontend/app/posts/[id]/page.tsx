@@ -38,6 +38,7 @@ import {
 import { api } from "@/lib/api";
 import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
 import { FeatureIcon } from "@/lib/feature-icons";
+import { motion } from "framer-motion";
 import { groupFeaturesByCategory } from "@/lib/feature-groups";
 import {
   formatArea,
@@ -444,15 +445,88 @@ export default function PostDetailPage() {
   };
 
   if (isLoading) {
-  return (
-    <div className="container mx-auto flex min-h-[60vh] items-center justify-center px-4 py-10 lg:px-8">
-      <div className="inline-flex items-center gap-3 text-[var(--secondary-foreground)]">
-        <LoaderCircle className="h-5 w-5 animate-spin text-[var(--accent)]" />
-        Đang tải chi tiết bài đăng...
+    return (
+      <div className="container mx-auto space-y-5 px-4 pt-5 pb-28 lg:space-y-6 lg:px-8 lg:py-10">
+        {/* Breadcrumb Skeleton */}
+        <div className="hidden lg:flex items-center gap-2">
+          <div className="theme-skeleton h-4 w-16 rounded" />
+          <span>/</span>
+          <div className="theme-skeleton h-4 w-20 rounded" />
+          <span>/</span>
+          <div className="theme-skeleton h-4 w-48 rounded" />
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="space-y-6 min-w-0">
+            {/* Image Gallery Skeleton */}
+            <div className="theme-card rounded-2xl overflow-hidden p-0">
+              <div className="theme-skeleton aspect-[16/10] lg:aspect-[16/9] w-full" />
+            </div>
+
+            {/* Details Skeleton */}
+            <div className="theme-card rounded-2xl p-4 sm:p-5 md:p-7 space-y-6">
+              <div className="space-y-3">
+                <div className="theme-skeleton h-8 w-[80%] rounded-lg" />
+                <div className="theme-skeleton h-4 w-[40%] rounded" />
+              </div>
+              <hr className="border-[var(--border)]" />
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="space-y-2">
+                    <div className="theme-skeleton h-6 w-24 rounded" />
+                    <div className="theme-skeleton h-4 w-16 rounded" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Amenities & Features Skeleton */}
+            <div className="theme-card rounded-2xl p-6 space-y-6">
+              <div className="theme-skeleton h-6 w-48 rounded" />
+              <div className="space-y-6">
+                {[...Array(2)].map((_, c) => (
+                  <div key={c} className="space-y-3">
+                    <div className="theme-skeleton h-4 w-24 rounded" />
+                    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+                      {[...Array(4)].map((_, f) => (
+                        <div key={f} className="theme-surface-muted flex items-center gap-3 rounded-2xl p-3.5">
+                          <div className="theme-skeleton h-9 w-9 rounded-xl shrink-0" />
+                          <div className="theme-skeleton h-4 w-20 rounded" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Map Skeleton */}
+            <div className="theme-card rounded-2xl overflow-hidden p-0">
+              <div className="border-b border-[var(--border)] px-6 py-4">
+                <div className="theme-skeleton h-6 w-32 rounded" />
+              </div>
+              <div className="theme-skeleton h-[360px] w-full" />
+            </div>
+          </div>
+
+          {/* Sidebar Skeleton */}
+          <div className="space-y-5 min-w-0">
+            <div className="theme-card rounded-2xl p-6 space-y-6">
+              <div className="theme-skeleton h-6 w-32 rounded" />
+              <div className="flex items-center gap-4">
+                <div className="theme-skeleton h-16 w-16 rounded-full shrink-0" />
+                <div className="space-y-2 flex-1">
+                  <div className="theme-skeleton h-5 w-28 rounded" />
+                  <div className="theme-skeleton h-4 w-20 rounded" />
+                </div>
+              </div>
+              <div className="theme-skeleton h-12 w-full rounded-xl" />
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
   if (error && !post) {
     return (
@@ -473,8 +547,8 @@ export default function PostDetailPage() {
 
   if (isBannedOwnerView) {
     return (
-      <div className="container mx-auto space-y-6 px-4 pt-8 pb-20 lg:px-8 lg:py-10">
-        <div className="hidden md:flex flex-wrap items-center gap-2 text-sm text-[var(--muted-foreground)]">
+      <div className="container mx-auto space-y-4 px-4 pt-4 pb-12 lg:px-8 lg:py-8 min-h-[calc(100vh-6rem)] flex flex-col justify-center">
+        <div className="hidden md:flex flex-wrap items-center gap-2 text-xs text-[var(--muted-foreground)]">
           <Link href="/" className="transition hover:text-[var(--foreground)]">
             Trang chủ
           </Link>
@@ -486,38 +560,38 @@ export default function PostDetailPage() {
           <span className="text-[var(--foreground)]">Bài đăng bị khóa</span>
         </div>
 
-        <div className="theme-shadow-lg mx-auto max-w-4xl rounded-[32px] border border-[var(--post-banned-shell-border)] bg-[image:var(--post-banned-shell)] p-6 md:p-8">
-          <div className="theme-surface-strong rounded-3xl border border-[var(--danger-border)] p-6 md:p-8">
+        <div className="theme-shadow-lg mx-auto w-full max-w-3xl rounded-3xl border border-[var(--post-banned-shell-border)] bg-[image:var(--post-banned-shell)] p-4 sm:p-6">
+          <div className="theme-surface-strong rounded-2xl border border-[var(--danger-border)] p-4 sm:p-6 md:p-8">
             <div className="mx-auto max-w-2xl text-center">
-              <span className="inline-flex items-center gap-2 rounded-full border border-[var(--danger-border)] bg-[var(--danger-soft)] px-4 py-2 text-sm font-semibold text-[var(--danger-foreground)]">
-                <ShieldAlert className="h-4 w-4" />
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--danger-border)] bg-[var(--danger-soft)] px-3 py-1 text-xs font-semibold text-[var(--danger-foreground)]">
+                <ShieldAlert className="h-3.5 w-3.5" />
                 Bài đăng đã bị khóa do vi phạm
               </span>
-              <h1 className="mt-5 text-3xl font-bold text-[var(--foreground)] md:text-4xl">Thông tin bài đăng đang bị ẩn để chờ xử lý</h1>
-              <p className="mt-4 text-sm leading-7 text-[var(--secondary-foreground)] md:text-base">
+              <h1 className="mt-3.5 text-xl font-bold text-[var(--foreground)] sm:text-2xl md:text-3xl">Bài đăng bị ẩn để chờ xử lý</h1>
+              <p className="mt-2 text-xs leading-relaxed text-[var(--secondary-foreground)] sm:text-sm">
                 Để bảo vệ trải nghiệm chung của người dùng, chúng tôi tạm thời ẩn toàn bộ nội dung
                 của bài đăng này khỏi nền tảng. Nếu bạn cho rằng việc xử lý là chưa chính xác,
                 bạn có thể gửi khiếu nại kèm bằng chứng để đội ngũ quản trị xem xét lại.
               </p>
             </div>
 
-            <div className="mt-8 grid gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border border-[var(--danger-border)] bg-[var(--danger-soft)] p-5">
-                <p className="text-sm font-semibold uppercase tracking-wide text-[var(--danger-foreground)]">Lý do bị khóa</p>
-                <p className="mt-3 text-lg font-semibold text-[var(--foreground)]">{post.banContext?.reason || "Nội dung vi phạm chính sách hiển thị."}</p>
-                <p className="mt-3 text-sm leading-6 text-[var(--secondary-foreground)]">
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-[var(--danger-border)] bg-[var(--danger-soft)] p-4">
+                <p className="text-xs font-bold uppercase tracking-wider text-[var(--danger-foreground)]">Lý do bị khóa</p>
+                <p className="mt-1.5 text-sm font-bold text-[var(--foreground)]">{post.banContext?.reason || "Nội dung vi phạm chính sách hiển thị."}</p>
+                <p className="mt-1 text-xs leading-relaxed text-[var(--secondary-foreground)]">
                   {post.banContext?.description || "Bài đăng bị đánh giá là có dấu hiệu vi phạm nội dung hoặc thông tin không phù hợp với chính sách của nền tảng."}
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-[var(--info-border)] bg-[var(--info-soft)] p-5">
-                <p className="text-sm font-semibold uppercase tracking-wide text-[var(--info-foreground)]">Trạng thái khiếu nại</p>
-                <p className="mt-3 text-lg font-semibold text-[var(--foreground)]">
+              <div className="rounded-xl border border-[var(--info-border)] bg-[var(--info-soft)] p-4">
+                <p className="text-xs font-bold uppercase tracking-wider text-[var(--info-foreground)]">Trạng thái khiếu nại</p>
+                <p className="mt-1.5 text-sm font-bold text-[var(--foreground)]">
                   {post.banContext?.appealStatus === "PENDING"
                     ? "Đã gửi khiếu nại, chờ admin xem xét"
                     : "Chưa gửi khiếu nại"}
                 </p>
-                <p className="mt-3 text-sm leading-6 text-[var(--secondary-foreground)]">
+                <p className="mt-1 text-xs leading-relaxed text-[var(--secondary-foreground)]">
                   {post.banContext?.appealStatus === "PENDING"
                     ? "Yêu cầu khiếu nại của bạn đã nằm trong hàng đợi báo cáo của admin."
                     : "Hãy chuẩn bị mô tả rõ ràng và bằng chứng cụ thể để tăng khả năng được xem xét lại."}
@@ -525,22 +599,22 @@ export default function PostDetailPage() {
               </div>
             </div>
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+            <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
               <button
                 type="button"
                 onClick={() => setIsAppealDialogOpen(true)}
                 disabled={post.banContext?.appealStatus === "PENDING"}
-                className="theme-button-danger-solid inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60"
+                className="theme-button-danger-solid inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-60"
               >
-                <AlertTriangle className="h-4 w-4" />
+                <AlertTriangle className="h-3.5 w-3.5" />
                 {post.banContext?.appealStatus === "PENDING" ? "Đã gửi khiếu nại" : "Khiếu nại quyết định khóa bài"}
               </button>
               <button
                 type="button"
                 onClick={() => router.push("/profile/posts")}
-                className="theme-surface-soft inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-medium text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)]"
+                className="theme-surface-soft inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-medium text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)]"
               >
-                <ArrowLeft className="h-4 w-4" />
+                <ArrowLeft className="h-3.5 w-3.5" />
                 Quay lại bài đăng của tôi
               </button>
             </div>
@@ -593,7 +667,7 @@ export default function PostDetailPage() {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_360px]">
         <section className="space-y-6 min-w-0">
-          <div className="glass-card overflow-hidden p-0">
+          <div className="theme-card rounded-2xl overflow-hidden p-0">
             <div className={`grid gap-1 overflow-hidden ${images.length === 1 ? 'grid-cols-1' :
                 images.length === 2 ? 'grid-cols-1 lg:grid-cols-2' :
                   'grid-cols-1 lg:grid-cols-[1.8fr_1fr]'
@@ -688,7 +762,7 @@ export default function PostDetailPage() {
             </div>
           </div>
 
-          <div className="glass-card relative p-4 sm:p-5 md:p-7">
+          <div className="theme-card rounded-2xl relative p-4 sm:p-5 md:p-7">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0 flex-1">
                 <div className="mb-3 flex flex-wrap items-center gap-3">
@@ -895,7 +969,12 @@ export default function PostDetailPage() {
           </div>
 
           {groupedFeatures && groupedFeatures.length > 0 && (
-            <div className="glass-card p-6 space-y-6">
+            <motion.div 
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
+              className="theme-card rounded-2xl p-6 space-y-6"
+            >
               <h2 className="text-2xl font-semibold text-[var(--foreground)]">Tiện ích & Đặc trưng</h2>
               <div className="space-y-6">
                 {groupedFeatures.map(([category, list]) => (
@@ -922,10 +1001,13 @@ export default function PostDetailPage() {
                   </div>
                 ))}
               </div>
-            </div>
+            </motion.div>
           )}
 
-          <div ref={mapSectionRef} className="glass-card overflow-hidden p-0">
+          <div 
+            ref={mapSectionRef} 
+            className="theme-card rounded-2xl overflow-hidden p-0"
+          >
             <div className="border-b border-[var(--border)] px-6 py-4">
               <h2 className="text-2xl font-semibold text-[var(--foreground)]">Vị trí trên bản đồ</h2>
             </div>
@@ -1028,7 +1110,12 @@ export default function PostDetailPage() {
               </div>
             )}
 
-            <div className="glass-card p-5 sm:p-6">
+            <motion.div 
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
+              className="theme-card rounded-2xl p-5 sm:p-6"
+            >
               <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-xl font-semibold text-[var(--foreground)] sm:text-2xl">Bất động sản tương tự</h2>
                 <Link href="/posts" className="text-sm font-medium text-[var(--accent)] transition hover:brightness-110">
@@ -1037,7 +1124,7 @@ export default function PostDetailPage() {
               </div>
 
               <RelatedPostsCarousel posts={relatedPosts} />
-            </div>
+            </motion.div>
 
             <button
               type="button"
