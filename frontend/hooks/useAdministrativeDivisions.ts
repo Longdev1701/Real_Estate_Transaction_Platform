@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import type { FieldPath, FieldValues, UseFormSetValue } from "react-hook-form";
 
 import {
@@ -43,21 +43,24 @@ export const useAdministrativeDivisions = <TFieldValues extends LocationFieldVal
   const [selectedProvinceCode, setSelectedProvinceCode] = useState("");
   const [selectedDistrictCode, setSelectedDistrictCode] = useState("");
 
-  const setFieldValue = <TPath extends FieldPath<TFieldValues>>(
-    field: TPath,
-    value: TFieldValues[TPath],
-    shouldDirty = false,
-  ) => {
-    setValue(field, value, buildSetValueOptions(shouldDirty));
-  };
+  const setFieldValue = useCallback(
+    <TPath extends FieldPath<TFieldValues>>(
+      field: TPath,
+      value: TFieldValues[TPath],
+      shouldDirty = false,
+    ) => {
+      setValue(field, value, buildSetValueOptions(shouldDirty));
+    },
+    [setValue],
+  );
 
-  const resetLocationCoordinates = () => {
+  const resetLocationCoordinates = useCallback(() => {
     setFieldValue("latitude" as FieldPath<TFieldValues>, 0 as TFieldValues[FieldPath<TFieldValues>], shouldDirtyCoordinates);
     setFieldValue("longitude" as FieldPath<TFieldValues>, 0 as TFieldValues[FieldPath<TFieldValues>], shouldDirtyCoordinates);
     onLocationReset?.();
-  };
+  }, [onLocationReset, setFieldValue, shouldDirtyCoordinates]);
 
-  const ensureProvincesLoaded = async () => {
+  const ensureProvincesLoaded = useCallback(async () => {
     if (provinces.length > 0) {
       return provinces;
     }
@@ -65,9 +68,9 @@ export const useAdministrativeDivisions = <TFieldValues extends LocationFieldVal
     const provinceList = await fetchProvinces();
     setProvinces(provinceList);
     return provinceList;
-  };
+  }, [provinces]);
 
-  const syncSelectionByNames = async ({
+  const syncSelectionByNames = useCallback(async ({
     city,
     district,
     ward,
@@ -127,9 +130,9 @@ export const useAdministrativeDivisions = <TFieldValues extends LocationFieldVal
     if (matchedWard) {
       setFieldValue("ward" as FieldPath<TFieldValues>, matchedWard.name as TFieldValues[FieldPath<TFieldValues>]);
     }
-  };
+  }, [ensureProvincesLoaded, setFieldValue]);
 
-  const handleProvinceCodeChange = async (provinceCode: string) => {
+  const handleProvinceCodeChange = useCallback(async (provinceCode: string) => {
     setSelectedProvinceCode(provinceCode);
     setSelectedDistrictCode("");
     setDistricts([]);
@@ -152,9 +155,9 @@ export const useAdministrativeDivisions = <TFieldValues extends LocationFieldVal
     setFieldValue("district" as FieldPath<TFieldValues>, "" as TFieldValues[FieldPath<TFieldValues>]);
     setFieldValue("ward" as FieldPath<TFieldValues>, "" as TFieldValues[FieldPath<TFieldValues>]);
     resetLocationCoordinates();
-  };
+  }, [provinces, resetLocationCoordinates, setFieldValue]);
 
-  const handleDistrictCodeChange = async (districtCode: string) => {
+  const handleDistrictCodeChange = useCallback(async (districtCode: string) => {
     setSelectedDistrictCode(districtCode);
     setWards([]);
 
@@ -177,11 +180,11 @@ export const useAdministrativeDivisions = <TFieldValues extends LocationFieldVal
 
     setFieldValue("ward" as FieldPath<TFieldValues>, "" as TFieldValues[FieldPath<TFieldValues>]);
     resetLocationCoordinates();
-  };
+  }, [districts, resetLocationCoordinates, setFieldValue]);
 
-  const handleWardChange = (wardName: string) => {
+  const handleWardChange = useCallback((wardName: string) => {
     setFieldValue("ward" as FieldPath<TFieldValues>, wardName as TFieldValues[FieldPath<TFieldValues>]);
-  };
+  }, [setFieldValue]);
 
   return {
     provinces,

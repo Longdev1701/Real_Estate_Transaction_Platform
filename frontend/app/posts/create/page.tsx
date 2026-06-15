@@ -15,7 +15,7 @@ import {
   Star,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 
@@ -98,6 +98,7 @@ export default function CreatePostPage() {
   const previewsRef = useRef<ImagePreview[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const isSubmittedRef = useRef(false);
+  const hasInitializedDraftRef = useRef(false);
 
   useEffect(() => {
     if (hasHydrated && !accessToken && !user) {
@@ -151,6 +152,7 @@ export default function CreatePostPage() {
   const propertyType = watch("propertyType");
   const { features, selectedFeatureIds, setSelectedFeatureIds, toggleFeature } =
     usePropertyFeatures(propertyType);
+  const handleLocationReset = useCallback(() => setGeocodeStatus("idle"), []);
   const {
     provinces,
     districts,
@@ -166,7 +168,7 @@ export default function CreatePostPage() {
     setWards,
   } = useAdministrativeDivisions<CreatePostFormInput>({
     setValue,
-    onLocationReset: () => setGeocodeStatus("idle"),
+    onLocationReset: handleLocationReset,
   });
   const selProvinceCode = selectedProvinceCode;
   const selDistrictCode = selectedDistrictCode;
@@ -184,6 +186,12 @@ export default function CreatePostPage() {
   }, [features]);
   // Load provinces and draft on mount
   useEffect(() => {
+    if (hasInitializedDraftRef.current) {
+      return;
+    }
+
+    hasInitializedDraftRef.current = true;
+
     const initialize = async () => {
       try {
         await ensureProvincesLoaded();
