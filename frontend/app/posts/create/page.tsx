@@ -424,12 +424,14 @@ export default function CreatePostPage() {
     }
   };
 
-  const selectedImages = useMemo(
+  const uploadableImagePreviews = useMemo(
     () =>
-      imagePreviews
-        .filter((image) => image.isSizeValid && (image.isMimeValid || image.isExtensionValid))
-        .map((image) => image.file),
+      imagePreviews.filter((image) => image.isSizeValid && (image.isMimeValid || image.isExtensionValid)),
     [imagePreviews],
+  );
+  const selectedImages = useMemo(
+    () => uploadableImagePreviews.map((image) => image.file),
+    [uploadableImagePreviews],
   );
 
   const handleImageSelection = async (files: FileList | null) => {
@@ -567,7 +569,7 @@ export default function CreatePostPage() {
       }
 
       // Tạo metadata gửi lên backend để set order: 0 cho ảnh đại diện
-      const metadata = imagePreviews.map((img, idx) => {
+      const metadata = uploadableImagePreviews.map((img, idx) => {
         const isAvatar = img.id === avatarImageId;
         return {
           caption: img.file.name,
