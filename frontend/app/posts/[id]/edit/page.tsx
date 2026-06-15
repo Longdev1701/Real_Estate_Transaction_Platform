@@ -41,7 +41,7 @@ import {
 import { api } from "@/lib/api";
 import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
 import { FeatureIcon } from "@/lib/feature-icons";
-import { compressPropertyImage } from "@/lib/image-compression";
+import { compressPropertyImage, yieldToBrowser } from "@/lib/image-compression";
 import {
   acceptedPropertyImageInput,
   extractPostFeatureIds,
@@ -82,6 +82,9 @@ type NewImagePreview = {
   id: string;
   file: File;
   url: string;
+  isMimeValid: boolean;
+  isExtensionValid: boolean;
+  isSizeValid: boolean;
 };
 
 const imageFallback =
@@ -343,24 +346,26 @@ export default function EditPostPage() {
     }>;
 
     try {
-      processedFiles = await Promise.all(
-        selectedFiles.map(async (file) => {
-          const originalValidation = getPropertyImageValidation(file);
+      processedFiles = [];
 
-          if (!originalValidation.isMimeValid && !originalValidation.isExtensionValid) {
-            return {
-              file,
-              validation: originalValidation,
-            };
-          }
+      for (const file of selectedFiles) {
+        const originalValidation = getPropertyImageValidation(file);
 
+        if (!originalValidation.isMimeValid && !originalValidation.isExtensionValid) {
+          processedFiles.push({
+            file,
+            validation: originalValidation,
+          });
+        } else {
           const compressedFile = await compressPropertyImage(file);
-          return {
+          processedFiles.push({
             file: compressedFile,
             validation: getPropertyImageValidation(compressedFile),
-          };
-        }),
-      );
+          });
+        }
+
+        await yieldToBrowser();
+      }
     } catch (error) {
       console.error("Failed to prepare images before upload:", error);
       setImageError("Không thể xử lý ảnh vừa chọn. Vui lòng thử lại.");
@@ -369,10 +374,13 @@ export default function EditPostPage() {
 
     setNewImages((current) => [
       ...current,
-      ...processedFiles.map(({ file }) => ({
+      ...processedFiles.map(({ file, validation }) => ({
         id: `${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2, 8)}`,
         file,
         url: URL.createObjectURL(file),
+        isMimeValid: validation.isMimeValid,
+        isExtensionValid: validation.isExtensionValid,
+        isSizeValid: validation.isSizeValid,
       })),
     ]);
 
@@ -620,15 +628,19 @@ export default function EditPostPage() {
 
     const response = await api.patch<{ data: Post }>(`/posts/${params.id}`, payload);
 
-    if (newImages.length > 0) {
+    const uploadableNewImages = newImages.filter(
+      (image) => image.isSizeValid && (image.isMimeValid || image.isExtensionValid),
+    );
+
+    if (uploadableNewImages.length > 0) {
       const formData = new FormData();
-      newImages.forEach((image) => {
+      uploadableNewImages.forEach((image) => {
         formData.append("images", image.file);
       });
       formData.append(
         "imageMetadata",
         JSON.stringify(
-          newImages.map((image, index) => ({
+          uploadableNewImages.map((image, index) => ({
             caption: image.file.name,
             order: image.id === avatarImageId ? 0 : images.length + index + 1,
           })),

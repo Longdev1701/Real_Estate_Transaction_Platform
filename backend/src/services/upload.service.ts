@@ -11,6 +11,32 @@ type ImageMetadataInput = {
   order?: number;
 };
 
+const storageOperationTimeoutMs = Number(
+  process.env.SUPABASE_STORAGE_TIMEOUT_MS ?? 30_000,
+);
+
+const withStorageTimeout = async <T>(
+  operation: Promise<T>,
+  timeoutMessage: string,
+) => {
+  let timeoutId: NodeJS.Timeout | undefined;
+
+  try {
+    return await Promise.race([
+      operation,
+      new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new AppError(timeoutMessage, 504));
+        }, storageOperationTimeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+};
+
 const contentTypeToExtension: Record<string, string> = {
   "image/jpeg": ".jpg",
   "image/png": ".png",
@@ -66,12 +92,15 @@ export const uploadPostImages = async (
   try {
     for (const [index, file] of files.entries()) {
       const storagePath = buildStoragePath(postId, file);
-      const { error } = await getSupabaseClient().storage
-        .from(propertyImagesBucket)
-        .upload(storagePath, file.buffer, {
-          contentType: file.mimetype,
-          upsert: false,
-        });
+      const { error } = await withStorageTimeout(
+        getSupabaseClient().storage
+          .from(propertyImagesBucket)
+          .upload(storagePath, file.buffer, {
+            contentType: file.mimetype,
+            upsert: false,
+          }),
+        "Upload image timed out. Please try again.",
+      );
 
       if (error) {
         throw new AppError("Failed to upload image to Supabase Storage.", 500, {
@@ -103,12 +132,15 @@ export const uploadChatImage = async (
   file: Express.Multer.File,
 ) => {
   const storagePath = buildChatStoragePath(conversationId, file);
-  const { error } = await getSupabaseClient().storage
-    .from(propertyImagesBucket)
-    .upload(storagePath, file.buffer, {
-      contentType: file.mimetype,
-      upsert: false,
-    });
+  const { error } = await withStorageTimeout(
+    getSupabaseClient().storage
+      .from(propertyImagesBucket)
+      .upload(storagePath, file.buffer, {
+        contentType: file.mimetype,
+        upsert: false,
+      }),
+    "Upload image timed out. Please try again.",
+  );
 
   if (error) {
     throw new AppError("Failed to upload image to Supabase Storage.", 500, {
@@ -127,12 +159,15 @@ export const uploadAvatarImage = async (
   file: Express.Multer.File,
 ) => {
   const storagePath = buildAvatarStoragePath(userId, file);
-  const { error } = await getSupabaseClient().storage
-    .from(propertyImagesBucket)
-    .upload(storagePath, file.buffer, {
-      contentType: file.mimetype,
-      upsert: false,
-    });
+  const { error } = await withStorageTimeout(
+    getSupabaseClient().storage
+      .from(propertyImagesBucket)
+      .upload(storagePath, file.buffer, {
+        contentType: file.mimetype,
+        upsert: false,
+      }),
+    "Upload avatar image timed out. Please try again.",
+  );
 
   if (error) {
     throw new AppError("Failed to upload avatar image to Supabase Storage.", 500, {
@@ -145,9 +180,12 @@ export const uploadAvatarImage = async (
 
 export const deleteImageByUrl = async (imageUrl: string) => {
   const storagePath = getStoragePathFromPublicUrl(imageUrl);
-  const { error } = await getSupabaseClient().storage
-    .from(propertyImagesBucket)
-    .remove([storagePath]);
+  const { error } = await withStorageTimeout(
+    getSupabaseClient().storage
+      .from(propertyImagesBucket)
+      .remove([storagePath]),
+    "Delete image timed out. Please try again.",
+  );
 
   if (error) {
     throw new AppError("Failed to delete image from Supabase Storage.", 500, {

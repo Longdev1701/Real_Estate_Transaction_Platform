@@ -191,7 +191,7 @@ export const createOrGetConversation = async (req: Request, res: Response, next:
         const createConversationData: Prisma.ConversationUncheckedCreateInput = {
           buyerId,
           sellerId,
-          ...(normalizedPostId ? { postId: normalizedPostId } : {})
+          postId: normalizedPostId ?? undefined
         };
 
         conversation = await prisma.conversation.create({
