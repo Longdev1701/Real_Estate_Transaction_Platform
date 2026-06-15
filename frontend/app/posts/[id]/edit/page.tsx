@@ -494,18 +494,29 @@ export default function EditPostPage() {
           .map((c: any) => ({ code: Number(c.id), name: c.full_name.replace(/\n/g, "").trim() }))
           .sort((a: District, b: District) => a.name.localeCompare(b.name, 'vi'));
         setDistricts(dataList);
+
+        // Tự động định vị về trung tâm tỉnh/thành phố đó
+        const query = `${name}, Việt Nam`;
+        const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=vn&limit=1`);
+        const geoData = await geoRes.json();
+        if (geoData && geoData.length > 0) {
+          const lat = parseFloat(geoData[0].lat);
+          const lon = parseFloat(geoData[0].lon);
+          setValue("latitude", lat, { shouldValidate: true });
+          setValue("longitude", lon, { shouldValidate: true });
+          setGeocodeStatus("success");
+        }
       } catch (err) {
-        console.error("Lỗi tải danh sách phường xã:", err);
+        console.error("Lỗi tải danh sách phường xã hoặc định vị:", err);
       }
     } else {
       setValue("city", "", { shouldValidate: true });
+      setValue("latitude", 0);
+      setValue("longitude", 0);
+      setGeocodeStatus("idle");
     }
     setValue("district", "", { shouldValidate: true });
     setValue("ward", "");
-
-    setValue("latitude", 0);
-    setValue("longitude", 0);
-    setGeocodeStatus("idle");
   };
 
   const handleDistrictChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -516,15 +527,31 @@ export default function EditPostPage() {
     if (code) {
       const name = districts.find((d) => String(d.code) === code)?.name || "";
       setValue("district", name, { shouldValidate: true });
-      // API mới không có phường xã
       setWards([]);
+
+      // Tự động định vị về trung tâm quận/huyện đó
+      const cityVal = watch("city");
+      try {
+        const query = `${name}, ${cityVal}, Việt Nam`;
+        const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=vn&limit=1`);
+        const geoData = await geoRes.json();
+        if (geoData && geoData.length > 0) {
+          const lat = parseFloat(geoData[0].lat);
+          const lon = parseFloat(geoData[0].lon);
+          setValue("latitude", lat, { shouldValidate: true });
+          setValue("longitude", lon, { shouldValidate: true });
+          setGeocodeStatus("success");
+        }
+      } catch (err) {
+        console.error("Lỗi định vị Quận/Huyện:", err);
+      }
     } else {
       setValue("district", "", { shouldValidate: true });
+      setValue("latitude", 0);
+      setValue("longitude", 0);
+      setGeocodeStatus("idle");
     }
     setValue("ward", "");
-
-    setValue("latitude", 0);
-    setValue("longitude", 0);
   };
 
   const handleGeocode = async () => {
@@ -535,9 +562,11 @@ export default function EditPostPage() {
     setIsGeocoding(true);
     setGeocodeStatus("idle");
 
+    const streetOnly = address.replace(/^\d+([a-zA-Z]?)(\/\d+)*\s+/, "").trim();
+
     const queries = [
-      [address, ward, district, city, "Việt Nam"].filter(Boolean).join(", "),
-      [ward, district, city, "Việt Nam"].filter(Boolean).join(", "),
+      [address, district, city, "Việt Nam"].filter(Boolean).join(", "),
+      [streetOnly !== address ? streetOnly : null, district, city, "Việt Nam"].filter(Boolean).join(", "),
       [district, city, "Việt Nam"].filter(Boolean).join(", "),
       [city, "Việt Nam"].filter(Boolean).join(", "),
     ];
@@ -547,7 +576,7 @@ export default function EditPostPage() {
 
       for (const query of queries) {
         const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=vn&limit=1&addressdetails=1`,
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=vn&limit=1&addressdetails=1&accept-language=vi`,
           {
             headers: {
               "Accept-Language": "vi",
@@ -557,69 +586,10 @@ export default function EditPostPage() {
         const data = await response.json();
 
         if (data && data.length > 0) {
-          setValue("latitude", parseFloat(data[0].lat), { shouldDirty: true, shouldValidate: true });
-          setValue("longitude", parseFloat(data[0].lon), { shouldDirty: true, shouldValidate: true });
-
-          const addr = data[0].address;
-          if (addr) {
-            const addressParts = [addr.house_number, addr.road].filter(Boolean);
-            const detailedAddress = addressParts.length > 0 ? addressParts.join(" ") : null;
-            if (detailedAddress) {
-              setValue("address", detailedAddress, { shouldValidate: true });
-            }
-          }
-
-          const displayName = data[0].display_name;
-          if (displayName) {
-            const nameParts = displayName.split(',').map((s: string) => s.trim());
-
-            const matchProv = provinces.find(p => {
-              const baseProv = p.name.replace(/^(Thành phố|Tỉnh)\s+/i, "");
-              return nameParts.some((part: string) => part === p.name || part === baseProv || part.includes(p.name) || (baseProv.length > 2 && part.includes(baseProv)));
-            });
-
-            if (matchProv) {
-              const provCodeStr = String(matchProv.code);
-              let currentDistricts = districts;
-
-              if (selProvinceCode !== provCodeStr) {
-                setSelProvinceCode(provCodeStr);
-                setValue("city", matchProv.name, { shouldValidate: true });
-                setSelDistrictCode("");
-                setValue("district", "", { shouldValidate: true });
-                setValue("ward", "", { shouldValidate: true });
-                setWards([]);
-
-                try {
-                  const res = await fetch(`https://esgoo.net/api-tinhthanh/2/${provCodeStr}.htm`);
-                  const data = await res.json();
-                  const distList: District[] = (data.data || [])
-                    .map((c: any) => ({ code: Number(c.id), name: c.full_name.replace(/\n/g, "").trim() }))
-                    .sort((a: District, b: District) => a.name.localeCompare(b.name, 'vi'));
-                  setDistricts(distList);
-                  currentDistricts = distList;
-                } catch (e) {
-                  console.error("Lỗi fetch communes:", e);
-                }
-              }
-
-              const matchDist = currentDistricts.find(d => {
-                const baseDist = d.name.replace(/^(Quận|Huyện|Thị xã|Thành phố)\s+/i, "");
-                return nameParts.some((part: string) => part === d.name || part === baseDist || part.includes(d.name) || (baseDist.length > 2 && part.includes(baseDist)));
-              });
-
-              if (matchDist) {
-                const distCodeStr = String(matchDist.code);
-
-                if (selDistrictCode !== distCodeStr || selProvinceCode !== provCodeStr) {
-                  setSelDistrictCode(distCodeStr);
-                  setValue("district", matchDist.name, { shouldValidate: true });
-                  setValue("ward", "", { shouldValidate: true });
-                  setWards([]);
-                }
-              }
-            }
-          }
+          const lat = parseFloat(data[0].lat);
+          const lon = parseFloat(data[0].lon);
+          setValue("latitude", lat, { shouldDirty: true, shouldValidate: true });
+          setValue("longitude", lon, { shouldDirty: true, shouldValidate: true });
 
           setGeocodeStatus("success");
           addToast("Đã lấy tọa độ bản đồ tự động dựa vào địa chỉ của bạn!", "success");
@@ -963,23 +933,16 @@ export default function EditPostPage() {
               </button>
             </div>
 
-            {latitude && longitude && Number(latitude) !== 0 && Number(longitude) !== 0 ? (
-              <>
-                <div className="theme-post-gallery relative z-0 mt-2 h-[180px] sm:h-[220px] w-full shrink-0 overflow-hidden rounded-xl">
-                  <CreatePostMap
-                    latitude={Number(latitude)}
-                    longitude={Number(longitude)}
-                    onChange={(lat, lng) => {
-                      setValue("latitude", lat, { shouldValidate: true });
-                      setValue("longitude", lng, { shouldValidate: true });
-                    }}
-                    onLocationSelect={async (addr, displayName) => {
-                      if (addr) setValue("address", addr, { shouldValidate: true });
-                    }}
-                  />
-                </div>
-              </>
-            ) : null}
+            <div className="theme-post-gallery relative z-0 mt-2 h-[180px] sm:h-[220px] w-full shrink-0 overflow-hidden rounded-xl">
+              <CreatePostMap
+                latitude={Number(latitude) || 0}
+                longitude={Number(longitude) || 0}
+                onChange={(lat, lng) => {
+                  setValue("latitude", lat, { shouldValidate: true });
+                  setValue("longitude", lng, { shouldValidate: true });
+                }}
+              />
+            </div>
             </div>
           </div>
 
