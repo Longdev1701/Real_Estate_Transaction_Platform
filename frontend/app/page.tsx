@@ -32,6 +32,8 @@ import { CompareButton } from "@/components/post/CompareButton";
 import { HomePageSound } from "@/components/home/HomePageSound";
 import { HeroSlideshow } from "@/components/home/HeroSlideshow";
 import { HomeSearchForm } from "@/components/home/HomeSearchForm";
+import { AnimatedHeroContent, AnimatedHeroSearch, AnimatedSection } from "@/components/home/AnimatedSections";
+import { AnimatedCounter } from "@/components/home/AnimatedCounter";
 
 const sectionContainerClass = "mx-auto w-full max-w-[1360px] px-4 sm:px-6 lg:px-8";
 
@@ -121,25 +123,25 @@ export default async function HomePage() {
   const stats = [
     {
       icon: Sparkles,
-      value: formatCompactNumber(homeData?.stats.sellPostCount ?? 0),
+      value: homeData?.stats.sellPostCount ?? 0,
       label: "Bất động sản đang bán",
       color: "theme-public-icon-blue",
     },
     {
       icon: Home,
-      value: formatCompactNumber(homeData?.stats.rentPostCount ?? 0),
+      value: homeData?.stats.rentPostCount ?? 0,
       label: "Bất động sản cho thuê",
       color: "theme-public-icon-violet",
     },
     {
       icon: Building2,
-      value: formatCompactNumber(homeData?.stats.activePostCount ?? 0),
+      value: homeData?.stats.activePostCount ?? 0,
       label: "Tin đang hoạt động",
       color: "theme-public-icon-green",
     },
     {
       icon: UsersRound,
-      value: formatCompactNumber(homeData?.stats.userCount ?? 0),
+      value: homeData?.stats.userCount ?? 0,
       label: "Người dùng trong hệ thống",
       color: "theme-public-icon-orange",
     },
@@ -149,7 +151,7 @@ export default async function HomePage() {
     <div className="pb-14">
       <HomePageSound />
 
-      <section className="relative min-h-[480px] lg:min-h-[560px] overflow-hidden border-b border-[var(--border)]">
+      <section className="relative min-h-[480px] lg:min-h-[560px] overflow-hidden border-b border-[var(--border)] -mt-20 pt-20">
         <div className="absolute inset-0 z-0">
           <HeroSlideshow />
         </div>
@@ -158,7 +160,7 @@ export default async function HomePage() {
         <div className="theme-hero-accent absolute inset-0 z-10" />
 
         <div className={`${sectionContainerClass} relative z-20 flex min-h-[480px] flex-col py-8 lg:min-h-[560px] lg:py-10`}>
-          <div className="max-w-2xl">
+          <AnimatedHeroContent>
             <div className="theme-hero-badge mb-5 inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-[var(--accent)] backdrop-blur">
               <ShieldCheck className="h-4 w-4 text-[var(--accent)]" />
               {"Nền tảng bất động sản TrustEstate"}
@@ -173,15 +175,15 @@ export default async function HomePage() {
             <p className="mt-4 max-w-xl text-sm leading-relaxed text-[var(--secondary-foreground)] sm:text-base sm:leading-8">
               Hệ sinh thái với hơn 100,000+ bất động sản được xác thực. Khám phá ngay không gian sống mơ ước và cơ hội đầu tư an toàn cùng TrustEstate.
             </p>
-          </div>
+          </AnimatedHeroContent>
 
-          <div className="mt-4 mb-12 lg:mb-4 lg:mt-auto">
+          <AnimatedHeroSearch>
             <HomeSearchForm popularLocations={popularLocations} />
-          </div>
+          </AnimatedHeroSearch>
         </div>
       </section>
 
-      <section className={`${sectionContainerClass} relative z-10 -mt-8`}>
+      <AnimatedSection className={`${sectionContainerClass} relative z-10 -mt-8`}>
         <div className="theme-card flex overflow-x-auto snap-x snap-mandatory gap-3 rounded-2xl p-4 backdrop-blur-xl sm:grid sm:grid-cols-2 sm:gap-4 sm:p-5 xl:grid-cols-4">
           {stats.map((stat) => (
             <div key={stat.label} className="min-w-[140px] shrink-0 snap-start flex flex-col sm:flex-row items-center gap-2 sm:gap-4 px-1 sm:px-2 py-2 text-center sm:text-left sm:min-w-0 sm:shrink">
@@ -190,15 +192,17 @@ export default async function HomePage() {
               </span>
 
               <span>
-                <span className="block text-xl sm:text-2xl font-bold text-[var(--foreground)]">{stat.value}</span>
+                <span className="block text-xl sm:text-2xl font-bold text-[var(--foreground)]">
+                  <AnimatedCounter value={stat.value} suffix={stat.value > 1000 ? "+" : ""} />
+                </span>
                 <span className="text-[11px] leading-tight sm:text-sm text-[var(--secondary-foreground)]">{stat.label}</span>
               </span>
             </div>
           ))}
         </div>
-      </section>
+      </AnimatedSection>
 
-      <section className={`${sectionContainerClass} mt-6 sm:mt-8`}>
+      <AnimatedSection className={`${sectionContainerClass} mt-6 sm:mt-8`}>
         <div className="mb-5 flex items-center justify-between gap-4">
           <h2 className="text-2xl font-bold text-[var(--foreground)] sm:text-3xl">
             {"Bất động sản mới nhất"}
@@ -235,10 +239,10 @@ export default async function HomePage() {
             {"Chưa có bài đăng đang hoạt động để hiển thị."}
           </div>
         )}
-      </section>
+      </AnimatedSection>
 
       {homeData && homeData.categories.length > 0 && (
-        <section className={`${sectionContainerClass} mt-6 sm:mt-9`}>
+        <AnimatedSection className={`${sectionContainerClass} mt-6 sm:mt-9`}>
           <div className="mb-5 flex items-center justify-between gap-4">
             <h2 className="text-2xl font-bold text-[var(--foreground)] sm:text-3xl">
               {"Khám phá theo loại hình"}
@@ -281,7 +285,7 @@ export default async function HomePage() {
               );
             })}
           </div>
-        </section>
+        </AnimatedSection>
       )}
 
       <style

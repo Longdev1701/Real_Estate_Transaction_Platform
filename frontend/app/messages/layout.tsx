@@ -600,8 +600,17 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
                           </span>
                         </div>
 
-                        <p className={`line-clamp-1 break-all text-[14px] ${isTyping ? "font-medium text-[var(--accent)]" : "text-[var(--secondary-foreground)]"}`}>
-                          {isTyping ? "Đang nhập..." : formatConversationPreview(lastMessage)}
+                        <p className={`line-clamp-1 break-all text-[14px] flex items-center gap-1.5 ${isTyping ? "font-medium text-[var(--accent)]" : "text-[var(--secondary-foreground)]"}`}>
+                          {isTyping ? (
+                            <>
+                              <span className="italic">Đang nhập</span>
+                              <span className="flex items-center gap-0.5 mt-1">
+                                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--accent)] [animation-delay:0ms]" />
+                                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--accent)] [animation-delay:150ms]" />
+                                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--accent)] [animation-delay:300ms]" />
+                              </span>
+                            </>
+                          ) : formatConversationPreview(lastMessage)}
                         </p>
                         <p className="mt-1 truncate text-xs text-[var(--muted-foreground)]">
                           {conversation.post?.title || "Chưa gắn bất động sản"}

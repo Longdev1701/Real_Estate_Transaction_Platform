@@ -669,7 +669,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
     if (!isAtBottomRef.current && !shouldStickToBottomRef.current) return;
 
     requestAnimationFrame(() => {
-      snapToBottom("auto");
+      snapToBottom(initialPositionSettledRef.current ? "smooth" : "auto");
     });
   }, [messages.length, otherUserTyping]);
 
@@ -1138,10 +1138,20 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                           </div>
                         )}
                       </div>
-                      <div className="flex items-center gap-1 rounded-[24px] rounded-bl-lg bg-[var(--surface-muted)] px-5 py-4">
-                        <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--message-typing-dot)] [animation-delay:0ms]" />
-                        <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--message-typing-dot)] [animation-delay:120ms]" />
-                        <span className="h-2 w-2 animate-bounce rounded-full bg-[var(--message-typing-dot)] [animation-delay:240ms]" />
+                      <div className="flex items-center gap-1.5 rounded-[24px] rounded-bl-lg bg-[var(--surface-muted)] px-5 py-4 shadow-sm border border-[var(--border)]">
+                        {[0, 1, 2].map((i) => (
+                          <motion.span
+                            key={i}
+                            className="h-2 w-2 rounded-full bg-[var(--muted-foreground)]"
+                            animate={{ y: [0, -5, 0] }}
+                            transition={{
+                              duration: 0.6,
+                              repeat: Infinity,
+                              ease: "easeInOut",
+                              delay: i * 0.15,
+                            }}
+                          />
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -1569,8 +1579,9 @@ const MessageBubble = memo(({
       )}
 
       <motion.div
-        initial={message.isHistory ? false : { opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={message.isHistory ? false : { opacity: 0, scale: 0.8, y: 15, originX: isMine ? 1 : 0, originY: 1 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 350, damping: 25 }}
         className={`group/message flex w-full overflow-visible ${isMine ? "justify-end" : "justify-start"} ${isGroupedWithNext ? "mb-2" : "mb-5"
           }`}
       >
@@ -1605,7 +1616,7 @@ const MessageBubble = memo(({
                 className={`relative overflow-hidden ${message.messageType === "IMAGE"
                   ? ""
                   : `px-4 py-3.5 ${isMine
-                    ? "bg-[image:var(--message-own-bg)] text-[var(--message-own-foreground)]"
+                    ? "bg-gradient-to-br from-[var(--accent)] to-[#4facfe] text-white shadow-md border border-transparent"
                     : "bg-[var(--message-other-bg)] text-[var(--message-other-foreground)]"
                   }`
                   } ${isMine

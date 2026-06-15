@@ -37,6 +37,20 @@ import {
 } from "@/lib/posts";
 import { PostCard } from "./PostCard";
 import { PostFilter } from "./PostFilter";
+import { motion, Variants } from "framer-motion";
+
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 }
+  }
+};
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+};
 
 const PAGE_SIZE = 15;
 const POST_LIST_CACHE_TTL_MS = 2 * 60 * 1000;
@@ -526,11 +540,21 @@ export function PostList() {
           )}
 
           {isLoading ? (
-            <div className="glass-card flex min-h-[280px] items-center justify-center rounded-3xl">
-              <div className="inline-flex items-center gap-3 text-[var(--muted-foreground)]">
-                <LoaderCircle className="h-5 w-5 animate-spin text-[var(--accent)]" />
-                Đang tải bài đăng...
-              </div>
+            <div className="space-y-5">
+              {[1, 2, 3].map((index) => (
+                <div key={index} className="glass-card overflow-hidden rounded-2xl p-4 md:p-5">
+                  <div className="flex items-start gap-4">
+                    <div className="theme-skeleton h-11 w-11 shrink-0 rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <div className="theme-skeleton h-4 w-1/3 rounded" />
+                      <div className="theme-skeleton h-3 w-1/4 rounded" />
+                    </div>
+                  </div>
+                  <div className="theme-skeleton mt-4 h-6 w-3/4 rounded" />
+                  <div className="theme-skeleton mt-2 h-4 w-1/2 rounded" />
+                  <div className="theme-skeleton mt-5 aspect-[4/3] w-full rounded-xl md:aspect-auto md:h-64" />
+                </div>
+              ))}
             </div>
           ) : posts.length === 0 ? (
             <div className="glass-card flex min-h-[280px] items-center justify-center p-10 text-center text-[var(--muted-foreground)]">
@@ -538,13 +562,18 @@ export function PostList() {
             </div>
           ) : (
             <>
-              <div className="space-y-5">
+              <motion.div 
+                variants={containerVariants}
+                initial="hidden"
+                animate="show"
+                className="space-y-5"
+              >
                 {posts.map((post, index) => (
-                  <div key={post.id}>
+                  <motion.div key={post.id} variants={itemVariants}>
                     <PostCard post={post} isFirstPost={index === 0} />
-                  </div>
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
 
               <div ref={loadMoreRef} className="flex min-h-16 items-center justify-center">
                 {isLoadingMore ? (
