@@ -43,13 +43,13 @@ const containerVariants: Variants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
-    transition: { staggerChildren: 0.1 }
+    transition: { staggerChildren: 0.03 } // Tăng tốc độ xuất hiện liên tiếp (stagger) từ 0.1s xuống 0.03s
   }
 };
-
+ 
 const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+  hidden: { opacity: 0, y: 12 }, // Giảm khoảng cách trượt từ 20px xuống 12px để mượt hơn
+  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 400, damping: 28 } } // Tăng lực lò xo giúp chuyển động nhanh, dứt khoát
 };
 
 const PAGE_SIZE = 15;
@@ -564,7 +564,7 @@ export function PostList() {
             <>
               <motion.div 
                 variants={containerVariants}
-                initial="hidden"
+                initial={isRestored ? "show" : "hidden"}
                 animate="show"
                 className="space-y-5"
               >

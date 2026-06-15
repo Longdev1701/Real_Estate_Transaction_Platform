@@ -426,9 +426,8 @@
   }
 
   .glass-panel {
-    background: var(--header);
+    background: color-mix(in srgb, var(--header) 88%, transparent);
     border-bottom: 1px solid var(--border);
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.45) inset;
     @apply backdrop-blur-md;
   }
 
@@ -1294,6 +1293,7 @@
 
   .theme-modal-backdrop {
     background: var(--overlay);
+    z-index: 3000 !important;
   }
 
   .theme-media-backdrop {
