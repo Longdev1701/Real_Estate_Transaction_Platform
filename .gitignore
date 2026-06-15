@@ -8,5 +8,6 @@ build/
 coverage/
 *.log
 uploads/
+frontend/tsconfig.tsbuildinfo
 
 /generated/prisma

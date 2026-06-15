@@ -7,6 +7,8 @@ import { sendSuccess } from "../utils/response.js";
 import { AppError } from "../middlewares/error.middleware.js";
 import { createNotification } from "../utils/notification.helper.js";
 import { createSystemLog } from "../utils/system-log.helper.js";
+import { invalidatePostReadCaches } from "../posts/post-cache.service.js";
+import { getPostStatusForAppealDecision } from "./report.service.js";
 
 const createReportSchema = z.object({
   postId: z.string().trim().min(1),
@@ -248,6 +250,7 @@ export const resolveReport = async (req: Request, res: Response, next: NextFunct
         where: { id: report.postId },
         data: { status: PostStatus.BANNED },
       });
+      await invalidatePostReadCaches(report.postId);
 
       void createNotification({
         userId: updatedReport.post.author.id,
@@ -479,8 +482,7 @@ export const reviewReportAppeal = async (
       throw new AppError("This report does not have a pending appeal.", 400);
     }
 
-    const nextPostStatus =
-      decision === "APPROVE" ? PostStatus.ACTIVE : PostStatus.BANNED;
+    const nextPostStatus = getPostStatusForAppealDecision(decision);
 
     const updatedReport = await prisma.$transaction(async (tx) => {
       await tx.propertyPost.update({
@@ -529,6 +531,7 @@ export const reviewReportAppeal = async (
         },
       });
     });
+    await invalidatePostReadCaches(report.postId);
 
     await createSystemLog({
       module: "REPORT",

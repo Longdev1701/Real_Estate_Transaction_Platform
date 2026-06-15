@@ -71,7 +71,7 @@ type PublicUser = Pick<
   "id" | "email" | "fullName" | "phone" | "address" | "bio" | "role" | "status" | "avatarUrl"
 >;
 
-const buildPublicUser = (user: User): PublicUser => ({
+export const buildPublicUser = (user: User): PublicUser => ({
   id: user.id,
   email: user.email,
   fullName: user.fullName,
