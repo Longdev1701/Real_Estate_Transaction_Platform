@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 
 export function UserMenu() {
   const { user, logout, hasHydrated, isLoadingUser } = useAuthStore();
@@ -80,49 +81,57 @@ export function UserMenu() {
         <span className="hidden font-medium md:block">{user.name}</span>
       </button>
 
-      {isOpen ? (
-        <div className="theme-popover absolute right-0 top-full z-[140] mt-2 w-60 flex flex-col overflow-hidden rounded-2xl py-2 shadow-lg">
-          <Link
-            href="/profile/posts"
-            className="theme-dropdown-item flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-[var(--surface-muted)]"
-            onClick={() => setIsOpen(false)}
+      <AnimatePresence>
+        {isOpen ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: -10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -10 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="theme-popover absolute right-0 top-full z-[140] mt-2 w-60 flex flex-col overflow-hidden rounded-2xl py-2 shadow-lg origin-top-right"
           >
-            <UserIcon size={16} />
-            <span>Hồ sơ</span>
-          </Link>
-
-          <Link
-            href="/profile/saved"
-            className="theme-dropdown-item flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-[var(--surface-muted)]"
-            onClick={() => setIsOpen(false)}
-          >
-            <Bookmark size={16} />
-            <span>Bài đăng đã lưu</span>
-          </Link>
-          {user.role === "ADMIN" ? (
             <Link
-              href="/admin"
-              className="theme-dropdown-item flex items-center gap-3 px-4 py-2.5 text-[var(--accent)] transition-colors hover:bg-[var(--surface-muted)]"
+              href="/profile/posts"
+              className="theme-dropdown-item flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-[var(--surface-muted)]"
               onClick={() => setIsOpen(false)}
             >
-              <LayoutDashboard size={16} />
-              <span>Quản trị</span>
+              <UserIcon size={16} />
+              <span>Hồ sơ</span>
             </Link>
-          ) : null}
 
-          <div className="theme-divider my-2 h-px" />
+            <Link
+              href="/profile/saved"
+              className="theme-dropdown-item flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-[var(--surface-muted)]"
+              onClick={() => setIsOpen(false)}
+            >
+              <Bookmark size={16} />
+              <span>Bài đăng đã lưu</span>
+            </Link>
+            {user.role === "ADMIN" ? (
+              <Link
+                href="/admin"
+                className="theme-dropdown-item flex items-center gap-3 px-4 py-2.5 text-[var(--accent)] transition-colors hover:bg-[var(--surface-muted)]"
+                onClick={() => setIsOpen(false)}
+              >
+                <LayoutDashboard size={16} />
+                <span>Quản trị</span>
+              </Link>
+            ) : null}
 
-          <button
-            type="button"
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-            className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[var(--badge-danger-text)] transition-colors hover:bg-[var(--badge-danger-bg)]"
-          >
-            <LogOut size={16} />
-            <span>{isLoggingOut ? "Đang đăng xuất..." : "Đăng xuất"}</span>
-          </button>
-        </div>
-      ) : null}
+            <div className="theme-divider my-2 h-px" />
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-[var(--badge-danger-text)] transition-colors hover:bg-[var(--badge-danger-bg)]"
+            >
+              <LogOut size={16} />
+              <span>{isLoggingOut ? "Đang đăng xuất..." : "Đăng xuất"}</span>
+            </button>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }

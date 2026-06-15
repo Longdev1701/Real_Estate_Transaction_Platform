@@ -18,7 +18,22 @@ export function Header() {
   const socket = useSocketStore((state) => state.socket);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
+  const [isScrolled, setIsScrolled] = useState(false);
   const userId = user?.id ?? null;
+
+  useEffect(() => {
+    const scrollContainer = document.getElementById("main-scroll-container");
+    if (!scrollContainer) return;
+
+    const handleScroll = () => {
+      setIsScrolled(scrollContainer.scrollTop > 20);
+    };
+
+    scrollContainer.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll(); // Check initial scroll
+
+    return () => scrollContainer.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
     if (!hasHydrated || isLoadingUser || !user || !accessToken) {
@@ -122,7 +137,7 @@ export function Header() {
   }
 
   return (
-    <header className="fixed top-0 z-[120] w-full overflow-visible glass-panel">
+    <header className={`fixed top-0 z-[120] w-full overflow-visible transition-all duration-300 ${isScrolled ? "glass-panel border-b border-[var(--border)] shadow-sm" : "bg-transparent"}`}>
       <div className="container mx-auto flex h-20 items-center justify-between overflow-visible px-4 lg:px-8">
         <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center gap-2 text-2xl font-bold tracking-wider text-[var(--foreground)]">
