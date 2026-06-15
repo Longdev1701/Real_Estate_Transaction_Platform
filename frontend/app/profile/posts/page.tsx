@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { AxiosError } from "axios";
 import { BadgeCheck, LoaderCircle, Star, Mail, Phone, CalendarDays, MessageCircle, MapPin } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 import { ProfilePostCard } from "@/components/post/ProfilePostCard";
 import { buildPostQuery, defaultPostFilter, type Post, type PostAuthor, type PostListData } from "@/lib/posts";
@@ -14,7 +15,7 @@ import { useAuthStore } from "@/stores/auth.store";
 import { confirm } from "@/stores/confirm.store";
 import { toast } from "@/stores/toast.store";
 
-type PostViewTab = "ALL" | "SELL" | "RENT" | "SOLD" | "BANNED";
+type PostViewTab = "ALL" | "SELL" | "RENT" | "BANNED";
 
 export default function ProfilePostsPage() {
   const searchParams = useSearchParams();
@@ -121,7 +122,6 @@ export default function ProfilePostsPage() {
     () => myPosts.filter((post) => post.postType === "RENT" && post.status !== "BANNED").length,
     [myPosts],
   );
-  const soldCount = useMemo(() => myPosts.filter((post) => post.status === "SOLD").length, [myPosts]);
   const bannedCount = useMemo(
     () => myPosts.filter((post) => post.status === "BANNED").length,
     [myPosts],
@@ -133,8 +133,6 @@ export default function ProfilePostsPage() {
         return myPosts.filter((post) => post.postType === "SELL" && post.status !== "BANNED");
       case "RENT":
         return myPosts.filter((post) => post.postType === "RENT" && post.status !== "BANNED");
-      case "SOLD":
-        return myPosts.filter((post) => post.status === "SOLD");
       case "BANNED":
         return myPosts.filter((post) => post.status === "BANNED");
       case "ALL":
@@ -149,8 +147,6 @@ export default function ProfilePostsPage() {
         return "Chưa có bài đăng bán nào.";
       case "RENT":
         return "Chưa có bài đăng cho thuê nào.";
-      case "SOLD":
-        return "Chưa có bài đăng nào đã bán hoặc đã cho thuê.";
       case "BANNED":
         return "Bạn chưa có bài đăng nào bị khóa.";
       case "ALL":
@@ -301,14 +297,17 @@ export default function ProfilePostsPage() {
 
         <div className="relative -mt-16 flex flex-col items-start justify-between gap-6 px-6 pb-8 md:-mt-24 md:flex-row md:items-end md:px-10">
           <div className="flex w-full flex-col items-start gap-6 md:w-auto md:flex-row md:items-end">
-            <div className="theme-avatar-ring relative h-32 w-32 shrink-0 overflow-hidden rounded-full border-4 md:h-44 md:w-44">
-              {avatarUrl ? (
-                <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-5xl font-bold text-[var(--primary-foreground)]">
-                  {displayName.charAt(0).toUpperCase()}
-                </div>
-              )}
+            <div className="relative shrink-0 z-10 md:mb-0 mb-4">
+              <div className="absolute inset-0 rounded-full bg-[var(--accent)] blur-md opacity-30 transition-opacity hover:opacity-50"></div>
+              <div className="relative h-32 w-32 md:h-44 md:w-44 shrink-0 overflow-hidden rounded-full border-[6px] border-[var(--surface)] bg-[var(--surface-muted)] text-3xl md:text-5xl font-bold text-[var(--muted-foreground)] shadow-xl transition-transform hover:scale-[1.02]">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-[var(--muted-foreground)]">
+                    {displayName.charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="w-full pb-2">
@@ -375,33 +374,45 @@ export default function ProfilePostsPage() {
         </div>
       </div>
 
-      <div className="glass-panel mb-8 overflow-hidden rounded-2xl">
-        <div className="flex w-full hide-scrollbar">
-          <button
-            onClick={() => setMainTab("posts")}
-            className={`flex-1 md:flex-none whitespace-nowrap border-b-2 px-2 py-3.5 sm:px-6 sm:py-4 text-sm sm:text-base font-medium transition-colors ${
-              mainTab === "posts"
-                ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]"
-                : "border-transparent text-[var(--muted-foreground)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
-            }`}
-          >
-            {isOwnProfile ? "Bài đăng của tôi" : "Bài đăng"}
-          </button>
-          <button
-            onClick={() => setMainTab("about")}
-            className={`flex-1 md:flex-none whitespace-nowrap border-b-2 px-2 py-3.5 sm:px-6 sm:py-4 text-sm sm:text-base font-medium transition-colors ${
-              mainTab === "about"
-                ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]"
-                : "border-transparent text-[var(--muted-foreground)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
-            }`}
-          >
-            Giới thiệu
-          </button>
+      <div className="glass-panel mb-8 overflow-hidden rounded-2xl p-1.5 shadow-sm">
+        <div className="flex w-full gap-2 overflow-x-auto hide-scrollbar">
+          {[
+            { id: "posts", label: isOwnProfile ? "Bài đăng của tôi" : "Bài đăng" },
+            { id: "about", label: "Giới thiệu" },
+          ].map((tab) => {
+            const isActive = mainTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setMainTab(tab.id as "posts" | "about")}
+                className={`relative flex-1 md:flex-none whitespace-nowrap px-4 py-3 sm:px-8 sm:py-3.5 text-sm sm:text-base font-medium transition-colors z-10 ${
+                  isActive ? "text-[var(--accent)]" : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                }`}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="mainTabIndicatorPosts"
+                    className="absolute inset-0 z-[-1] rounded-xl bg-[var(--accent-soft)] border border-[var(--accent-border)] shadow-sm"
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  />
+                )}
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
+      <AnimatePresence mode="wait">
       {mainTab === "posts" && (
-        <div className="glass-card p-6 md:p-8">
+        <motion.div
+          key="posts"
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -15 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className="glass-card p-6 md:p-8"
+        >
           <div className="mb-8 flex flex-col gap-6 md:flex-row-reverse md:items-center md:justify-between">
             {isOwnProfile ? (
               <div className="flex shrink-0">
@@ -411,12 +422,11 @@ export default function ProfilePostsPage() {
               </div>
             ) : null}
 
-            <div className="flex w-full gap-3 overflow-x-auto pb-2 hide-scrollbar md:pb-0">
+            <div className="flex w-full gap-2 overflow-x-auto p-1 hide-scrollbar md:pb-0 bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-sm">
               {[
                 { key: "ALL" as const, label: "Tất cả", count: myPosts.length },
                 { key: "SELL" as const, label: "Đang bán", count: saleCount },
                 { key: "RENT" as const, label: "Đang cho thuê", count: rentCount },
-                { key: "SOLD" as const, label: "Đã bán/cho thuê", count: soldCount },
                 ...(isOwnProfile ? [{ key: "BANNED" as const, label: "Bị khóa", count: bannedCount }] : []),
               ].map((tab) => {
                 const isActive = activeTab === tab.key;
@@ -424,12 +434,19 @@ export default function ProfilePostsPage() {
                   <button
                     key={tab.key}
                     onClick={() => setActiveTab(tab.key)}
-                    className={`whitespace-nowrap rounded-full border px-5 py-2 text-sm font-medium transition-colors ${
+                    className={`relative whitespace-nowrap rounded-xl px-5 py-2.5 text-sm font-medium transition-colors z-10 ${
                       isActive
-                        ? "border-[var(--accent-border)] bg-[var(--accent-soft)] text-[var(--foreground)]"
-                        : "border-[var(--border)] bg-transparent text-[var(--muted-foreground)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
+                        ? "text-[var(--accent)]"
+                        : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
                     }`}
                   >
+                    {isActive && (
+                      <motion.div
+                        layoutId="subTabIndicatorPosts"
+                        className="absolute inset-0 z-[-1] rounded-xl bg-[var(--accent-soft)] border border-[var(--accent-border)] shadow-sm"
+                        transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                      />
+                    )}
                     {tab.label} ({tab.count})
                   </button>
                 );
@@ -455,22 +472,44 @@ export default function ProfilePostsPage() {
               {emptyStateMessage}
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
-              {visiblePosts.map((post) => (
-                <ProfilePostCard 
-                  key={post.id} 
-                  post={post} 
-                  isOwnProfile={isOwnProfile}
-                  onDelete={isOwnProfile ? handleDeletePost : undefined}
-                />
-              ))}
-            </div>
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3"
+            >
+              <AnimatePresence mode="popLayout">
+                {visiblePosts.map((post, i) => (
+                  <motion.div
+                    key={post.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9, y: -20 }}
+                    transition={{ duration: 0.3, delay: i * 0.05 }}
+                  >
+                    <ProfilePostCard 
+                      post={post} 
+                      isOwnProfile={isOwnProfile}
+                      onDelete={isOwnProfile ? handleDeletePost : undefined}
+                    />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </motion.div>
           )}
-        </div>
+        </motion.div>
       )}
 
       {mainTab === "about" && (
-        <div className="glass-card p-6 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <motion.div 
+          key="about"
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -15 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className="glass-card p-6 md:p-8"
+        >
           <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
             <div className="space-y-6 md:col-span-2">
               <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6">
@@ -515,8 +554,9 @@ export default function ProfilePostsPage() {
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
     </div>
   );
 }

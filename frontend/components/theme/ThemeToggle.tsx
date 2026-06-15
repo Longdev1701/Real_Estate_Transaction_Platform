@@ -1,83 +1,56 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Moon, Sun, SunMoon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Moon, Sun } from "lucide-react";
 
-import { useTheme, type ThemePreference } from "@/components/theme/ThemeProvider";
-
-const themeOptions: Array<{
-  value: ThemePreference;
-  label: string;
-  icon: typeof SunMoon;
-}> = [
-  { value: "default", label: "Mặc định", icon: SunMoon },
-  { value: "light", label: "Sáng", icon: Sun },
-  { value: "dark", label: "Tối", icon: Moon },
-];
-
-const getActiveIcon = (themePreference: ThemePreference) => {
-  if (themePreference === "light") return Sun;
-  if (themePreference === "dark") return Moon;
-  return SunMoon;
-};
+import { useTheme } from "@/components/theme/ThemeProvider";
 
 export function ThemeToggle() {
-  const { themePreference, setThemePreference } = useTheme();
-  const [isOpen, setIsOpen] = useState(false);
-  const popoverRef = useRef<HTMLDivElement | null>(null);
-  const ActiveIcon = getActiveIcon(themePreference);
+  const { resolvedTheme, setThemePreference } = useTheme();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    setMounted(true);
   }, []);
 
-  return (
-    <div className="relative z-[130]" ref={popoverRef}>
-      <button
-        type="button"
-        onClick={() => setIsOpen((current) => !current)}
-        className="rounded-xl p-2 text-[var(--muted-foreground)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--foreground)]"
-        aria-label="Chọn chế độ nền"
-      >
-        <ActiveIcon size={20} />
+  if (!mounted) {
+    return (
+      <button className="flex h-10 w-10 items-center justify-center rounded-full text-[var(--muted-foreground)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)]">
+        <Sun size={20} className="opacity-0" />
       </button>
+    );
+  }
 
-      {isOpen ? (
-        <div className="theme-popover absolute right-0 top-full z-[140] mt-2 w-44 rounded-2xl p-2">
-          <div className="grid gap-1">
-            {themeOptions.map((option) => {
-              const Icon = option.icon;
-              const selected = themePreference === option.value;
+  const isDark = resolvedTheme === "dark";
 
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => {
-                    setThemePreference(option.value);
-                    setIsOpen(false);
-                  }}
-                  className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition ${
-                    selected
-                      ? "theme-usermenu-option-active"
-                      : "text-[var(--secondary-foreground)] hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  <span>{option.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      ) : null}
-    </div>
+  const toggleTheme = () => {
+    setThemePreference(isDark ? "light" : "dark");
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={toggleTheme}
+      className="group relative flex h-10 w-10 items-center justify-center rounded-full bg-transparent hover:bg-[var(--surface-muted)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors duration-200"
+      aria-label="Chuyển chế độ sáng tối"
+    >
+      <div className="relative flex h-full w-full items-center justify-center">
+        {/* Sun icon for Light Mode */}
+        <Sun 
+          size={20} 
+          className={`absolute transition-all duration-300 ${
+            isDark ? "rotate-90 scale-0 opacity-0" : "rotate-0 scale-100 opacity-100"
+          }`} 
+        />
+        
+        {/* Moon icon for Dark Mode */}
+        <Moon 
+          size={20} 
+          className={`absolute transition-all duration-300 ${
+            isDark ? "rotate-0 scale-100 opacity-100" : "-rotate-90 scale-0 opacity-0"
+          }`} 
+        />
+      </div>
+    </button>
   );
 }

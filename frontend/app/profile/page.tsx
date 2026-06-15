@@ -22,6 +22,7 @@ import { normalizeUser } from "@/components/auth/AuthSessionProvider";
 import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth.store";
 import { useToastStore } from "@/stores/toast.store";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function ProfileSettingsPage() {
   const { user, accessToken, hasHydrated, isLoadingUser, setUser } = useAuthStore();
@@ -190,46 +191,47 @@ export default function ProfileSettingsPage() {
             <ArrowLeft className="h-5 w-5" />
             <span className="hidden text-sm font-medium lg:inline">Quay lại</span>
           </Link>
-          <div className="flex flex-1 overflow-x-auto gap-2 no-scrollbar lg:block lg:space-y-1 lg:overflow-visible">
-            <button
-              onClick={(e) => handleTabClick("personal", e)}
-            className={`flex-shrink-0 flex items-center gap-2 rounded-xl px-3 py-2.5 lg:w-full lg:gap-3 lg:px-4 lg:py-3 text-sm font-medium transition-all ${
-              activeTab === "personal"
-                ? "bg-[var(--accent)] text-[var(--primary-foreground)] shadow-[var(--shadow-glow)]"
-                : "text-[var(--muted-foreground)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
-            }`}
-          >
-            <UserIcon className="h-4 w-4 lg:h-5 lg:w-5" />
-            Thông tin cá nhân
-          </button>
-          <button
-            onClick={(e) => handleTabClick("security", e)}
-            className={`flex-shrink-0 flex items-center gap-2 rounded-xl px-3 py-2.5 lg:w-full lg:gap-3 lg:px-4 lg:py-3 text-sm font-medium transition-all ${
-              activeTab === "security"
-                ? "bg-[var(--accent)] text-[var(--primary-foreground)] shadow-[var(--shadow-glow)]"
-                : "text-[var(--muted-foreground)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
-            }`}
-          >
-            <Lock className="h-4 w-4 lg:h-5 lg:w-5" />
-            Đổi mật khẩu
-          </button>
-          <button
-            onClick={(e) => handleTabClick("notifications", e)}
-            className={`flex-shrink-0 flex items-center gap-2 rounded-xl px-3 py-2.5 lg:w-full lg:gap-3 lg:px-4 lg:py-3 text-sm font-medium transition-all ${
-              activeTab === "notifications"
-                ? "bg-[var(--accent)] text-[var(--primary-foreground)] shadow-[var(--shadow-glow)]"
-                : "text-[var(--muted-foreground)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
-            }`}
-          >
-              <Bell className="h-4 w-4 lg:h-5 lg:w-5" />
-              Cài đặt thông báo
-            </button>
+          <div className="flex flex-1 overflow-x-auto gap-2 no-scrollbar lg:flex-col lg:space-y-1 lg:overflow-visible">
+            {[
+              { id: "personal", icon: UserIcon, label: "Thông tin cá nhân" },
+              { id: "security", icon: Lock, label: "Đổi mật khẩu" },
+              { id: "notifications", icon: Bell, label: "Cài đặt thông báo" }
+            ].map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={(e) => handleTabClick(tab.id, e)}
+                  className={`relative flex-shrink-0 flex items-center gap-2 rounded-xl px-3 py-2.5 lg:w-full lg:gap-3 lg:px-4 lg:py-3 text-sm font-medium transition-colors ${
+                    isActive ? "text-[var(--primary-foreground)]" : "text-[var(--muted-foreground)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)]"
+                  }`}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="active-tab"
+                      className="absolute inset-0 rounded-xl bg-[var(--accent)] shadow-[var(--shadow-glow)]"
+                      transition={{ type: "spring", stiffness: 350, damping: 30 }}
+                    />
+                  )}
+                  <tab.icon className="relative z-10 h-4 w-4 lg:h-5 lg:w-5" />
+                  <span className="relative z-10">{tab.label}</span>
+                </button>
+              );
+            })}
           </div>
         </aside>
 
-        <div className="glass-panel min-h-[600px] rounded-2xl p-4 sm:p-6 lg:p-8">
-          {activeTab === "personal" && (
-            <div className="animate-in space-y-8 fade-in slide-in-from-bottom-4 duration-500">
+        <div className="glass-panel min-h-[600px] rounded-2xl p-4 sm:p-6 lg:p-8 overflow-hidden">
+          <AnimatePresence mode="wait">
+            {activeTab === "personal" && (
+              <motion.div
+                key="personal"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+                className="space-y-8"
+              >
               <div className="flex items-center justify-between border-b border-[var(--border)] pb-6">
                 <div>
                   <h2 className="text-xl font-semibold text-[var(--foreground)]">
@@ -246,11 +248,12 @@ export default function ProfileSettingsPage() {
                 {/* Khối Header: Avatar + Form Cơ bản */}
                 <div className="flex flex-col sm:flex-row items-center sm:items-center gap-8 sm:gap-10 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 sm:p-8 shadow-sm">
                   {/* Left: Avatar */}
-                  <div className="relative shrink-0" ref={avatarMenuRef}>
+                  <div className="relative shrink-0 z-10" ref={avatarMenuRef}>
+                    <div className="absolute inset-0 rounded-full bg-[var(--accent)] blur-md opacity-20 transition-opacity hover:opacity-40"></div>
                     <button
                       type="button"
                       onClick={() => setIsAvatarMenuOpen(!isAvatarMenuOpen)}
-                      className="group relative flex h-28 w-28 sm:h-32 sm:w-32 items-center justify-center overflow-hidden rounded-full border-4 border-[var(--surface-muted)] text-3xl sm:text-4xl font-bold text-[var(--muted-foreground)] focus:outline-none focus:ring-4 focus:ring-[var(--accent-soft)] shadow-md transition-all hover:border-[var(--accent-soft)] hover:scale-[1.02]"
+                      className="group relative flex h-28 w-28 sm:h-32 sm:w-32 items-center justify-center overflow-hidden rounded-full border-[6px] border-[var(--surface-muted)] bg-[var(--surface-muted)] text-3xl sm:text-4xl font-bold text-[var(--muted-foreground)] focus:outline-none focus:ring-4 focus:ring-[var(--accent-soft)] shadow-md transition-transform hover:scale-[1.02]"
                     >
                       {user.avatarUrl ? (
                         <img
@@ -449,11 +452,18 @@ export default function ProfileSettingsPage() {
                   </button>
                 </div>
               </form>
-            </div>
+            </motion.div>
           )}
 
-          {activeTab === "security" && (
-            <div className="animate-in space-y-8 fade-in slide-in-from-bottom-4 duration-500">
+            {activeTab === "security" && (
+              <motion.div
+                key="security"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+                className="space-y-8"
+              >
               <div className="border-b border-[var(--border)] pb-6">
                 <h2 className="text-xl font-semibold text-[var(--foreground)]">
                   Đổi mật khẩu
@@ -527,11 +537,18 @@ export default function ProfileSettingsPage() {
                   </button>
                 </div>
               </form>
-            </div>
+              </motion.div>
           )}
 
-          {activeTab === "notifications" && (
-            <div className="animate-in space-y-8 fade-in slide-in-from-bottom-4 duration-500">
+            {activeTab === "notifications" && (
+              <motion.div
+                key="notifications"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+                className="space-y-8"
+              >
               <div className="border-b border-[var(--border)] pb-6">
                 <h2 className="text-xl font-semibold text-[var(--foreground)]">
                   Cài đặt thông báo
@@ -555,12 +572,14 @@ export default function ProfileSettingsPage() {
                     </p>
                   </div>
                   <label className="relative inline-flex cursor-pointer items-center">
-                    <input
-                      type="checkbox"
-                      className="peer sr-only"
-                      defaultChecked
-                    />
-                    <div className="peer h-6 w-11 rounded-full bg-[var(--surface-muted)] after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-[var(--border)] after:bg-[var(--surface)] after:transition-all after:content-[''] peer-checked:bg-[var(--accent)] peer-checked:after:translate-x-full peer-checked:after:border-[var(--primary-foreground)] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[var(--accent-border)]" />
+                    <input type="checkbox" className="peer sr-only" defaultChecked />
+                    <div className="peer relative h-7 w-12 rounded-full bg-[var(--surface-muted)] transition-colors peer-checked:bg-[var(--accent)] peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[var(--accent-soft)]">
+                      <motion.div
+                        layout
+                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                        className="absolute bottom-1 left-1 h-5 w-5 rounded-full bg-[var(--surface)] shadow-md peer-checked:translate-x-5"
+                      />
+                    </div>
                   </label>
                 </div>
 
@@ -575,12 +594,19 @@ export default function ProfileSettingsPage() {
                   </div>
                   <label className="relative inline-flex cursor-pointer items-center">
                     <input type="checkbox" className="peer sr-only" />
-                    <div className="peer h-6 w-11 rounded-full bg-[var(--surface-muted)] after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-[var(--border)] after:bg-[var(--surface)] after:transition-all after:content-[''] peer-checked:bg-[var(--accent)] peer-checked:after:translate-x-full peer-checked:after:border-[var(--primary-foreground)] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[var(--accent-border)]" />
+                    <div className="peer relative h-7 w-12 rounded-full bg-[var(--surface-muted)] transition-colors peer-checked:bg-[var(--accent)] peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[var(--accent-soft)]">
+                      <motion.div
+                        layout
+                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                        className="absolute bottom-1 left-1 h-5 w-5 rounded-full bg-[var(--surface)] shadow-md peer-checked:translate-x-5"
+                      />
+                    </div>
                   </label>
                 </div>
               </div>
-            </div>
-          )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
@@ -594,11 +620,11 @@ export default function ProfileSettingsPage() {
           </button>
           <div className="relative max-w-2xl max-h-[80vh] w-full flex items-center justify-center" onClick={e => e.stopPropagation()}>
              {user?.avatarUrl ? (
-                <img src={user.avatarUrl} alt="Avatar" className="w-auto max-h-[80vh] object-contain rounded-lg shadow-2xl" />
+                <motion.img initial={{ scale: 0.9 }} animate={{ scale: 1 }} src={user.avatarUrl} alt="Avatar" className="w-auto max-h-[80vh] object-contain rounded-lg shadow-2xl shadow-[var(--accent)/20]" />
              ) : (
-                <div className="flex h-64 w-64 items-center justify-center rounded-full bg-[var(--surface-muted)] text-7xl font-bold text-[var(--muted-foreground)] shadow-2xl">
+                <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="flex h-64 w-64 items-center justify-center rounded-full bg-[var(--surface-muted)] text-7xl font-bold text-[var(--muted-foreground)] shadow-2xl shadow-[var(--accent)/20]">
                    {(user?.fullName || user?.name || "U").charAt(0).toUpperCase()}
-                </div>
+                </motion.div>
              )}
           </div>
         </div>
