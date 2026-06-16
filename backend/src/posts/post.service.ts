@@ -615,11 +615,16 @@ export const getPosts = async (
   return data;
 };
 
-export const getPostById = async (id: string, user?: AuthenticatedUser) => {
+export const getPostById = async (
+  id: string,
+  user?: AuthenticatedUser,
+  options: { includeRelated?: boolean } = {},
+) => {
+  const includeRelated = options.includeRelated !== false;
   const cacheKey = buildPostDetailCacheKey(id);
   let cachedBase: { post: any; relatedPosts: any[] } | null = null;
 
-  if (redisClient?.isOpen) {
+  if (includeRelated && redisClient?.isOpen) {
     try {
       const cachedValue = await redisClient.get(cacheKey);
       if (cachedValue) {
@@ -628,7 +633,7 @@ export const getPostById = async (id: string, user?: AuthenticatedUser) => {
     } catch (err) {
       console.warn("Failed to read Redis cache key:", err);
     }
-  } else {
+  } else if (includeRelated) {
     cachedBase = getLocalPostDetailCache<typeof cachedBase>(cacheKey);
   }
 
@@ -673,7 +678,7 @@ export const getPostById = async (id: string, user?: AuthenticatedUser) => {
     throw new AppError("Post not found.", 404);
   }
 
-  // Fetch saved status and related posts in parallel to minimize network latency overhead
+  // Fetch user-specific status and optional related posts in parallel.
   const [isSavedResult, relatedPostsRaw, latestResolvedReport] = await Promise.all([
     user
       ? prisma.savedPost.findUnique({
@@ -686,17 +691,19 @@ export const getPostById = async (id: string, user?: AuthenticatedUser) => {
           select: { id: true },
         })
       : null,
-    prisma.propertyPost.findMany({
-      where: {
-        status: PostStatus.ACTIVE,
-        city: post.city,
-        propertyType: post.propertyType,
-        id: { not: id },
-      },
-      select: relatedPostSelect,
-      orderBy: { createdAt: "desc" },
-      take: 3,
-    }),
+    includeRelated
+      ? prisma.propertyPost.findMany({
+          where: {
+            status: PostStatus.ACTIVE,
+            city: post.city,
+            propertyType: post.propertyType,
+            id: { not: id },
+          },
+          select: relatedPostSelect,
+          orderBy: { createdAt: "desc" },
+          take: 3,
+        })
+      : Promise.resolve([]),
     post.status === PostStatus.BANNED && user && canManagePost(user, post.authorId)
       ? prisma.report.findFirst({
           where: {
@@ -727,7 +734,7 @@ export const getPostById = async (id: string, user?: AuthenticatedUser) => {
   }));
 
   // Only cache ACTIVE posts to ensure real-time status changes and security checks
-  if (post.status === PostStatus.ACTIVE) {
+  if (includeRelated && post.status === PostStatus.ACTIVE) {
     const cacheData = { post, relatedPosts };
     if (redisClient?.isOpen) {
       try {
