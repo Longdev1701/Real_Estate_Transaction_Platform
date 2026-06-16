@@ -205,6 +205,21 @@ export default function PostDetailPage() {
   }, []);
 
   useEffect(() => {
+    const scrollToTop = () => {
+      document.getElementById("main-scroll-container")?.scrollTo({ top: 0 });
+      window.scrollTo({ top: 0 });
+    };
+
+    const frame = window.requestAnimationFrame(scrollToTop);
+    const timeout = window.setTimeout(scrollToTop, 80);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timeout);
+    };
+  }, [params.id]);
+
+  useEffect(() => {
     let isMounted = true;
 
     const fetchPost = async () => {

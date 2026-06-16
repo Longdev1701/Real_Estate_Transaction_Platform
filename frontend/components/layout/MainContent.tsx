@@ -13,7 +13,7 @@ export function MainContent({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const scrollContainer = document.getElementById("main-scroll-container");
     const shouldPreservePostList =
-      pathname === "/posts" &&
+      Boolean(pathname?.startsWith("/posts")) &&
       Array.from({ length: sessionStorage.length }, (_, index) => sessionStorage.key(index))
         .some((key) => key?.startsWith(getVersionedStorageKey("posts_page_state:")));
 
