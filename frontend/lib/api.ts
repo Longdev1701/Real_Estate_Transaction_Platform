@@ -27,6 +27,8 @@ type RefreshTokenResponse = {
   };
 };
 
+export type RefreshedAuthSession = RefreshTokenResponse["data"];
+
 export const api = axios.create({
   baseURL,
   withCredentials: true,
@@ -35,7 +37,7 @@ export const api = axios.create({
   },
 });
 
-let refreshPromise: Promise<string> | null = null;
+let refreshPromise: Promise<RefreshedAuthSession> | null = null;
 
 const isAuthEndpoint = (url?: string) =>
   typeof url === "string" &&
@@ -44,7 +46,7 @@ const isAuthEndpoint = (url?: string) =>
     url.includes("/auth/refresh-token") ||
     url.includes("/auth/logout"));
 
-export const refreshAccessToken = async () => {
+export const refreshAuthSession = async () => {
   const { setTokens, logout } = useAuthStore.getState();
 
   if (!refreshPromise) {
@@ -55,9 +57,9 @@ export const refreshAccessToken = async () => {
         },
       })
       .then((response) => {
-        const nextAccessToken = response.data.data.tokens.accessToken;
-        setTokens(nextAccessToken);
-        return nextAccessToken;
+        const nextSession = response.data.data;
+        setTokens(nextSession.tokens.accessToken);
+        return nextSession;
       })
       .catch((error) => {
         logout();
@@ -69,6 +71,11 @@ export const refreshAccessToken = async () => {
   }
 
   return refreshPromise;
+};
+
+export const refreshAccessToken = async () => {
+  const session = await refreshAuthSession();
+  return session.tokens.accessToken;
 };
 
 api.interceptors.request.use(
