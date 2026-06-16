@@ -3,9 +3,8 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { motion } from "framer-motion";
 import {
 
   Bookmark,
@@ -163,7 +162,7 @@ const getGalleryGridClassName = (imageCount: number) => {
   return "grid-cols-1 md:grid-cols-3 gap-1";
 };
 
-export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: boolean }) {
+function PostCardComponent({ post, isFirstPost }: { post: Post; isFirstPost?: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuthStore();
@@ -489,11 +488,9 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
 
   return (
     <>
-      <motion.article
-        ref={cardRef as any}
-        whileHover={{ y: -4, scale: 1.01 }}
-        transition={{ duration: 0.2, ease: "easeOut" }}
-        className="theme-post-card animate-in overflow-hidden rounded-2xl fade-in slide-in-from-bottom-4 duration-500 backdrop-blur-xl hover:shadow-xl"
+      <article
+        ref={cardRef}
+        className="theme-post-card overflow-hidden rounded-2xl transition-shadow [contain-intrinsic-size:720px] [content-visibility:auto] hover:shadow-xl"
       >
         <div className="flex items-start justify-between gap-4 px-4 pb-3 pt-4 md:px-5">
           <div className="flex min-w-0 items-center gap-3">
@@ -505,7 +502,7 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
               aria-label={`Xem bài đăng của ${post.author.fullName}`}
             >
               {post.author.avatarUrl ? (
-                <img src={post.author.avatarUrl} alt={post.author.fullName} className="h-full w-full object-cover" />
+                <img src={post.author.avatarUrl} alt={post.author.fullName} loading="lazy" decoding="async" className="h-full w-full object-cover" />
               ) : (
                 getInitial(post.author.fullName)
               )}
@@ -662,6 +659,8 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
                     <img
                       src={imageError ? imageFallback : image.imageUrl}
                       alt={`${post.title} ${index + 1}`}
+                      loading={isFirstPost && index === 0 ? "eager" : "lazy"}
+                      decoding="async"
                       className="h-full w-full object-cover transition-transform duration-[800ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-105"
                       onError={() => setImageError(true)}
                     />
@@ -793,7 +792,7 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
             </Link>
           </div>
         </div>
-      </motion.article>
+      </article>
 
       {isClient && isImageViewerOpen &&
         createPortal(
@@ -853,6 +852,7 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
                 key={activeImageIndex}
                 src={activeImage}
                 alt={`${post.title} ${activeImageIndex + 1}`}
+                decoding="async"
                 className="max-h-[70vh] md:max-h-[76vh] max-w-full rounded-xl object-contain shadow-2xl animate-in fade-in zoom-in-95 duration-300"
               />
             </div>
@@ -873,7 +873,7 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
                       activeImageIndex === index ? "border-[var(--info-border)] scale-105 opacity-100" : "border-[var(--border)] opacity-60 hover:opacity-100"
                     }`}
                   >
-                    <img src={image.imageUrl} alt={`${post.title} ${index + 1}`} className="h-full w-full object-cover" />
+                    <img src={image.imageUrl} alt={`${post.title} ${index + 1}`} loading="lazy" decoding="async" className="h-full w-full object-cover" />
                   </button>
                 ))}
               </div>
@@ -896,7 +896,7 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
               <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[var(--accent-border)] bg-[var(--accent-soft)] text-sm font-semibold text-[var(--accent)]">
                   {post.author.avatarUrl ? (
-                    <img src={post.author.avatarUrl} alt={post.author.fullName} className="h-full w-full object-cover" />
+                    <img src={post.author.avatarUrl} alt={post.author.fullName} loading="lazy" decoding="async" className="h-full w-full object-cover" />
                   ) : (
                     getInitial(post.author.fullName)
                   )}
@@ -931,6 +931,7 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
                   <img
                     src={activeImage}
                     alt={post.title}
+                    decoding="async"
                     className="aspect-[16/9] w-full object-cover transition duration-300 group-hover/image:scale-[1.02]"
                   />
                   <div className="theme-media-overlay pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between px-3 py-3 opacity-100">
@@ -975,7 +976,7 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
                         activeImageIndex === index ? "border-[var(--info-border)]" : "border-[var(--border)] opacity-75 hover:opacity-100"
                       }`}
                     >
-                      <img src={image.imageUrl} alt={`${post.title} ${index + 1}`} className="h-full w-full object-cover" />
+                      <img src={image.imageUrl} alt={`${post.title} ${index + 1}`} loading="lazy" decoding="async" className="h-full w-full object-cover" />
                     </button>
                   ))}
                 </div>
@@ -1227,3 +1228,6 @@ export function PostCard({ post, isFirstPost }: { post: Post; isFirstPost?: bool
     </>
   );
 }
+
+export const PostCard = memo(PostCardComponent);
+PostCard.displayName = "PostCard";

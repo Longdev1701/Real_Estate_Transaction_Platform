@@ -75,9 +75,8 @@ const ensureHomePageAudioReady = () => {
 };
 
 export const useSound = () => {
-  initAudio();
-
   const playPop = useCallback(() => {
+    initAudio();
     if (sendAudio) {
       sendAudio.currentTime = 0;
       sendAudio.play().catch((err) => {
@@ -87,6 +86,7 @@ export const useSound = () => {
   }, []);
 
   const playDing = useCallback(() => {
+    initAudio();
     if (receiveAudio) {
       receiveAudio.currentTime = 0;
       receiveAudio.play().catch((err) => {
@@ -96,6 +96,7 @@ export const useSound = () => {
   }, []);
 
   const playDetail = useCallback(() => {
+    initAudio();
     if (detailAudio) {
       detailAudio.currentTime = 0;
       detailAudio.play().catch((err) => {
@@ -105,6 +106,7 @@ export const useSound = () => {
   }, []);
 
   const playLikeBegin = useCallback(() => {
+    initAudio();
     if (likeBeginAudio) {
       likeBeginAudio.currentTime = 0;
       likeBeginAudio.play().catch((err) => {
@@ -114,6 +116,7 @@ export const useSound = () => {
   }, []);
 
   const playLikeEnd = useCallback(() => {
+    initAudio();
     if (likeEndAudio) {
       likeEndAudio.currentTime = 0;
       likeEndAudio.play().catch((err) => {
@@ -123,6 +126,7 @@ export const useSound = () => {
   }, []);
 
   const playComment = useCallback(() => {
+    initAudio();
     if (commentAudio) {
       commentAudio.currentTime = 0;
       commentAudio.play().catch((err) => {
@@ -132,6 +136,7 @@ export const useSound = () => {
   }, []);
 
   const playSave = useCallback(() => {
+    initAudio();
     if (saveAudio) {
       saveAudio.currentTime = 0;
       saveAudio.play().catch((err) => {
@@ -141,6 +146,7 @@ export const useSound = () => {
   }, []);
 
   const playReport = useCallback(() => {
+    initAudio();
     if (reportAudio) {
       reportAudio.currentTime = 0;
       reportAudio.play().catch((err) => {

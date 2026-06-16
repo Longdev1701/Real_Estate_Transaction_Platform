@@ -37,20 +37,6 @@ import {
 } from "@/lib/posts";
 import { PostCard } from "./PostCard";
 import { PostFilter } from "./PostFilter";
-import { motion, Variants } from "framer-motion";
-
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.03 } // Tăng tốc độ xuất hiện liên tiếp (stagger) từ 0.1s xuống 0.03s
-  }
-};
- 
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 12 }, // Giảm khoảng cách trượt từ 20px xuống 12px để mượt hơn
-  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 400, damping: 28 } } // Tăng lực lò xo giúp chuyển động nhanh, dứt khoát
-};
 
 const PAGE_SIZE = 15;
 const POST_LIST_CACHE_TTL_MS = 2 * 60 * 1000;
@@ -136,9 +122,12 @@ export function PostList() {
   const [hasRestoredAttempted, setHasRestoredAttempted] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const isFirstMountRef = useRef(true);
+  const scrollSaveFrameRef = useRef<number | null>(null);
+  const pendingScrollTopRef = useRef(0);
   const canUsePostListCache = hasHydrated && !isLoadingUser;
   const postListCacheScope = user?.id ? `user:${user.id}` : "guest";
   const postListStateKey = getPostListStateKey(postListCacheScope);
+  const postListScrollKey = `${postListStateKey}:scroll`;
 
   const fetchPosts = useCallback(
     async (nextPage: number, append: boolean, filter: PostFilterValue) => {
@@ -227,8 +216,9 @@ export function PostList() {
 
           // Restore scroll position as soon as layout completes
           const restoreScroll = () => {
-            if (scrollContainerRef.current && typeof state.scrollTop === "number") {
-              scrollContainerRef.current.scrollTop = state.scrollTop;
+            const savedScrollTop = Number(sessionStorage.getItem(postListScrollKey) ?? state.scrollTop ?? 0);
+            if (scrollContainerRef.current && Number.isFinite(savedScrollTop)) {
+              scrollContainerRef.current.scrollTop = savedScrollTop;
             }
           };
           requestAnimationFrame(() => {
@@ -243,7 +233,7 @@ export function PostList() {
     } finally {
       setHasRestoredAttempted(true);
     }
-  }, [canUsePostListCache, hasHydrated, isLoadingUser, postListStateKey, searchParamString]);
+  }, [canUsePostListCache, hasHydrated, isLoadingUser, postListScrollKey, postListStateKey, searchParamString]);
 
   // Save state on updates
   useEffect(() => {
@@ -256,23 +246,31 @@ export function PostList() {
       state.hasMore = hasMore;
       state.total = total;
       state.activeFilter = activeFilter;
-      state.draftFilter = draftFilter;
+      state.draftFilter = activeFilter;
       state.searchParamString = searchParamString;
       sessionStorage.setItem(postListStateKey, JSON.stringify(state));
     } catch {}
-  }, [posts, page, hasMore, total, activeFilter, draftFilter, searchParamString, isLoading, hasRestoredAttempted, canUsePostListCache, postListStateKey]);
+  }, [posts, page, hasMore, total, activeFilter, searchParamString, isLoading, hasRestoredAttempted, canUsePostListCache, postListStateKey]);
 
   const handleScroll = (e: React.UIEvent<HTMLElement>) => {
     if (!canUsePostListCache) return;
 
-    const target = e.currentTarget;
-    try {
-      const saved = sessionStorage.getItem(postListStateKey);
-      const state = saved ? JSON.parse(saved) : {};
-      state.scrollTop = target.scrollTop;
-      sessionStorage.setItem(postListStateKey, JSON.stringify(state));
-    } catch {}
+    pendingScrollTopRef.current = e.currentTarget.scrollTop;
+    if (scrollSaveFrameRef.current !== null) return;
+
+    scrollSaveFrameRef.current = window.requestAnimationFrame(() => {
+      scrollSaveFrameRef.current = null;
+      try {
+        sessionStorage.setItem(postListScrollKey, String(pendingScrollTopRef.current));
+      } catch {}
+    });
   };
+
+  useEffect(() => () => {
+    if (scrollSaveFrameRef.current !== null) {
+      window.cancelAnimationFrame(scrollSaveFrameRef.current);
+    }
+  }, []);
   useEffect(() => {
     if (!hasHydrated || isLoadingUser) {
       return;
@@ -302,14 +300,9 @@ export function PostList() {
     }
 
     try {
-      const saved = sessionStorage.getItem(postListStateKey);
-      if (saved) {
-        const state = JSON.parse(saved);
-        state.scrollTop = 0;
-        sessionStorage.setItem(postListStateKey, JSON.stringify(state));
-      }
+      sessionStorage.setItem(postListScrollKey, "0");
     } catch {}
-  }, [activeFilter, fetchPosts, hasHydrated, isLoadingUser, hasRestoredAttempted, postListStateKey]);
+  }, [activeFilter, fetchPosts, hasHydrated, isLoadingUser, hasRestoredAttempted, postListScrollKey]);
 
   useEffect(() => {
     if (isFirstMountRef.current) return;
@@ -562,18 +555,13 @@ export function PostList() {
             </div>
           ) : (
             <>
-              <motion.div 
-                variants={containerVariants}
-                initial={isRestored ? "show" : "hidden"}
-                animate="show"
-                className="space-y-5"
-              >
+              <div className="space-y-5">
                 {posts.map((post, index) => (
-                  <motion.div key={post.id} variants={itemVariants}>
+                  <div key={post.id}>
                     <PostCard post={post} isFirstPost={index === 0} />
-                  </motion.div>
+                  </div>
                 ))}
-              </motion.div>
+              </div>
 
               <div ref={loadMoreRef} className="flex min-h-16 items-center justify-center">
                 {isLoadingMore ? (
