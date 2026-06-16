@@ -125,6 +125,8 @@ export function PostList() {
   const scrollSaveFrameRef = useRef<number | null>(null);
   const pendingScrollTopRef = useRef(0);
   const restoredFilterKeyRef = useRef<string | null>(null);
+  const isRestoringScrollRef = useRef(false);
+  const isSnapshotFrozenRef = useRef(false);
   const canUsePostListCache = hasHydrated && !isLoadingUser;
   const postListCacheScope = user?.id ? `user:${user.id}` : "guest";
   const postListStateKey = getVersionedStorageKey(getPostListStateKey(postListCacheScope));
@@ -144,26 +146,52 @@ export function PostList() {
     return window.scrollY || document.documentElement.scrollTop || 0;
   }, []);
 
-  const saveCurrentScrollTop = useCallback(() => {
+  const savePostListSnapshot = useCallback((scrollTop: number) => {
     if (!canUsePostListCache) return;
-
-    const scrollTop = getCurrentScrollTop();
-    pendingScrollTopRef.current = scrollTop;
 
     try {
       sessionStorage.setItem(postListScrollKey, String(scrollTop));
       const saved = sessionStorage.getItem(postListStateKey);
       const state = saved ? JSON.parse(saved) : {};
       state.scrollTop = scrollTop;
+      state.posts = posts;
+      state.page = page;
+      state.hasMore = hasMore;
+      state.total = total;
+      state.activeFilter = activeFilter;
+      state.draftFilter = draftFilter;
+      state.searchParamString = searchParamString;
       sessionStorage.setItem(postListStateKey, JSON.stringify(state));
     } catch {}
-  }, [canUsePostListCache, getCurrentScrollTop, postListScrollKey, postListStateKey]);
+  }, [
+    activeFilter,
+    canUsePostListCache,
+    draftFilter,
+    hasMore,
+    page,
+    postListScrollKey,
+    postListStateKey,
+    posts,
+    searchParamString,
+    total,
+  ]);
+
+  const saveCurrentScrollTop = useCallback(() => {
+    if (!canUsePostListCache) return;
+
+    const scrollTop = getCurrentScrollTop();
+    pendingScrollTopRef.current = scrollTop;
+    savePostListSnapshot(scrollTop);
+  }, [canUsePostListCache, getCurrentScrollTop, savePostListSnapshot]);
 
   const scheduleSaveCurrentScrollTop = useCallback(() => {
     if (!canUsePostListCache || scrollSaveFrameRef.current !== null) return;
 
     scrollSaveFrameRef.current = window.requestAnimationFrame(() => {
       scrollSaveFrameRef.current = null;
+      if (!isRestoringScrollRef.current) {
+        isSnapshotFrozenRef.current = false;
+      }
       saveCurrentScrollTop();
     });
   }, [canUsePostListCache, saveCurrentScrollTop]);
@@ -257,6 +285,8 @@ export function PostList() {
           // Restore scroll position as soon as layout completes
           const restoreScroll = () => {
             const savedScrollTop = Number(sessionStorage.getItem(postListScrollKey) ?? state.scrollTop ?? 0);
+            isRestoringScrollRef.current = true;
+            isSnapshotFrozenRef.current = true;
             if (scrollContainerRef.current && Number.isFinite(savedScrollTop)) {
               scrollContainerRef.current.scrollTop = savedScrollTop;
             }
@@ -267,6 +297,9 @@ export function PostList() {
             if (Number.isFinite(savedScrollTop)) {
               window.scrollTo({ top: savedScrollTop });
             }
+            window.setTimeout(() => {
+              isRestoringScrollRef.current = false;
+            }, 180);
           };
           requestAnimationFrame(() => {
             restoreScroll();
@@ -293,16 +326,19 @@ export function PostList() {
       state.hasMore = hasMore;
       state.total = total;
       state.activeFilter = activeFilter;
-      state.draftFilter = activeFilter;
+      state.draftFilter = draftFilter;
       state.searchParamString = searchParamString;
       sessionStorage.setItem(postListStateKey, JSON.stringify(state));
     } catch {}
-  }, [posts, page, hasMore, total, activeFilter, searchParamString, isLoading, hasRestoredAttempted, canUsePostListCache, postListStateKey]);
+  }, [posts, page, hasMore, total, activeFilter, draftFilter, searchParamString, isLoading, hasRestoredAttempted, canUsePostListCache, postListStateKey]);
 
   const handleScroll = (e: React.UIEvent<HTMLElement>) => {
     if (!canUsePostListCache) return;
 
     pendingScrollTopRef.current = e.currentTarget.scrollTop;
+    if (!isRestoringScrollRef.current) {
+      isSnapshotFrozenRef.current = false;
+    }
     scheduleSaveCurrentScrollTop();
   };
 
@@ -351,6 +387,7 @@ export function PostList() {
       return;
     }
 
+    isSnapshotFrozenRef.current = false;
     fetchPosts(1, false, activeFilter);
     restoredFilterKeyRef.current = activeFilterKey;
 
@@ -395,6 +432,9 @@ export function PostList() {
       (entries) => {
         const [entry] = entries;
         if (entry?.isIntersecting) {
+          if (isSnapshotFrozenRef.current) {
+            return;
+          }
           fetchPosts(page + 1, true, activeFilter);
         }
       },
