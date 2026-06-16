@@ -253,6 +253,21 @@ export default function PostDetailPage() {
   const relatedPostId = post?.id ?? "";
   const relatedPostCity = post?.city ?? "";
   const relatedPostPropertyType = post?.propertyType ?? "";
+  const relatedPostsListHref = useMemo(() => {
+    if (!relatedPostCity || !relatedPostPropertyType) {
+      return "/posts";
+    }
+
+    return `/posts?${buildPostQuery(
+      {
+        ...defaultPostFilter,
+        city: relatedPostCity,
+        propertyType: relatedPostPropertyType,
+      },
+      1,
+      15,
+    )}`;
+  }, [relatedPostCity, relatedPostPropertyType]);
 
   useEffect(() => {
     if (!relatedPostId || !relatedPostCity || !relatedPostPropertyType) return;
@@ -1265,7 +1280,7 @@ export default function PostDetailPage() {
             >
               <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-xl font-semibold text-[var(--foreground)] sm:text-2xl">Bất động sản tương tự</h2>
-                <Link href="/posts" className="text-sm font-medium text-[var(--accent)] transition hover:brightness-110">
+                <Link href={relatedPostsListHref} className="text-sm font-medium text-[var(--accent)] transition hover:brightness-110">
                   Xem tất cả
                 </Link>
               </div>
