@@ -4,12 +4,22 @@ import { useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Post, formatLocation, formatCompactPrice, formatArea } from "@/lib/posts";
-import { motion } from "framer-motion";
 
 const imageFallback = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 800'><rect width='1200' height='800' fill='%230b1120'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-family='Arial' font-size='52'>TrustEstate</text></svg>";
 
-export function RelatedPostsCarousel({ posts }: { posts: Post[] }) {
+export function RelatedPostsCarousel({
+  posts,
+  isLoading = false,
+  onPostIntent,
+}: {
+  posts: Post[];
+  isLoading?: boolean;
+  onPostIntent?: (postId: string) => void;
+}) {
+  const rootRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollFrameRef = useRef<number | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
@@ -21,10 +31,45 @@ export function RelatedPostsCarousel({ posts }: { posts: Post[] }) {
   };
 
   useEffect(() => {
+    const target = rootRef.current;
+    if (!target) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "600px 0px" },
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!isVisible) return;
+
     checkScroll();
     window.addEventListener("resize", checkScroll);
     return () => window.removeEventListener("resize", checkScroll);
-  }, [posts]);
+  }, [isVisible, posts]);
+
+  useEffect(() => () => {
+    if (scrollFrameRef.current !== null) {
+      window.cancelAnimationFrame(scrollFrameRef.current);
+    }
+  }, []);
+
+  const handleScroll = () => {
+    if (scrollFrameRef.current !== null) return;
+
+    scrollFrameRef.current = window.requestAnimationFrame(() => {
+      scrollFrameRef.current = null;
+      checkScroll();
+    });
+  };
 
   const scrollBy = (direction: 1 | -1) => {
     if (!containerRef.current) return;
@@ -33,16 +78,38 @@ export function RelatedPostsCarousel({ posts }: { posts: Post[] }) {
     containerRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
   };
 
+  const shouldShowSkeleton = isLoading || (!isVisible && posts.length > 0);
+
+  if (shouldShowSkeleton) {
+    return (
+      <div ref={rootRef} className="relative">
+        <div className="flex gap-4 overflow-hidden pb-4" aria-busy={isLoading}>
+          {[0, 1, 2].map((item) => (
+            <div key={item} className="w-[260px] sm:w-[280px] shrink-0 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3">
+              <div className="theme-skeleton h-40 w-full rounded-xl" />
+              <div className="mt-3 space-y-2">
+                <div className="theme-skeleton h-4 w-4/5 rounded" />
+                <div className="theme-skeleton h-3 w-2/3 rounded" />
+                <div className="theme-skeleton h-5 w-1/2 rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (posts.length === 0) {
     return (
-      <div className="flex min-h-[200px] items-center justify-center rounded-2xl border border-dashed border-[var(--border)]">
+      <div ref={rootRef} className="flex min-h-[200px] items-center justify-center rounded-2xl border border-dashed border-[var(--border)]">
         <p className="text-sm text-[var(--muted-foreground)]">Chưa có bài đăng tương tự.</p>
       </div>
     );
   }
 
   return (
-    <div className="relative group">
+    <div ref={rootRef} className="relative group">
+      <>
       {/* Scroll buttons for desktop */}
       {canScrollLeft && (
         <button
@@ -67,13 +134,16 @@ export function RelatedPostsCarousel({ posts }: { posts: Post[] }) {
       {/* Carousel Container */}
       <div
         ref={containerRef}
-        onScroll={checkScroll}
+        onScroll={handleScroll}
         className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-hidden -mx-5 px-5 sm:mx-0 sm:px-0"
       >
         {posts.map((item) => (
           <Link
             key={item.id}
             href={`/posts/${item.id}`}
+            onFocus={() => onPostIntent?.(item.id)}
+            onMouseEnter={() => onPostIntent?.(item.id)}
+            onTouchStart={() => onPostIntent?.(item.id)}
             className="flex w-[260px] sm:w-[280px] shrink-0 snap-center flex-col gap-3 rounded-2xl border border-transparent bg-[var(--surface-muted)] sm:bg-[var(--surface)] sm:border-[var(--border)] p-2 sm:p-3 transition-all hover:border-[var(--accent-border)] hover:bg-[var(--surface-muted)] group/card"
           >
             <div className="relative h-40 w-full overflow-hidden rounded-xl">
@@ -99,6 +169,7 @@ export function RelatedPostsCarousel({ posts }: { posts: Post[] }) {
           </Link>
         ))}
       </div>
+      </>
     </div>
   );
 }

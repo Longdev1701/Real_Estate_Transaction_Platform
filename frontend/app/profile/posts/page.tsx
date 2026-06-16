@@ -20,12 +20,19 @@ type PostViewTab = "ALL" | "SELL" | "RENT" | "BANNED";
 export default function ProfilePostsPage() {
   const searchParams = useSearchParams();
   const authorId = searchParams.get("authorId");
+  const initialPublicPayload = authorId
+    ? readSessionCache<PostListData>(`profile:posts:${authorId}:public`)
+    : null;
+  const initialPublicPosts = initialPublicPayload?.items ?? [];
+  const initialAuthorPreview = authorId
+    ? readSessionCache<PostAuthor>(`profile:author:${authorId}`)
+    : null;
   const { user, accessToken, hasHydrated, isLoadingUser } = useAuthStore();
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [authorPreview, setAuthorPreview] = useState<PostAuthor | null>(null);
+  const [posts, setPosts] = useState<Post[]>(initialPublicPosts);
+  const [authorPreview, setAuthorPreview] = useState<PostAuthor | null>(initialAuthorPreview);
   const [activeTab, setActiveTab] = useState<PostViewTab>("ALL");
   const [mainTab, setMainTab] = useState<"posts" | "about">("posts");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!initialPublicPayload);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const [isStartingConversation, setIsStartingConversation] = useState(false);
@@ -42,23 +49,37 @@ export default function ProfilePostsPage() {
   }, [targetAuthorId]);
 
   useEffect(() => {
-    if (!hasHydrated || isLoadingUser) {
+    if (!authorId && (!hasHydrated || isLoadingUser)) {
       return;
     }
 
     let isMounted = true;
 
     const fetchPosts = async () => {
+      let hasCachedPayload = false;
+
       try {
-        setIsLoading(true);
         setError(null);
         const targetAuthorId = authorId ?? user?.id;
         if (!targetAuthorId) {
           setPosts([]);
+          setIsLoading(false);
           return;
         }
 
-        const isOwnerView = Boolean(user?.id) && targetAuthorId === user?.id;
+        const isOwnerView = !authorId && Boolean(user?.id) && targetAuthorId === user?.id;
+        const cacheKey = `profile:posts:${targetAuthorId}:${isOwnerView ? "owner" : "public"}`;
+        const cachedPayload = readSessionCache<PostListData>(cacheKey);
+        hasCachedPayload = Boolean(cachedPayload);
+
+        if (cachedPayload && isMounted) {
+          setPosts(cachedPayload.items);
+          setIsLoading(false);
+        } else {
+          setPosts([]);
+          setIsLoading(true);
+        }
+
         const query = buildPostQuery(
           {
             ...defaultPostFilter,
@@ -68,14 +89,6 @@ export default function ProfilePostsPage() {
           30,
         );
         const listQuery = isOwnerView ? query : `${query}&imageLimit=1`;
-        const cacheKey = `profile:posts:${targetAuthorId}:${isOwnerView ? "owner" : "public"}`;
-        if (!isOwnerView) {
-          const cachedPayload = readSessionCache<PostListData>(cacheKey);
-          if (cachedPayload && isMounted) {
-            setPosts(cachedPayload.items);
-            setIsLoading(false);
-          }
-        }
 
         if (isOwnerView && !accessToken) {
           setPosts([]);
@@ -87,13 +100,11 @@ export default function ProfilePostsPage() {
         const response = await api.get<{ data: PostListData }>(endpoint);
         if (isMounted) {
           setPosts(response.data.data.items);
-          if (!isOwnerView) {
-            writeSessionCache(cacheKey, response.data.data);
-          }
+          writeSessionCache(cacheKey, response.data.data, { ttlMs: isOwnerView ? 60_000 : 5 * 60_000 });
         }
       } catch (err) {
         const axiosError = err as AxiosError<{ message?: string }>;
-        if (isMounted) {
+        if (isMounted && !hasCachedPayload) {
           setError(axiosError.response?.data?.message ?? "Không thể tải bài đăng của bạn.");
         }
       } finally {
@@ -112,7 +123,7 @@ export default function ProfilePostsPage() {
 
   const myPosts = useMemo(() => (targetAuthorId ? posts : []), [posts, targetAuthorId]);
   const targetAuthor = myPosts[0]?.author ?? authorPreview;
-  const isOwnProfile = !!user && targetAuthorId === user.id;
+  const isOwnProfile = !authorId && !!user && targetAuthorId === user.id;
 
   const saleCount = useMemo(
     () => myPosts.filter((post) => post.postType === "SELL" && post.status !== "BANNED").length,
@@ -215,7 +226,7 @@ export default function ProfilePostsPage() {
     }
   };
 
-  if (!hasHydrated || isLoadingUser) {
+  if (!authorId && (!hasHydrated || isLoadingUser)) {
     return (
       <div className="container mx-auto max-w-7xl px-4 py-8 lg:px-8">
         {/* Cover & Profile Header Skeleton */}

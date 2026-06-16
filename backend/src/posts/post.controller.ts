@@ -77,7 +77,9 @@ export const getMyPostsController: RequestHandler = async (req, res, next) => {
 
 export const getPostByIdController: RequestHandler = async (req, res, next) => {
   try {
-    const result = await getPostById(getPostIdParam(req.params.id), req.user);
+    const result = await getPostById(getPostIdParam(req.params.id), req.user, {
+      includeRelated: req.query.includeRelated !== "false",
+    });
 
     sendSuccess(res, result, "Post fetched successfully.");
   } catch (error) {
