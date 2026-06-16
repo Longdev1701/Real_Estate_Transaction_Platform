@@ -159,6 +159,15 @@ export function PostList() {
     } catch {}
   }, [canUsePostListCache, getCurrentScrollTop, postListScrollKey, postListStateKey]);
 
+  const scheduleSaveCurrentScrollTop = useCallback(() => {
+    if (!canUsePostListCache || scrollSaveFrameRef.current !== null) return;
+
+    scrollSaveFrameRef.current = window.requestAnimationFrame(() => {
+      scrollSaveFrameRef.current = null;
+      saveCurrentScrollTop();
+    });
+  }, [canUsePostListCache, saveCurrentScrollTop]);
+
   const fetchPosts = useCallback(
     async (nextPage: number, append: boolean, filter: PostFilterValue) => {
       const requestId = ++requestIdRef.current;
@@ -294,21 +303,33 @@ export function PostList() {
     if (!canUsePostListCache) return;
 
     pendingScrollTopRef.current = e.currentTarget.scrollTop;
-    if (scrollSaveFrameRef.current !== null) return;
-
-    scrollSaveFrameRef.current = window.requestAnimationFrame(() => {
-      scrollSaveFrameRef.current = null;
-      try {
-        sessionStorage.setItem(postListScrollKey, String(pendingScrollTopRef.current));
-      } catch {}
-    });
+    scheduleSaveCurrentScrollTop();
   };
 
-  useEffect(() => () => {
-    if (scrollSaveFrameRef.current !== null) {
-      window.cancelAnimationFrame(scrollSaveFrameRef.current);
-    }
-  }, []);
+  useEffect(() => {
+    const mainScroll = document.getElementById("main-scroll-container");
+    const handlePageExit = () => saveCurrentScrollTop();
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        saveCurrentScrollTop();
+      }
+    };
+
+    mainScroll?.addEventListener("scroll", scheduleSaveCurrentScrollTop, { passive: true });
+    window.addEventListener("scroll", scheduleSaveCurrentScrollTop, { passive: true });
+    window.addEventListener("pagehide", handlePageExit);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      mainScroll?.removeEventListener("scroll", scheduleSaveCurrentScrollTop);
+      window.removeEventListener("scroll", scheduleSaveCurrentScrollTop);
+      window.removeEventListener("pagehide", handlePageExit);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (scrollSaveFrameRef.current !== null) {
+        window.cancelAnimationFrame(scrollSaveFrameRef.current);
+      }
+    };
+  }, [saveCurrentScrollTop, scheduleSaveCurrentScrollTop]);
   useEffect(() => {
     if (!hasHydrated || isLoadingUser) {
       return;
@@ -497,16 +518,9 @@ export function PostList() {
       <section
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        onClickCapture={(event) => {
-          const target = event.target;
-          if (!(target instanceof Element)) return;
-
-          const link = target.closest<HTMLAnchorElement>("a[href]");
-          const href = link?.getAttribute("href") ?? "";
-          if (href.startsWith("/posts/") && !href.includes("/edit")) {
-            saveCurrentScrollTop();
-          }
-        }}
+        onClickCapture={saveCurrentScrollTop}
+        onMouseDownCapture={saveCurrentScrollTop}
+        onTouchStartCapture={saveCurrentScrollTop}
         className="no-scrollbar min-w-0 xl:h-full xl:max-h-[calc(100vh-100px)] xl:overflow-y-auto xl:pr-1"
       >
         <div className="space-y-5">
