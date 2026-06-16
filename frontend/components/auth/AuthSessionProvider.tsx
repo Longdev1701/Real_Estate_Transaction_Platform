@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { api, refreshAccessToken } from "@/lib/api";
+import { api, refreshAuthSession } from "@/lib/api";
 import { useAuthStore, type User } from "@/stores/auth.store";
 import { useSocketStore } from "@/stores/socket.store";
 
@@ -32,13 +32,38 @@ export const normalizeUser = (user: BackendUser): User => ({
   bio: user.bio,
 });
 
+const TOKEN_REFRESH_BUFFER_SECONDS = 60;
+
+const getTokenExpiresAt = (token: string) => {
+  try {
+    const [, payload] = token.split(".");
+    if (!payload) {
+      return null;
+    }
+
+    const base64Payload = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const paddedPayload = base64Payload.padEnd(base64Payload.length + ((4 - (base64Payload.length % 4)) % 4), "=");
+    const decodedPayload = JSON.parse(window.atob(paddedPayload)) as {
+      exp?: number;
+    };
+
+    return typeof decodedPayload.exp === "number" ? decodedPayload.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+};
+
+const shouldRefreshToken = (token: string) => {
+  const expiresAt = getTokenExpiresAt(token);
+  return !expiresAt || expiresAt - Date.now() <= TOKEN_REFRESH_BUFFER_SECONDS * 1000;
+};
+
 export function AuthSessionProvider({ children }: { children: React.ReactNode }) {
   const {
     accessToken,
     hasHydrated,
     user,
     setUser,
-    setTokens,
     setIsLoadingUser,
     logout,
   } = useAuthStore();
@@ -55,11 +80,31 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
 
     const restoreSession = async () => {
       try {
-        setIsLoadingUser(true);
+        const cachedUser = useAuthStore.getState().user;
+        setIsLoadingUser(!cachedUser);
 
-        let currentToken = useAuthStore.getState().accessToken;
+        const currentToken = useAuthStore.getState().accessToken;
         if (!currentToken) {
-          currentToken = await refreshAccessToken();
+          if (!cachedUser) {
+            setIsSessionVerified(false);
+            return;
+          }
+
+          const session = await refreshAuthSession();
+          if (!isMounted) return;
+
+          setUser(normalizeUser(session.user));
+          setIsSessionVerified(true);
+          return;
+        }
+
+        if (shouldRefreshToken(currentToken)) {
+          const session = await refreshAuthSession();
+          if (!isMounted) return;
+
+          setUser(normalizeUser(session.user));
+          setIsSessionVerified(true);
+          return;
         }
 
         const response = await api.get("/auth/me");
@@ -85,7 +130,7 @@ export function AuthSessionProvider({ children }: { children: React.ReactNode })
     return () => {
       isMounted = false;
     };
-  }, [hasHydrated, logout, setIsLoadingUser, setTokens, setUser]);
+  }, [hasHydrated, logout, setIsLoadingUser, setUser]);
 
   useEffect(() => {
     if (accessToken && user) {
