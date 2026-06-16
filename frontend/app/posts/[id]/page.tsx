@@ -116,6 +116,15 @@ export default function PostDetailPage() {
   const prefetchingPostIdsRef = useRef<Set<string>>(new Set());
   const prefetchingAuthorIdsRef = useRef<Set<string>>(new Set());
 
+  const handleBackToPosts = useCallback(() => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+      return;
+    }
+
+    router.push("/posts");
+  }, [router]);
+
   const prefetchPostDetail = useCallback(
     (postId: string) => {
       if (!postId || postId === params.id || prefetchingPostIdsRef.current.has(postId)) {
@@ -667,7 +676,7 @@ export default function PostDetailPage() {
       <div className="container mx-auto px-4 py-10 lg:px-8">
         <div className="glass-card p-8 text-center">
           <p className="text-lg text-[var(--danger-foreground)]">{error}</p>
-          <button type="button" onClick={() => router.push("/posts")} className="btn-primary mt-6">
+          <button type="button" onClick={handleBackToPosts} className="btn-primary mt-6">
             Quay lại danh sách
           </button>
         </div>
@@ -785,7 +794,7 @@ export default function PostDetailPage() {
       <div className="lg:hidden">
         <button
           type="button"
-          onClick={() => router.push("/posts")}
+          onClick={handleBackToPosts}
           className="theme-surface-soft inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)]"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -1294,7 +1303,7 @@ export default function PostDetailPage() {
 
             <button
               type="button"
-              onClick={() => router.push("/posts")}
+              onClick={handleBackToPosts}
               className="hidden lg:inline-flex theme-surface-soft items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)]"
             >
               <ArrowLeft className="h-4 w-4" />

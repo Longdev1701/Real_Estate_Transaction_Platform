@@ -124,10 +124,40 @@ export function PostList() {
   const isFirstMountRef = useRef(true);
   const scrollSaveFrameRef = useRef<number | null>(null);
   const pendingScrollTopRef = useRef(0);
+  const restoredFilterKeyRef = useRef<string | null>(null);
   const canUsePostListCache = hasHydrated && !isLoadingUser;
   const postListCacheScope = user?.id ? `user:${user.id}` : "guest";
   const postListStateKey = getVersionedStorageKey(getPostListStateKey(postListCacheScope));
   const postListScrollKey = getVersionedStorageKey(`${getPostListStateKey(postListCacheScope)}:scroll`);
+  const activeFilterKey = useMemo(
+    () => buildPostQuery(activeFilter, 1, PAGE_SIZE),
+    [activeFilter],
+  );
+
+  const getCurrentScrollTop = useCallback(() => {
+    const sectionScrollTop = scrollContainerRef.current?.scrollTop ?? 0;
+    if (sectionScrollTop > 0) return sectionScrollTop;
+
+    const mainScroll = document.getElementById("main-scroll-container");
+    if (mainScroll?.scrollTop) return mainScroll.scrollTop;
+
+    return window.scrollY || document.documentElement.scrollTop || 0;
+  }, []);
+
+  const saveCurrentScrollTop = useCallback(() => {
+    if (!canUsePostListCache) return;
+
+    const scrollTop = getCurrentScrollTop();
+    pendingScrollTopRef.current = scrollTop;
+
+    try {
+      sessionStorage.setItem(postListScrollKey, String(scrollTop));
+      const saved = sessionStorage.getItem(postListStateKey);
+      const state = saved ? JSON.parse(saved) : {};
+      state.scrollTop = scrollTop;
+      sessionStorage.setItem(postListStateKey, JSON.stringify(state));
+    } catch {}
+  }, [canUsePostListCache, getCurrentScrollTop, postListScrollKey, postListStateKey]);
 
   const fetchPosts = useCallback(
     async (nextPage: number, append: boolean, filter: PostFilterValue) => {
@@ -211,6 +241,7 @@ export function PostList() {
           setTotal(state.total || 0);
           setDraftFilter(state.draftFilter || defaultPostFilter);
           setActiveFilter(state.activeFilter || defaultPostFilter);
+          restoredFilterKeyRef.current = buildPostQuery(state.activeFilter || defaultPostFilter, 1, PAGE_SIZE);
           setIsRestored(true);
           setIsLoading(false);
 
@@ -219,6 +250,13 @@ export function PostList() {
             const savedScrollTop = Number(sessionStorage.getItem(postListScrollKey) ?? state.scrollTop ?? 0);
             if (scrollContainerRef.current && Number.isFinite(savedScrollTop)) {
               scrollContainerRef.current.scrollTop = savedScrollTop;
+            }
+            const mainScroll = document.getElementById("main-scroll-container");
+            if (mainScroll && Number.isFinite(savedScrollTop)) {
+              mainScroll.scrollTop = savedScrollTop;
+            }
+            if (Number.isFinite(savedScrollTop)) {
+              window.scrollTo({ top: savedScrollTop });
             }
           };
           requestAnimationFrame(() => {
@@ -288,7 +326,12 @@ export function PostList() {
       }
     }
 
+    if (restoredFilterKeyRef.current === activeFilterKey && posts.length > 0) {
+      return;
+    }
+
     fetchPosts(1, false, activeFilter);
+    restoredFilterKeyRef.current = activeFilterKey;
 
     // Reset scroll position to top on filter/category changes
     if (scrollContainerRef.current) {
@@ -302,7 +345,14 @@ export function PostList() {
     try {
       sessionStorage.setItem(postListScrollKey, "0");
     } catch {}
-  }, [activeFilter, fetchPosts, hasHydrated, isLoadingUser, hasRestoredAttempted, postListScrollKey]);
+  }, [activeFilter, activeFilterKey, fetchPosts, hasHydrated, isLoadingUser, hasRestoredAttempted, postListScrollKey, posts.length]);
+
+  useEffect(() => {
+    if (!hasRestoredAttempted || !canUsePostListCache) return;
+    if (restoredFilterKeyRef.current === activeFilterKey) return;
+
+    restoredFilterKeyRef.current = activeFilterKey;
+  }, [activeFilterKey, canUsePostListCache, hasRestoredAttempted]);
 
   useEffect(() => {
     if (isFirstMountRef.current) return;
@@ -447,6 +497,16 @@ export function PostList() {
       <section
         ref={scrollContainerRef}
         onScroll={handleScroll}
+        onClickCapture={(event) => {
+          const target = event.target;
+          if (!(target instanceof Element)) return;
+
+          const link = target.closest<HTMLAnchorElement>("a[href]");
+          const href = link?.getAttribute("href") ?? "";
+          if (href.startsWith("/posts/") && !href.includes("/edit")) {
+            saveCurrentScrollTop();
+          }
+        }}
         className="no-scrollbar min-w-0 xl:h-full xl:max-h-[calc(100vh-100px)] xl:overflow-y-auto xl:pr-1"
       >
         <div className="space-y-5">
