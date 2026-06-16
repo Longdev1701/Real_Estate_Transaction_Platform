@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { getVersionedStorageKey } from "@/lib/client-cache";
 
 export function MainContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -11,6 +12,15 @@ export function MainContent({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const scrollContainer = document.getElementById("main-scroll-container");
+    const shouldPreservePostList =
+      pathname === "/posts" &&
+      Array.from({ length: sessionStorage.length }, (_, index) => sessionStorage.key(index))
+        .some((key) => key?.startsWith(getVersionedStorageKey("posts_page_state:")));
+
+    if (shouldPreservePostList) {
+      return;
+    }
+
     if (scrollContainer) {
       scrollContainer.scrollTop = 0;
     }
