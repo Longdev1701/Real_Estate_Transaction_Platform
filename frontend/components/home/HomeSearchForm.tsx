@@ -16,6 +16,7 @@ import {
   propertyTypeLabels,
   type PropertyType,
 } from "@/lib/posts";
+import { getVersionedStorageKey } from "@/lib/client-cache";
 
 import { CitySelect } from "@/components/home/CitySelect";
 import { HomeSearchSelect } from "@/components/home/HomeSearchSelect";
@@ -184,7 +185,10 @@ export function HomeSearchForm({
       action="/posts"
       onSubmit={() => {
         try {
-          sessionStorage.removeItem("posts_page_state");
+          const prefix = getVersionedStorageKey("posts_page_state:");
+          Array.from({ length: sessionStorage.length }, (_, index) => sessionStorage.key(index))
+            .filter((key): key is string => Boolean(key?.startsWith(prefix)))
+            .forEach((key) => sessionStorage.removeItem(key));
         } catch (e) {}
       }}
       className="theme-hero-search mt-7 w-full max-w-[1360px] rounded-2xl p-4"

@@ -32,7 +32,7 @@ import {
 } from "@/lib/posts";
 import { useSound } from "@/hooks/useSound";
 import { api } from "@/lib/api";
-import { updateSessionCaches, writeSessionCache } from "@/lib/client-cache";
+import { getVersionedStorageKey, updateSessionCaches, writeSessionCache } from "@/lib/client-cache";
 import { useAuthStore } from "@/stores/auth.store";
 
 import CommentSection from "@/components/comment/CommentSection";
@@ -43,6 +43,7 @@ const ReportPostDialog = dynamic(async () => {
 
 const imageFallback =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 760'><rect width='1200' height='760' fill='%230b1120'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-family='Arial' font-size='48'>TrustEstate</text></svg>";
+const compareStorageKey = getVersionedStorageKey("compared_posts");
 const POST_DETAIL_CACHE_TTL_MS = 2 * 60 * 1000;
 
 const getInitial = (name: string) => name.trim().charAt(0).toUpperCase() || "T";
@@ -290,7 +291,7 @@ function PostCardComponent({ post, isFirstPost }: { post: Post; isFirstPost?: bo
   useEffect(() => {
     const handleCompareUpdate = () => {
       try {
-        const stored = localStorage.getItem("compared_posts");
+        const stored = localStorage.getItem(compareStorageKey);
         const list = stored ? JSON.parse(stored) : [];
         setIsCompared(Array.isArray(list) && list.some((item: any) => item.id === post.id));
       } catch {
@@ -303,7 +304,7 @@ function PostCardComponent({ post, isFirstPost }: { post: Post; isFirstPost?: bo
   }, [post.id]);
   const handleCompareClick = () => {
     try {
-      const stored = localStorage.getItem("compared_posts");
+      const stored = localStorage.getItem(compareStorageKey);
       let list = stored ? JSON.parse(stored) : [];
       if (!Array.isArray(list)) list = [];
 
@@ -327,7 +328,7 @@ function PostCardComponent({ post, isFirstPost }: { post: Post; isFirstPost?: bo
         list.push(post);
         setIsCompared(true);
       }
-      localStorage.setItem("compared_posts", JSON.stringify(list));
+      localStorage.setItem(compareStorageKey, JSON.stringify(list));
       window.dispatchEvent(new Event("compare_list_updated"));
     } catch (e) {
       console.error(e);

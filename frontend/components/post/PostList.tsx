@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 
 import { api } from "@/lib/api";
-import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
+import { getVersionedStorageKey, readSessionCache, writeSessionCache } from "@/lib/client-cache";
 import { useAuthStore } from "@/stores/auth.store";
 import {
   buildPostQuery,
@@ -126,8 +126,8 @@ export function PostList() {
   const pendingScrollTopRef = useRef(0);
   const canUsePostListCache = hasHydrated && !isLoadingUser;
   const postListCacheScope = user?.id ? `user:${user.id}` : "guest";
-  const postListStateKey = getPostListStateKey(postListCacheScope);
-  const postListScrollKey = `${postListStateKey}:scroll`;
+  const postListStateKey = getVersionedStorageKey(getPostListStateKey(postListCacheScope));
+  const postListScrollKey = getVersionedStorageKey(`${getPostListStateKey(postListCacheScope)}:scroll`);
 
   const fetchPosts = useCallback(
     async (nextPage: number, append: boolean, filter: PostFilterValue) => {

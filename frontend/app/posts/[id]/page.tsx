@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 
 import { api } from "@/lib/api";
-import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
+import { getVersionedStorageKey, readSessionCache, writeSessionCache } from "@/lib/client-cache";
 import { FeatureIcon } from "@/lib/feature-icons";
 import { motion } from "framer-motion";
 import { groupFeaturesByCategory } from "@/lib/feature-groups";
@@ -75,7 +75,8 @@ const PostDetailMap = dynamic(() => import("@/components/map/PostDetailMap"), {
 const imageFallback =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 800'><rect width='1200' height='800' fill='%230b1120'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-family='Arial' font-size='52'>TrustEstate</text></svg>";
 
-const savedKey = "trustestate-saved-posts";
+const savedKey = getVersionedStorageKey("trustestate-saved-posts");
+const compareStorageKey = getVersionedStorageKey("compared_posts");
 const POST_DETAIL_CACHE_TTL_MS = 2 * 60 * 1000;
 const RELATED_POSTS_CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -210,7 +211,7 @@ export default function PostDetailPage() {
           setSelectedImage(0);
           
           try {
-            const storedCompare = localStorage.getItem("compared_posts");
+            const storedCompare = localStorage.getItem(compareStorageKey);
             const compareList = storedCompare ? JSON.parse(storedCompare) : [];
             if (Array.isArray(compareList)) {
               setIsCompared(compareList.some((item: any) => item.id === cachedPost.id));
@@ -315,7 +316,7 @@ export default function PostDetailPage() {
 
     const handleCompareUpdate = () => {
       try {
-        const stored = window.localStorage.getItem("compared_posts");
+        const stored = window.localStorage.getItem(compareStorageKey);
         const parsed = stored ? JSON.parse(stored) : [];
         const list = Array.isArray(parsed) ? (parsed as Post[]) : [];
         setIsCompared(list.some((item) => item.id === post.id));
@@ -361,7 +362,7 @@ export default function PostDetailPage() {
     if (!post) return;
     const handleCompareUpdate = () => {
       try {
-        const stored = localStorage.getItem("compared_posts");
+        const stored = localStorage.getItem(compareStorageKey);
         const list = stored ? JSON.parse(stored) : [];
         setIsCompared(Array.isArray(list) && list.some((item: any) => item.id === post.id));
       } catch {
@@ -489,7 +490,7 @@ export default function PostDetailPage() {
     if (!post) return;
 
     try {
-      const stored = localStorage.getItem("compared_posts");
+      const stored = localStorage.getItem(compareStorageKey);
       let list = stored ? JSON.parse(stored) : [];
       if (!Array.isArray(list)) list = [];
 
@@ -511,7 +512,7 @@ export default function PostDetailPage() {
         setIsCompared(true);
         toast.success("Đã thêm vào danh sách so sánh.");
       }
-      localStorage.setItem("compared_posts", JSON.stringify(list));
+      localStorage.setItem(compareStorageKey, JSON.stringify(list));
       window.dispatchEvent(new Event("compare_list_updated"));
     } catch (e) {
       console.error(e);
