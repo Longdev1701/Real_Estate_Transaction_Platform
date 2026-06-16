@@ -1,7 +1,7 @@
 const isBrowser = typeof window !== "undefined";
 
 export const CLIENT_CACHE_VERSION =
-  process.env.NEXT_PUBLIC_CLIENT_CACHE_VERSION?.trim() || "db-seed-2026-06-17";
+  process.env.NEXT_PUBLIC_CLIENT_CACHE_VERSION?.trim() || "db-images-2026-06-17";
 
 const CACHE_STORAGE_PREFIX = `trustestate-cache:${CLIENT_CACHE_VERSION}:`;
 
