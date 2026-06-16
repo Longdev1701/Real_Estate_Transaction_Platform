@@ -39,9 +39,9 @@ import {
   type Ward,
 } from "@/lib/administrative-divisions";
 import { api } from "@/lib/api";
-import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
 import { FeatureIcon } from "@/lib/feature-icons";
 import { compressPropertyImage, yieldToBrowser } from "@/lib/image-compression";
+import { fetchPropertyFeatures, readCachedPropertyFeatures } from "@/lib/property-features-cache";
 import {
   acceptedPropertyImageInput,
   extractPostFeatureIds,
@@ -280,17 +280,14 @@ export default function EditPostPage() {
 
   useEffect(() => {
     const fetchFeatures = async () => {
-      const cacheKey = `features:${watchedPropertyType}`;
-      const cached = readSessionCache<PropertyFeature[]>(cacheKey);
+      const cached = readCachedPropertyFeatures(watchedPropertyType);
       if (cached) {
         setFeatures(cached);
-        return;
       }
 
       try {
-        const response = await api.get<{ data: PropertyFeature[] }>(`/features?propertyType=${watchedPropertyType}`);
-        setFeatures(response.data.data);
-        writeSessionCache(cacheKey, response.data.data, { ttlMs: 30 * 60 * 1000 });
+        const nextFeatures = await fetchPropertyFeatures(watchedPropertyType);
+        setFeatures(nextFeatures);
       } catch (err) {
         console.error("Lỗi tải đặc trưng:", err);
       }

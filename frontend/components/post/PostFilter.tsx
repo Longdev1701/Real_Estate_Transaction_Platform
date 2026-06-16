@@ -8,7 +8,6 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 
-import { api } from "@/lib/api";
 import {
   fetchDistrictsByProvinceCode,
   fetchProvinces as fetchAdministrativeProvinces,
@@ -16,9 +15,9 @@ import {
   type District,
   type Province,
 } from "@/lib/administrative-divisions";
-import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
 import { FeatureIcon } from "@/lib/feature-icons";
 import { groupFeaturesByCategory } from "@/lib/feature-groups";
+import { fetchPropertyFeatures, readCachedPropertyFeatures } from "@/lib/property-features-cache";
 import {
   PROPERTY_TYPES,
   propertyTypeLabels,
@@ -105,6 +104,7 @@ export function PostFilter({
   onReset,
 }: PostFilterProps) {
   const [features, setFeatures] = useState<Feature[]>([]);
+  const [isLoadingFeatures, setIsLoadingFeatures] = useState(false);
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
   const [selectedProvinceCode, setSelectedProvinceCode] = useState("");
@@ -113,24 +113,27 @@ export function PostFilter({
 
   useEffect(() => {
     const fetchFeatures = async () => {
-      const cacheKey = `features:${value.propertyType || "all"}`;
-      const cached = readSessionCache<Feature[]>(cacheKey);
+      const cached = readCachedPropertyFeatures(value.propertyType || undefined);
       if (cached) {
         setFeatures(cached);
+        if (!showFeatures) return;
+      } else if (!showFeatures) {
+        setFeatures([]);
         return;
       }
 
       try {
-        const url = value.propertyType ? `/features?propertyType=${value.propertyType}` : "/features";
-        const response = await api.get<{ data: Feature[] }>(url);
-        setFeatures(response.data.data);
-        writeSessionCache(cacheKey, response.data.data, { ttlMs: 30 * 60 * 1000 });
+        setIsLoadingFeatures(true);
+        const nextFeatures = await fetchPropertyFeatures(value.propertyType || undefined);
+        setFeatures(nextFeatures);
       } catch (err) {
         console.error("Lỗi tải đặc trưng:", err);
+      } finally {
+        setIsLoadingFeatures(false);
       }
     };
     fetchFeatures();
-  }, [value.propertyType]);
+  }, [showFeatures, value.propertyType]);
 
   useEffect(() => {
     const loadProvinces = async () => {
@@ -391,7 +394,7 @@ export function PostFilter({
             <div className="overflow-hidden">
               {features.length === 0 ? (
                 <div className="flex h-12 items-center justify-center text-[10px] text-[var(--muted-foreground)]">
-                  Đang tải tiện ích...
+                  {isLoadingFeatures ? "Đang tải tiện ích..." : "Mở để tải tiện ích"}
                 </div>
               ) : (
                 <div className="max-h-56 space-y-3 overflow-y-auto pr-1 custom-scrollbar">
