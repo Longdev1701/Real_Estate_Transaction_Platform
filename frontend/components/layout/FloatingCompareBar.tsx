@@ -4,8 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Scale, X, ArrowRight, ChevronDown, Trash2 } from "lucide-react";
+import { getVersionedStorageKey } from "@/lib/client-cache";
 import { getPrimaryImage, type Post } from "@/lib/posts";
 import { confirm } from "@/stores/confirm.store";
+
+const compareStorageKey = getVersionedStorageKey("compared_posts");
 
 export function FloatingCompareBar() {
   const pathname = usePathname();
@@ -16,7 +19,7 @@ export function FloatingCompareBar() {
   useEffect(() => {
     const handleCompareUpdate = () => {
       try {
-        const stored = localStorage.getItem("compared_posts");
+        const stored = localStorage.getItem(compareStorageKey);
         const list = stored ? JSON.parse(stored) : [];
 
         if (Array.isArray(list)) {
@@ -47,7 +50,7 @@ export function FloatingCompareBar() {
   const handleRemove = (postId: string) => {
     try {
       const updated = comparedPosts.filter((post) => post.id !== postId);
-      localStorage.setItem("compared_posts", JSON.stringify(updated));
+      localStorage.setItem(compareStorageKey, JSON.stringify(updated));
       setComparedPosts(updated);
       setIsVisible(updated.length > 0);
       window.dispatchEvent(new Event("compare_list_updated"));
@@ -66,7 +69,7 @@ export function FloatingCompareBar() {
     if (!confirmed) return;
 
     try {
-      localStorage.removeItem("compared_posts");
+      localStorage.removeItem(compareStorageKey);
       setComparedPosts([]);
       setIsVisible(false);
       setIsCollapsed(false);

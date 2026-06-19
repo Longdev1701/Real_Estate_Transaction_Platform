@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 
 import { api } from "@/lib/api";
-import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
+import { getVersionedStorageKey, readSessionCache, writeSessionCache } from "@/lib/client-cache";
 import {
   formatArea,
   formatLocation,
@@ -44,6 +44,7 @@ import { useAuthStore } from "@/stores/auth.store";
 
 const imageFallback =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 760'><rect width='1200' height='760' fill='%230b1120'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-family='Arial' font-size='48'>TrustEstate</text></svg>";
+const compareStorageKey = getVersionedStorageKey("compared_posts");
 
 const maxCompareItems = 3;
 
@@ -218,7 +219,7 @@ export default function ComparePage() {
   useEffect(() => {
     const handleCompareUpdate = () => {
       try {
-        const stored = localStorage.getItem("compared_posts");
+        const stored = localStorage.getItem(compareStorageKey);
         const parsed = stored ? JSON.parse(stored) : [];
         setComparedPosts((current) => {
           const currentIds = current.map((p) => p.id).join(",");
@@ -263,7 +264,7 @@ export default function ComparePage() {
           writeSessionCache(cacheKey, items);
 
           // If comparedPosts is empty, initialize it with first 3 saved posts of the same postType
-          const stored = localStorage.getItem("compared_posts");
+          const stored = localStorage.getItem(compareStorageKey);
           const parsed = stored ? JSON.parse(stored) : [];
           if (parsed.length === 0 && items.length > 0) {
             const firstPost = items[0].post;
@@ -272,7 +273,7 @@ export default function ComparePage() {
               .slice(0, maxCompareItems)
               .map((item) => item.post);
             setComparedPosts(initialCompared);
-            localStorage.setItem("compared_posts", JSON.stringify(initialCompared));
+            localStorage.setItem(compareStorageKey, JSON.stringify(initialCompared));
             window.dispatchEvent(new Event("compare_list_updated"));
           }
         }
@@ -327,7 +328,7 @@ export default function ComparePage() {
     if (exists) {
       const next = comparedPosts.filter((p) => p.id !== postId);
       setComparedPosts(next);
-      localStorage.setItem("compared_posts", JSON.stringify(next));
+      localStorage.setItem(compareStorageKey, JSON.stringify(next));
       window.dispatchEvent(new Event("compare_list_updated"));
     } else {
       if (comparedPosts.length >= maxCompareItems) {
@@ -342,7 +343,7 @@ export default function ComparePage() {
         }
         const next = [...comparedPosts, post];
         setComparedPosts(next);
-        localStorage.setItem("compared_posts", JSON.stringify(next));
+        localStorage.setItem(compareStorageKey, JSON.stringify(next));
         window.dispatchEvent(new Event("compare_list_updated"));
       }
     }
@@ -351,13 +352,13 @@ export default function ComparePage() {
   const removeFromCompare = (postId: string) => {
     const next = comparedPosts.filter((p) => p.id !== postId);
     setComparedPosts(next);
-    localStorage.setItem("compared_posts", JSON.stringify(next));
+    localStorage.setItem(compareStorageKey, JSON.stringify(next));
     window.dispatchEvent(new Event("compare_list_updated"));
   };
 
   const clearCompare = () => {
     setComparedPosts([]);
-    localStorage.removeItem("compared_posts");
+    localStorage.removeItem(compareStorageKey);
     window.dispatchEvent(new Event("compare_list_updated"));
     setActionError(null);
   };

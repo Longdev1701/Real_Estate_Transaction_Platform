@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { AxiosError } from "axios";
@@ -36,11 +36,13 @@ import {
 } from "lucide-react";
 
 import { api } from "@/lib/api";
-import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
+import { getVersionedStorageKey, readSessionCache, writeSessionCache } from "@/lib/client-cache";
 import { FeatureIcon } from "@/lib/feature-icons";
 import { motion } from "framer-motion";
 import { groupFeaturesByCategory } from "@/lib/feature-groups";
 import {
+  buildPostQuery,
+  defaultPostFilter,
   formatArea,
   formatCompactPrice,
   formatLocation,
@@ -73,10 +75,13 @@ const PostDetailMap = dynamic(() => import("@/components/map/PostDetailMap"), {
 const imageFallback =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 800'><rect width='1200' height='800' fill='%230b1120'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-family='Arial' font-size='52'>TrustEstate</text></svg>";
 
-const savedKey = "trustestate-saved-posts";
+const savedKey = getVersionedStorageKey("trustestate-saved-posts");
+const compareStorageKey = getVersionedStorageKey("compared_posts");
 const POST_DETAIL_CACHE_TTL_MS = 2 * 60 * 1000;
+const RELATED_POSTS_CACHE_TTL_MS = 5 * 60 * 1000;
 
 const getPostDetailCacheKey = (postId: string) => `posts:detail:${postId}`;
+const getRelatedPostsCacheKey = (postId: string) => `posts:related:v2:${postId}`;
 
 const isUsablePostDetailCache = (value: Post | null): value is Post =>
   Boolean(value?.id && value.author && Array.isArray(value.images));
@@ -88,6 +93,7 @@ export default function PostDetailPage() {
 
   const [post, setPost] = useState<Post | null>(null);
   const [relatedPosts, setRelatedPosts] = useState<Post[]>([]);
+  const [isRelatedPostsLoading, setIsRelatedPostsLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
@@ -107,6 +113,82 @@ export default function PostDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [showAllFeatures, setShowAllFeatures] = useState(false);
   const mapSectionRef = useRef<HTMLDivElement | null>(null);
+  const prefetchingPostIdsRef = useRef<Set<string>>(new Set());
+  const prefetchingAuthorIdsRef = useRef<Set<string>>(new Set());
+
+  const handleBackToPosts = useCallback(() => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+      return;
+    }
+
+    router.push("/posts");
+  }, [router]);
+
+  const prefetchPostDetail = useCallback(
+    (postId: string) => {
+      if (!postId || postId === params.id || prefetchingPostIdsRef.current.has(postId)) {
+        return;
+      }
+
+      const cacheKey = getPostDetailCacheKey(postId);
+      if (isUsablePostDetailCache(readSessionCache<Post>(cacheKey))) {
+        return;
+      }
+
+      prefetchingPostIdsRef.current.add(postId);
+      router.prefetch(`/posts/${postId}`);
+
+      void api
+        .get<{ data: Post }>(`/posts/${postId}?includeRelated=false`)
+        .then((response) => {
+          writeSessionCache(cacheKey, response.data.data, { ttlMs: POST_DETAIL_CACHE_TTL_MS });
+        })
+        .catch(() => {})
+        .finally(() => {
+          prefetchingPostIdsRef.current.delete(postId);
+        });
+    },
+    [params.id, router],
+  );
+
+  const prefetchAuthorProfile = useCallback(() => {
+    if (!post?.author?.id || prefetchingAuthorIdsRef.current.has(post.author.id)) {
+      return;
+    }
+
+    const authorId = post.author.id;
+    const profilePostsCacheKey = `profile:posts:${authorId}:public`;
+
+    writeSessionCache(`profile:author:${authorId}`, post.author, {
+      ttlMs: POST_DETAIL_CACHE_TTL_MS,
+    });
+    router.prefetch(`/profile/posts?authorId=${authorId}`);
+
+    if (readSessionCache(profilePostsCacheKey)) {
+      return;
+    }
+
+    prefetchingAuthorIdsRef.current.add(authorId);
+    const query = `${buildPostQuery(
+      {
+        ...defaultPostFilter,
+        authorId,
+      },
+      1,
+      30,
+    )}&imageLimit=1`;
+
+    void api
+      .get(`/posts?${query}`)
+      .then((response) => {
+        writeSessionCache(profilePostsCacheKey, response.data.data, { ttlMs: 5 * 60_000 });
+      })
+      .catch(() => {})
+      .finally(() => {
+        prefetchingAuthorIdsRef.current.delete(authorId);
+      });
+  }, [post, router]);
 
   useEffect(() => {
     window.dispatchEvent(
@@ -123,22 +205,37 @@ export default function PostDetailPage() {
   }, []);
 
   useEffect(() => {
+    const scrollToTop = () => {
+      document.getElementById("main-scroll-container")?.scrollTo({ top: 0 });
+      window.scrollTo({ top: 0 });
+    };
+
+    const frame = window.requestAnimationFrame(scrollToTop);
+    const timeout = window.setTimeout(scrollToTop, 80);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timeout);
+    };
+  }, [params.id]);
+
+  useEffect(() => {
     let isMounted = true;
 
     const fetchPost = async () => {
       try {
         setIsLoading(true);
         setError(null);
+        setRelatedPosts([]);
         const cacheKey = getPostDetailCacheKey(params.id);
         const cachedPost = readSessionCache<Post>(cacheKey);
 
         if (isUsablePostDetailCache(cachedPost) && isMounted) {
           setPost(cachedPost);
           setSelectedImage(0);
-          setRelatedPosts(cachedPost.relatedPosts ?? []);
           
           try {
-            const storedCompare = localStorage.getItem("compared_posts");
+            const storedCompare = localStorage.getItem(compareStorageKey);
             const compareList = storedCompare ? JSON.parse(storedCompare) : [];
             if (Array.isArray(compareList)) {
               setIsCompared(compareList.some((item: any) => item.id === cachedPost.id));
@@ -148,7 +245,7 @@ export default function PostDetailPage() {
           setIsLoading(false);
         }
 
-        const response = await api.get<{ data: Post }>(`/posts/${params.id}`);
+        const response = await api.get<{ data: Post }>(`/posts/${params.id}?includeRelated=false`);
 
         if (!isMounted) {
           return;
@@ -158,10 +255,6 @@ export default function PostDetailPage() {
         setPost(currentPost);
         setSelectedImage(0);
         writeSessionCache(cacheKey, currentPost, { ttlMs: POST_DETAIL_CACHE_TTL_MS });
-
-        if (currentPost.relatedPosts) {
-          setRelatedPosts(currentPost.relatedPosts);
-        }
       } catch (err) {
         const axiosError = err as AxiosError<{ message?: string }>;
         if (isMounted) {
@@ -181,6 +274,79 @@ export default function PostDetailPage() {
     };
   }, [params.id]);
 
+  const relatedPostId = post?.id ?? "";
+  const relatedPostCity = post?.city ?? "";
+  const relatedPostPropertyType = post?.propertyType ?? "";
+  const relatedPostsListHref = useMemo(() => {
+    if (!relatedPostCity || !relatedPostPropertyType) {
+      return "/posts";
+    }
+
+    return `/posts?${buildPostQuery(
+      {
+        ...defaultPostFilter,
+        city: relatedPostCity,
+        propertyType: relatedPostPropertyType,
+      },
+      1,
+      15,
+    )}`;
+  }, [relatedPostCity, relatedPostPropertyType]);
+
+  useEffect(() => {
+    if (!relatedPostId || !relatedPostCity || !relatedPostPropertyType) return;
+
+    let isMounted = true;
+    const cacheKey = getRelatedPostsCacheKey(relatedPostId);
+    const cachedRelatedPosts = readSessionCache<Post[]>(cacheKey);
+
+    if (cachedRelatedPosts) {
+      setRelatedPosts(cachedRelatedPosts);
+    } else {
+      setRelatedPosts([]);
+    }
+    setIsRelatedPostsLoading(!cachedRelatedPosts);
+
+    const fetchRelatedPosts = async () => {
+      try {
+        const query = `${buildPostQuery(
+          {
+            ...defaultPostFilter,
+            city: relatedPostCity,
+            propertyType: relatedPostPropertyType,
+          },
+          1,
+          4,
+        )}&imageLimit=1`;
+
+        const response = await api.get<{ data: { items: Post[] } }>(`/posts?${query}`);
+        if (!isMounted) return;
+
+        const nextRelatedPosts = response.data.data.items
+          .filter((item) => item.id !== relatedPostId)
+          .slice(0, 3);
+
+        setRelatedPosts(nextRelatedPosts);
+        writeSessionCache(cacheKey, nextRelatedPosts, { ttlMs: RELATED_POSTS_CACHE_TTL_MS });
+      } catch (error) {
+        if (!cachedRelatedPosts) {
+          setRelatedPosts([]);
+        }
+        console.error("Failed to load related posts:", error);
+      } finally {
+        if (isMounted) {
+          setIsRelatedPostsLoading(false);
+        }
+      }
+    };
+
+    void fetchRelatedPosts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [relatedPostCity, relatedPostId, relatedPostPropertyType]);
+
   useEffect(() => {
     if (!post) {
       setIsCompared(false);
@@ -189,7 +355,7 @@ export default function PostDetailPage() {
 
     const handleCompareUpdate = () => {
       try {
-        const stored = window.localStorage.getItem("compared_posts");
+        const stored = window.localStorage.getItem(compareStorageKey);
         const parsed = stored ? JSON.parse(stored) : [];
         const list = Array.isArray(parsed) ? (parsed as Post[]) : [];
         setIsCompared(list.some((item) => item.id === post.id));
@@ -235,7 +401,7 @@ export default function PostDetailPage() {
     if (!post) return;
     const handleCompareUpdate = () => {
       try {
-        const stored = localStorage.getItem("compared_posts");
+        const stored = localStorage.getItem(compareStorageKey);
         const list = stored ? JSON.parse(stored) : [];
         setIsCompared(Array.isArray(list) && list.some((item: any) => item.id === post.id));
       } catch {
@@ -363,7 +529,7 @@ export default function PostDetailPage() {
     if (!post) return;
 
     try {
-      const stored = localStorage.getItem("compared_posts");
+      const stored = localStorage.getItem(compareStorageKey);
       let list = stored ? JSON.parse(stored) : [];
       if (!Array.isArray(list)) list = [];
 
@@ -385,7 +551,7 @@ export default function PostDetailPage() {
         setIsCompared(true);
         toast.success("Đã thêm vào danh sách so sánh.");
       }
-      localStorage.setItem("compared_posts", JSON.stringify(list));
+      localStorage.setItem(compareStorageKey, JSON.stringify(list));
       window.dispatchEvent(new Event("compare_list_updated"));
     } catch (e) {
       console.error(e);
@@ -434,14 +600,6 @@ export default function PostDetailPage() {
     } finally {
       setIsStartingConversation(false);
     }
-  };
-
-  const cacheAuthorPreview = () => {
-    if (!post) return;
-
-    writeSessionCache(`profile:author:${post.author.id}`, post.author, {
-      ttlMs: POST_DETAIL_CACHE_TTL_MS,
-    });
   };
 
   if (isLoading) {
@@ -533,7 +691,7 @@ export default function PostDetailPage() {
       <div className="container mx-auto px-4 py-10 lg:px-8">
         <div className="glass-card p-8 text-center">
           <p className="text-lg text-[var(--danger-foreground)]">{error}</p>
-          <button type="button" onClick={() => router.push("/posts")} className="btn-primary mt-6">
+          <button type="button" onClick={handleBackToPosts} className="btn-primary mt-6">
             Quay lại danh sách
           </button>
         </div>
@@ -651,7 +809,7 @@ export default function PostDetailPage() {
       <div className="lg:hidden">
         <button
           type="button"
-          onClick={() => router.push("/posts")}
+          onClick={handleBackToPosts}
           className="theme-surface-soft inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)]"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -873,7 +1031,14 @@ export default function PostDetailPage() {
                   <div className="pointer-events-none absolute left-0 top-0 h-24 w-full bg-gradient-to-b from-[var(--accent-soft)] to-transparent" />
                   <h2 className="relative text-lg font-semibold text-[var(--foreground)]">Thông tin người đăng</h2>
                   <div className="relative mt-4 flex items-center gap-4">
-                    <Link href={`/profile/posts?authorId=${post.author.id}`} className="relative shrink-0 transition hover:opacity-80 block">
+                    <Link
+                      href={`/profile/posts?authorId=${post.author.id}`}
+                      onClick={prefetchAuthorProfile}
+                      onFocus={prefetchAuthorProfile}
+                      onMouseEnter={prefetchAuthorProfile}
+                      onTouchStart={prefetchAuthorProfile}
+                      className="relative shrink-0 transition hover:opacity-80 block"
+                    >
                       <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full border-2 border-[var(--accent-border)] bg-[var(--accent-soft)] text-lg font-semibold text-[var(--accent)]">
                         {post.author.avatarUrl ? (
                           <img src={post.author.avatarUrl} alt={post.author.fullName} className="h-full w-full object-cover" />
@@ -884,7 +1049,14 @@ export default function PostDetailPage() {
                       </div>
                     </Link>
                     <div className="min-w-0 flex-1">
-                      <Link href={`/profile/posts?authorId=${post.author.id}`} className="block break-words font-bold leading-snug text-[var(--foreground)] transition hover:text-[var(--accent)]">
+                      <Link
+                        href={`/profile/posts?authorId=${post.author.id}`}
+                        onClick={prefetchAuthorProfile}
+                        onFocus={prefetchAuthorProfile}
+                        onMouseEnter={prefetchAuthorProfile}
+                        onTouchStart={prefetchAuthorProfile}
+                        className="block break-words font-bold leading-snug text-[var(--foreground)] transition hover:text-[var(--accent)]"
+                      >
                         {post.author.fullName}
                       </Link>
                       <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">Đã xác thực</p>
@@ -1060,7 +1232,14 @@ export default function PostDetailPage() {
                 <div className="pointer-events-none absolute left-0 top-0 h-24 w-full bg-gradient-to-b from-[var(--accent-soft)] to-transparent" />
                 <h2 className="relative text-xl font-semibold text-[var(--foreground)]">Liên hệ người bán</h2>
                 <div className="relative mt-5 flex items-center gap-4">
-                  <Link href={`/profile/posts?authorId=${post.author.id}`} onClick={cacheAuthorPreview} className="relative shrink-0 transition hover:opacity-80 block">
+                  <Link
+                    href={`/profile/posts?authorId=${post.author.id}`}
+                    onClick={prefetchAuthorProfile}
+                    onFocus={prefetchAuthorProfile}
+                    onMouseEnter={prefetchAuthorProfile}
+                    onTouchStart={prefetchAuthorProfile}
+                    className="relative shrink-0 transition hover:opacity-80 block"
+                  >
                     <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border-2 border-[var(--accent-border)] bg-[var(--accent-soft)] text-xl font-semibold text-[var(--accent)]">
                       {post.author.avatarUrl ? (
                         <img src={post.author.avatarUrl} alt={post.author.fullName} className="h-full w-full object-cover" />
@@ -1073,7 +1252,14 @@ export default function PostDetailPage() {
                     </div>
                   </Link>
                   <div className="min-w-0 flex-1">
-                    <Link href={`/profile/posts?authorId=${post.author.id}`} onClick={cacheAuthorPreview} className="block break-words text-lg font-bold leading-snug text-[var(--foreground)] transition hover:text-[var(--accent)]">
+                    <Link
+                      href={`/profile/posts?authorId=${post.author.id}`}
+                      onClick={prefetchAuthorProfile}
+                      onFocus={prefetchAuthorProfile}
+                      onMouseEnter={prefetchAuthorProfile}
+                      onTouchStart={prefetchAuthorProfile}
+                      className="block break-words text-lg font-bold leading-snug text-[var(--foreground)] transition hover:text-[var(--accent)]"
+                    >
                       {post.author.fullName}
                     </Link>
                     <p className="mt-1 text-sm text-[var(--muted-foreground)]">Hoạt động gần đây</p>
@@ -1118,17 +1304,21 @@ export default function PostDetailPage() {
             >
               <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-xl font-semibold text-[var(--foreground)] sm:text-2xl">Bất động sản tương tự</h2>
-                <Link href="/posts" className="text-sm font-medium text-[var(--accent)] transition hover:brightness-110">
+                <Link href={relatedPostsListHref} className="text-sm font-medium text-[var(--accent)] transition hover:brightness-110">
                   Xem tất cả
                 </Link>
               </div>
 
-              <RelatedPostsCarousel posts={relatedPosts} />
+              <RelatedPostsCarousel
+                posts={relatedPosts}
+                isLoading={isRelatedPostsLoading}
+                onPostIntent={prefetchPostDetail}
+              />
             </motion.div>
 
             <button
               type="button"
-              onClick={() => router.push("/posts")}
+              onClick={handleBackToPosts}
               className="hidden lg:inline-flex theme-surface-soft items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)]"
             >
               <ArrowLeft className="h-4 w-4" />
