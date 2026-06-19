@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -32,6 +32,13 @@ const themeInitScript = `
 export const metadata: Metadata = {
   title: "TrustEstate - Nền tảng giao dịch bất động sản",
   description: "Nền tảng bất động sản cho đăng tin, tìm kiếm, tư vấn qua trò chuyện và so sánh bất động sản."
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({

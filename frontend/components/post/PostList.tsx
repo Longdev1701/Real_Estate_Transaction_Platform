@@ -38,6 +38,7 @@ import {
 } from "@/lib/posts";
 import { PostCard } from "./PostCard";
 import { PostFilter } from "./PostFilter";
+import { toast } from "@/stores/toast.store";
 
 const PAGE_SIZE = 15;
 const POST_LIST_CACHE_TTL_MS = 2 * 60 * 1000;
@@ -165,7 +166,7 @@ export function PostList() {
       state.draftFilter = draftFilter;
       state.searchParamString = searchParamString;
       sessionStorage.setItem(postListStateKey, JSON.stringify(state));
-    } catch {}
+    } catch { }
   }, [
     activeFilter,
     canUsePostListCache,
@@ -200,7 +201,7 @@ export function PostList() {
   }, [canUsePostListCache, saveCurrentScrollTop]);
 
   const fetchPosts = useCallback(
-    async (nextPage: number, append: boolean, filter: PostFilterValue) => {
+    async (nextPage: number, append: boolean, filter: PostFilterValue, showSuccessToast = false) => {
       const requestId = ++requestIdRef.current;
 
       if (append) {
@@ -224,6 +225,9 @@ export function PostList() {
             setHasMore(cachedPayload.meta.hasMore);
             setTotal(cachedPayload.meta.total ?? cachedPayload.items.length);
             setIsLoading(false);
+            if (showSuccessToast) {
+              toast.success("Đã làm mới bài đăng mới nhất!");
+            }
             return;
           }
         }
@@ -240,6 +244,9 @@ export function PostList() {
         setTotal(payload.meta.total ?? payload.items.length);
         if (!append && canUsePostListCache) {
           writeSessionCache(cacheKey, payload, { ttlMs: POST_LIST_CACHE_TTL_MS });
+        }
+        if (showSuccessToast) {
+          toast.success("Đã cập nhật bài đăng mới nhất!");
         }
       } catch (err) {
         const axiosError = err as AxiosError<{ message?: string }>;
@@ -274,8 +281,8 @@ export function PostList() {
     const cacheKey = `posts:list:${postListCacheScope}:${query}`;
     try {
       sessionStorage.removeItem(cacheKey);
-    } catch (e) {}
-    fetchPosts(1, false, activeFilter);
+    } catch (e) { }
+    fetchPosts(1, false, activeFilter, true);
   };
 
   // Restore state on mount matching search params
@@ -350,7 +357,7 @@ export function PostList() {
       state.draftFilter = draftFilter;
       state.searchParamString = searchParamString;
       sessionStorage.setItem(postListStateKey, JSON.stringify(state));
-    } catch {}
+    } catch { }
   }, [posts, page, hasMore, total, activeFilter, draftFilter, searchParamString, isLoading, hasRestoredAttempted, canUsePostListCache, postListStateKey]);
 
   const handleScroll = (e: React.UIEvent<HTMLElement>) => {
@@ -432,7 +439,7 @@ export function PostList() {
 
     try {
       sessionStorage.setItem(postListScrollKey, "0");
-    } catch {}
+    } catch { }
   }, [activeFilter, activeFilterKey, fetchPosts, hasHydrated, isLoadingUser, hasRestoredAttempted, postListScrollKey, posts.length]);
 
   useEffect(() => {
@@ -536,276 +543,273 @@ export function PostList() {
 
   return (
     <>
-    <div className="grid min-h-0 flex-1 gap-6 xl:grid-cols-[260px_minmax(0,1fr)_340px] 2xl:grid-cols-[280px_minmax(0,1fr)_360px]">
-      <aside className="hidden min-h-0 xl:block">
-        <div className="sticky top-20 h-full max-h-[calc(100vh-100px)] space-y-5 overflow-y-auto pr-1 scrollbar-thin">
-          <div className="glass-card p-2.5">
-            <nav className="space-y-1">
-              {leftNavItems.map((item) => (
-                <button
-                  key={item.label}
-                  type="button"
-                  className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-xs font-semibold transition ${
-                    item.active
+      <div className="grid min-h-0 flex-1 gap-6 xl:grid-cols-[260px_minmax(0,1fr)_340px] 2xl:grid-cols-[280px_minmax(0,1fr)_360px]">
+        <aside className="hidden min-h-0 xl:block">
+          <div className="sticky top-20 h-full max-h-[calc(100vh-100px)] space-y-5 overflow-y-auto pr-1 scrollbar-thin">
+            <div className="glass-card p-2.5">
+              <nav className="space-y-1">
+                {leftNavItems.map((item) => (
+                  <button
+                    key={item.label}
+                    type="button"
+                    className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-xs font-semibold transition ${item.active
                       ? "theme-nav-active border"
                       : "theme-nav-item"
-                  }`}
-                >
-                  <item.icon className="h-3.5 w-3.5" />
-                  {item.label}
-                </button>
-              ))}
-            </nav>
-          </div>
-
-          <div className="glass-card p-3.5">
-            <h2 className="mb-2.5 text-xs font-bold uppercase tracking-wider text-[var(--accent)]">Danh mục</h2>
-            <div className="space-y-1">
-              {categoryItems.map((item) => {
-                const active = draftFilter.propertyType === item.value;
-
-                return (
-                  <button
-                    key={item.value || "all"}
-                    type="button"
-                    onClick={() => applyCategory(item.value)}
-                    className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-medium text-left transition ${
-                      active
-                        ? "theme-nav-active border"
-                        : "theme-nav-item"
-                    }`}
+                      }`}
                   >
-                    <item.icon className={`h-3.5 w-3.5 shrink-0 ${active ? "text-[var(--accent)]" : "text-[var(--muted-foreground)]"}`} />
-                    <span className="line-clamp-1">{item.label}</span>
+                    <item.icon className="h-3.5 w-3.5" />
+                    {item.label}
                   </button>
-                );
-              })}
+                ))}
+              </nav>
             </div>
-          </div>
-        </div>
-      </aside>
 
-      <section
-        ref={scrollContainerRef}
-        onScroll={handleScroll}
-        onClickCapture={saveCurrentScrollTop}
-        onMouseDownCapture={saveCurrentScrollTop}
-        onTouchStartCapture={saveCurrentScrollTop}
-        className="no-scrollbar min-w-0 xl:h-full xl:max-h-[calc(100vh-100px)] xl:overflow-y-auto xl:pr-1"
-      >
-        <div className="space-y-5">
-          <section className="hidden md:flex flex-wrap items-center gap-2 text-sm text-[var(--muted-foreground)]">
-            <span>Trang chủ</span>
-            <span>/</span>
-            <span className="text-[var(--foreground)]">Bài đăng</span>
-          </section>
+            <div className="glass-card p-3.5">
+              <h2 className="mb-2.5 text-xs font-bold uppercase tracking-wider text-[var(--accent)]">Danh mục</h2>
+              <div className="space-y-1">
+                {categoryItems.map((item) => {
+                  const active = draftFilter.propertyType === item.value;
 
-          <div className="glass-card p-4 sm:p-5 md:p-6">
-            <form
-              className="space-y-3"
-              onSubmit={(event) => {
-                event.preventDefault();
-                const normalizedFilter = normalizePostFilter(draftFilter);
-                setDraftFilter(normalizedFilter);
-                setActiveFilter(normalizedFilter);
-              }}
-            >
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <div className="relative flex-1">
-                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--accent)]" />
-                  <input
-                    type="search"
-                    value={draftFilter.keyword}
-                    onChange={(event) => setDraftFilter({ ...draftFilter, keyword: event.target.value })}
-                    className="input-dark h-12 rounded-xl pl-11 text-sm sm:text-base"
-                    placeholder="Tìm kiếm bất động sản..."
-                  />
-                </div>
-                <button type="submit" className="btn-primary inline-flex h-12 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold sm:min-w-36">
-                  <Search className="h-4 w-4" />
-                  Tìm kiếm
-                </button>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {transactionItems.map((item) => {
-                  const isActive = draftFilter.postType === item.value;
                   return (
                     <button
                       key={item.value || "all"}
                       type="button"
-                      onClick={() => applyPostType(item.value)}
-                      className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
-                        isActive
-                          ? "theme-filter-chip-active"
-                          : "theme-filter-chip"
-                      }`}
+                      onClick={() => applyCategory(item.value)}
+                      className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-medium text-left transition ${active
+                        ? "theme-nav-active border"
+                        : "theme-nav-item"
+                        }`}
                     >
-                      {item.label}
+                      <item.icon className={`h-3.5 w-3.5 shrink-0 ${active ? "text-[var(--accent)]" : "text-[var(--muted-foreground)]"}`} />
+                      <span className="line-clamp-1">{item.label}</span>
                     </button>
                   );
                 })}
               </div>
-            </form>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-4 px-1">
-            <div>
-              <h2 className="text-2xl font-semibold text-[var(--foreground)]">Bảng tin bất động sản</h2>
-              <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-                {posts.length > 0
-                  ? total > 0
-                    ? `${total} bài đăng đang hiển thị`
-                    : `${posts.length} bài đăng đang hiển thị`
-                  : "0 bài đăng đang hiển thị"}
-              </p>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  const query = buildPostQuery(activeFilter, 1, PAGE_SIZE);
-                  const cacheKey = `posts:list:${postListCacheScope}:${query}`;
-                  try {
-                    sessionStorage.removeItem(cacheKey);
-                  } catch (e) {}
-                  fetchPosts(1, false, activeFilter);
+          </div>
+        </aside>
+
+        <section
+          ref={scrollContainerRef}
+          onScroll={handleScroll}
+          onClickCapture={saveCurrentScrollTop}
+          onMouseDownCapture={saveCurrentScrollTop}
+          onTouchStartCapture={saveCurrentScrollTop}
+          className="no-scrollbar min-w-0 xl:h-full xl:max-h-[calc(100vh-100px)] xl:overflow-y-auto xl:pr-1"
+        >
+          <div className="space-y-5">
+            <section className="hidden md:flex flex-wrap items-center gap-2 text-sm text-[var(--muted-foreground)]">
+              <span>Trang chủ</span>
+              <span>/</span>
+              <span className="text-[var(--foreground)]">Bài đăng</span>
+            </section>
+
+            <div className="glass-card p-4 sm:p-5 md:p-6">
+              <form
+                className="space-y-3"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const normalizedFilter = normalizePostFilter(draftFilter);
+                  setDraftFilter(normalizedFilter);
+                  setActiveFilter(normalizedFilter);
                 }}
-                className="theme-surface-soft inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--surface-muted)]"
               >
-                <RefreshCw className={`h-4 w-4 text-[var(--accent)] ${isLoading ? "animate-spin" : ""}`} />
-                Mới nhất
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsFilterOpen(true)}
-                className="theme-surface-soft inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--surface-muted)] xl:hidden"
-              >
-                <Filter className="h-4 w-4 text-[var(--accent)]" />
-                Mở bộ lọc
-              </button>
-            </div>
-          </div>
-
-          {error && (
-            <div className="theme-badge-danger rounded-2xl p-4 text-sm">
-              {error}
-            </div>
-          )}
-
-          {isLoading ? (
-            <div className="space-y-5">
-              {[1, 2, 3].map((index) => (
-                <div key={index} className="glass-card overflow-hidden rounded-2xl p-4 md:p-5">
-                  <div className="flex items-start gap-4">
-                    <div className="theme-skeleton h-11 w-11 shrink-0 rounded-full" />
-                    <div className="flex-1 space-y-2">
-                      <div className="theme-skeleton h-4 w-1/3 rounded" />
-                      <div className="theme-skeleton h-3 w-1/4 rounded" />
-                    </div>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <div className="relative flex-1">
+                    <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--accent)]" />
+                    <input
+                      type="search"
+                      value={draftFilter.keyword}
+                      onChange={(event) => setDraftFilter({ ...draftFilter, keyword: event.target.value })}
+                      className="input-dark h-12 rounded-xl pl-11 text-sm sm:text-base"
+                      placeholder="Tìm kiếm bất động sản..."
+                    />
                   </div>
-                  <div className="theme-skeleton mt-4 h-6 w-3/4 rounded" />
-                  <div className="theme-skeleton mt-2 h-4 w-1/2 rounded" />
-                  <div className="theme-skeleton mt-5 aspect-[4/3] w-full rounded-xl md:aspect-auto md:h-64" />
+                  <button type="submit" className="btn-primary inline-flex h-12 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold sm:min-w-36">
+                    <Search className="h-4 w-4" />
+                    Tìm kiếm
+                  </button>
                 </div>
-              ))}
+
+                <div className="flex flex-wrap gap-2">
+                  {transactionItems.map((item) => {
+                    const isActive = draftFilter.postType === item.value;
+                    return (
+                      <button
+                        key={item.value || "all"}
+                        type="button"
+                        onClick={() => applyPostType(item.value)}
+                        className={`rounded-full border px-4 py-2 text-sm font-medium transition ${isActive
+                          ? "theme-filter-chip-active"
+                          : "theme-filter-chip"
+                          }`}
+                      >
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </form>
             </div>
-          ) : posts.length === 0 ? (
-            <div className="glass-card flex min-h-[280px] items-center justify-center p-10 text-center text-[var(--muted-foreground)]">
-              Không tìm thấy bài đăng nào khớp bộ lọc hiện tại.
+
+            <div className="flex flex-wrap items-center justify-between gap-4 px-1">
+              <div>
+                <h2 className="text-2xl font-semibold text-[var(--foreground)]">Bảng tin bất động sản</h2>
+                <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+                  {posts.length > 0
+                    ? total > 0
+                      ? `${total} bài đăng đang hiển thị`
+                      : `${posts.length} bài đăng đang hiển thị`
+                    : "0 bài đăng đang hiển thị"}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const query = buildPostQuery(activeFilter, 1, PAGE_SIZE);
+                    const cacheKey = `posts:list:${postListCacheScope}:${query}`;
+                    try {
+                      sessionStorage.removeItem(cacheKey);
+                    } catch (e) { }
+                    fetchPosts(1, false, activeFilter);
+                  }}
+                  className="theme-surface-soft inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--surface-muted)]"
+                >
+                  <RefreshCw className={`h-4 w-4 text-[var(--accent)] ${isLoading ? "animate-spin" : ""}`} />
+                  Mới nhất
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsFilterOpen(true)}
+                  className="theme-surface-soft inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--surface-muted)] xl:hidden"
+                >
+                  <Filter className="h-4 w-4 text-[var(--accent)]" />
+                  Mở bộ lọc
+                </button>
+              </div>
             </div>
-          ) : (
-            <>
-              <div className="space-y-5">
-                {posts.map((post, index) => (
-                  <div key={post.id}>
-                    <PostCard post={post} isFirstPost={index === 0} />
+
+            {error && (
+              <div className="theme-badge-danger rounded-2xl p-4 text-sm">
+                {error}
+              </div>
+            )}
+
+            {isLoading ? (
+              <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                {[1, 2, 3].map((index) => (
+                  <div key={index} className="glass-card overflow-hidden rounded-2xl p-4 md:p-5">
+                    <div className="flex items-start gap-4">
+                      <div className="theme-skeleton h-11 w-11 shrink-0 rounded-full" />
+                      <div className="flex-1 space-y-2">
+                        <div className="theme-skeleton h-4 w-1/3 rounded" />
+                        <div className="theme-skeleton h-3 w-1/4 rounded" />
+                      </div>
+                    </div>
+                    <div className="theme-skeleton mt-4 h-6 w-3/4 rounded" />
+                    <div className="theme-skeleton mt-2 h-4 w-1/2 rounded" />
+                    <div className="theme-skeleton mt-5 aspect-[4/3] w-full rounded-xl md:aspect-auto md:h-64" />
                   </div>
                 ))}
               </div>
-
-              <div ref={loadMoreRef} className="flex min-h-16 items-center justify-center">
-                {isLoadingMore ? (
-                  <div className="inline-flex items-center gap-3 text-sm text-[var(--muted-foreground)]">
-                    <LoaderCircle className="h-4 w-4 animate-spin text-[var(--accent)]" />
-                    Đang tải thêm...
-                  </div>
-                ) : hasMore ? (
-                  <span className="text-sm text-[var(--muted-foreground)]">Cuộn để tải thêm bài đăng</span>
-                ) : (
-                  <span className="text-sm text-[var(--muted-foreground)]">Đã hiển thị toàn bộ bài đăng</span>
-                )}
+            ) : posts.length === 0 ? (
+              <div className="glass-card flex min-h-[280px] items-center justify-center p-10 text-center text-[var(--muted-foreground)]">
+                Không tìm thấy bài đăng nào khớp bộ lọc hiện tại.
               </div>
-            </>
-          )}
-        </div>
-      </section>
+            ) : (
+              <>
+                <div key={posts[0]?.id || "empty"} className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  {posts.map((post, index) => (
+                    <div key={post.id}>
+                      <PostCard post={post} isFirstPost={index === 0} />
+                    </div>
+                  ))}
+                </div>
 
-      <aside className="hidden min-h-0 xl:block">
-        <div className="no-scrollbar sticky top-20 h-full max-h-[calc(100vh-100px)] overflow-y-auto xl:space-y-5">
-          <PostFilter
-            value={draftFilter}
-            isLoading={isLoading}
-            onChange={setDraftFilter}
-            onSubmit={() => {
-              const normalizedFilter = normalizePostFilter(draftFilter);
-              setDraftFilter(normalizedFilter);
-              setActiveFilter(normalizedFilter);
-            }}
-            onReset={() => {
-              setDraftFilter(defaultPostFilter);
-              setActiveFilter(defaultPostFilter);
-            }}
-          />
-        </div>
-      </aside>
-
-    </div>
-    {isFilterOpen ? (
-      <div className="theme-overlay-dim fixed inset-0 z-50 backdrop-blur-sm xl:hidden" onClick={() => setIsFilterOpen(false)}>
-        <div
-          className="theme-drawer-surface absolute inset-x-3 bottom-3 top-20 overflow-hidden rounded-[28px] sm:left-auto sm:right-4 sm:top-24 sm:w-[360px] xl:right-6 xl:w-[380px]"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3">
-            <div>
-              <h2 className="text-base font-semibold text-[var(--foreground)]">Bộ lọc tìm kiếm</h2>
-              <p className="text-xs text-[var(--muted-foreground)]">Giữ cố định ở mép phải để dễ điều chỉnh khi xem bài đăng.</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsFilterOpen(false)}
-              className="theme-surface-soft inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--foreground)] transition hover:bg-[var(--surface-muted)]"
-              aria-label="Đóng bộ lọc"
-            >
-              <X className="h-5 w-5" />
-            </button>
+                <div ref={loadMoreRef} className="flex min-h-16 items-center justify-center">
+                  {isLoadingMore ? (
+                    <div className="inline-flex items-center gap-3 text-sm text-[var(--muted-foreground)]">
+                      <LoaderCircle className="h-4 w-4 animate-spin text-[var(--accent)]" />
+                      Đang tải thêm...
+                    </div>
+                  ) : hasMore ? (
+                    <span className="text-sm text-[var(--muted-foreground)]">Cuộn để tải thêm bài đăng</span>
+                  ) : (
+                    <span className="text-sm text-[var(--muted-foreground)]">Đã hiển thị toàn bộ bài đăng</span>
+                  )}
+                </div>
+              </>
+            )}
           </div>
+        </section>
 
-          <div className="no-scrollbar h-full overflow-y-auto p-4 pb-24">
+        <aside className="hidden min-h-0 xl:block">
+          <div className="no-scrollbar sticky top-20 h-full max-h-[calc(100vh-100px)] overflow-y-auto xl:space-y-5">
             <PostFilter
               value={draftFilter}
               isLoading={isLoading}
               onChange={setDraftFilter}
-              onSubmit={applyAdvancedFilter}
-              onReset={resetAdvancedFilter}
+              onSubmit={() => {
+                const normalizedFilter = normalizePostFilter(draftFilter);
+                setDraftFilter(normalizedFilter);
+                setActiveFilter(normalizedFilter);
+              }}
+              onReset={() => {
+                setDraftFilter(defaultPostFilter);
+                setActiveFilter(defaultPostFilter);
+              }}
             />
           </div>
+        </aside>
+
+      </div>
+      {isFilterOpen ? (
+        <div className="theme-overlay-dim fixed inset-0 z-50 backdrop-blur-sm xl:hidden" onClick={() => setIsFilterOpen(false)}>
+          <div
+            className="theme-drawer-surface absolute inset-x-3 bottom-3 top-20 overflow-hidden rounded-[28px] sm:left-auto sm:right-4 sm:top-24 sm:w-[360px] xl:right-6 xl:w-[380px]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3">
+              <div>
+                <h2 className="text-base font-semibold text-[var(--foreground)]">Bộ lọc tìm kiếm</h2>
+                <p className="text-xs text-[var(--muted-foreground)]">Giữ cố định ở mép phải để dễ điều chỉnh khi xem bài đăng.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsFilterOpen(false)}
+                className="theme-surface-soft inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--foreground)] transition hover:bg-[var(--surface-muted)]"
+                aria-label="Đóng bộ lọc"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="no-scrollbar h-full overflow-y-auto p-4 pb-24">
+              <PostFilter
+                value={draftFilter}
+                isLoading={isLoading}
+                onChange={setDraftFilter}
+                onSubmit={applyAdvancedFilter}
+                onReset={resetAdvancedFilter}
+              />
+            </div>
+          </div>
         </div>
-      </div>
-    ) : null}
-    {showFloatingReload && (
-      <div className="fixed left-1/2 top-24 z-40 -translate-x-1/2 animate-in fade-in slide-in-from-top-4 duration-300">
-        <button
-          type="button"
-          onClick={scrollToTopAndRefresh}
-          className="flex items-center gap-2 rounded-full border border-[var(--accent-border)] bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-[var(--primary-foreground)] shadow-[0_4px_20px_color-mix(in_srgb,var(--accent)_30%,transparent)] hover:scale-105 hover:brightness-110 active:scale-95 transition-all duration-300"
-        >
-          <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-          Xem bài đăng mới nhất
-        </button>
-      </div>
-    )}
+      ) : null}
+      {showFloatingReload && (
+        <div className="fixed z-40 transition-all duration-300 bottom-24 right-5 sm:bottom-auto sm:right-auto sm:left-1/2 sm:top-24 sm:-translate-x-1/2 animate-in fade-in slide-in-from-bottom-4 sm:slide-in-from-top-4">
+          <button
+            type="button"
+            onClick={scrollToTopAndRefresh}
+            style={{ backgroundColor: "color-mix(in srgb, var(--surface) 28%, transparent)", backdropFilter: "blur(20px)" }}
+            className="flex items-center justify-center rounded-full glass-card hover:bg-[var(--surface-muted)] text-[var(--accent)] shadow-lg hover:scale-105 active:scale-95 transition-all duration-300 h-12 w-12 sm:h-auto sm:w-auto sm:px-5 sm:py-2.5 text-sm font-semibold"
+          >
+            <RefreshCw className={`h-5 w-5 sm:h-4 sm:w-4 ${isLoading ? "animate-spin" : ""}`} />
+          </button>
+        </div>
+      )}
     </>
   );
 }

@@ -1475,3 +1475,13 @@
     background-position: -200% 0;
   }
 }
+
+a,
+button,
+input,
+select,
+textarea,
+[role="button"],
+.touch-manipulation {
+  touch-action: manipulation;
+}

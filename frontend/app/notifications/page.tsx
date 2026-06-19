@@ -386,7 +386,7 @@ export default function NotificationsPage() {
 
           <div className="no-scrollbar min-h-0 flex-1 pb-6 xl:overflow-y-auto xl:pr-1">
             {isLoading ? (
-              <div className="theme-surface-soft flex h-full min-h-[300px] items-center justify-center rounded-2xl">
+              <div className="theme-surface-soft flex h-full min-h-[300px] items-center justify-center rounded-2xl animate-in fade-in slide-in-from-bottom-2 duration-500">
                 <div className="theme-text-secondary inline-flex items-center gap-3">
                   <LoaderCircle className="h-5 w-5 animate-spin text-[var(--primary)]" />
                   Đang tải thông báo...
