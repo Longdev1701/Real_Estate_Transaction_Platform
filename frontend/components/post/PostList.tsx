@@ -16,6 +16,7 @@ import {
   SlidersHorizontal,
   X,
   Warehouse,
+  RefreshCw,
 } from "lucide-react";
 
 import { api } from "@/lib/api";
@@ -630,14 +631,31 @@ export function PostList() {
                   : "0 bài đăng đang hiển thị"}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setIsFilterOpen(true)}
-              className="theme-surface-soft inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--surface-muted)] xl:hidden"
-            >
-              <Filter className="h-4 w-4 text-[var(--accent)]" />
-              Mở bộ lọc
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const query = buildPostQuery(activeFilter, 1, PAGE_SIZE);
+                  const cacheKey = `posts:list:${postListCacheScope}:${query}`;
+                  try {
+                    sessionStorage.removeItem(cacheKey);
+                  } catch (e) {}
+                  fetchPosts(1, false, activeFilter);
+                }}
+                className="theme-surface-soft inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--surface-muted)]"
+              >
+                <RefreshCw className={`h-4 w-4 text-[var(--accent)] ${isLoading ? "animate-spin" : ""}`} />
+                Mới nhất
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsFilterOpen(true)}
+                className="theme-surface-soft inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--surface-muted)] xl:hidden"
+              >
+                <Filter className="h-4 w-4 text-[var(--accent)]" />
+                Mở bộ lọc
+              </button>
+            </div>
           </div>
 
           {error && (
