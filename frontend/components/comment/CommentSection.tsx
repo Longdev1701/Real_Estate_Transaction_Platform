@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth.store";
 import { useSocketStore } from "@/stores/socket.store";
 import { confirm } from "@/stores/confirm.store";
+import { writeSessionCache } from "@/lib/client-cache";
 
 type CommentAuthor = {
   id: string;
@@ -520,7 +521,15 @@ function CommentItem({
 
   return (
     <div className={`flex gap-4 pt-4 ${index === 0 ? "border-t-0 pt-0" : ""}`}>
-      <Link href={`/profile/posts?authorId=${comment.authorId}`} className="shrink-0 transition hover:opacity-80 block">
+      <Link
+        href={`/profile/posts?authorId=${comment.authorId}`}
+        onClick={() => {
+          if (comment.author) {
+            writeSessionCache(`profile:author:${comment.authorId}`, comment.author, { ttlMs: 5 * 60_000 });
+          }
+        }}
+        className="shrink-0 transition hover:opacity-80 block"
+      >
         <Avatar name={getAuthorName(comment.author)} imageUrl={comment.author?.avatarUrl} size="md" />
       </Link>
       <div className="min-w-0 flex-1 space-y-2">
@@ -575,7 +584,15 @@ function CommentItem({
 
               return (
                 <div key={reply.id} className="flex gap-3 pt-2">
-                  <Link href={`/profile/posts?authorId=${reply.authorId}`} className="shrink-0 transition hover:opacity-80 block">
+                  <Link
+                    href={`/profile/posts?authorId=${reply.authorId}`}
+                    onClick={() => {
+                      if (reply.author) {
+                        writeSessionCache(`profile:author:${reply.authorId}`, reply.author, { ttlMs: 5 * 60_000 });
+                      }
+                    }}
+                    className="shrink-0 transition hover:opacity-80 block"
+                  >
                     <Avatar name={getAuthorName(reply.author)} imageUrl={reply.author?.avatarUrl} size="sm" />
                   </Link>
                   <div className="min-w-0 flex-1 space-y-1">
@@ -642,7 +659,15 @@ function CommentHeader({
   return (
     <div className="flex items-center justify-between gap-2">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <Link href={`/profile/posts?authorId=${comment.authorId}`} className={`${compact ? "text-xs" : "text-sm"} font-semibold text-[var(--foreground)] transition hover:text-[var(--accent)]`}>
+        <Link
+          href={`/profile/posts?authorId=${comment.authorId}`}
+          onClick={() => {
+            if (comment.author) {
+              writeSessionCache(`profile:author:${comment.authorId}`, comment.author, { ttlMs: 5 * 60_000 });
+            }
+          }}
+          className={`${compact ? "text-xs" : "text-sm"} font-semibold text-[var(--foreground)] transition hover:text-[var(--accent)]`}
+        >
           {getAuthorName(comment.author)}
         </Link>
         {isPostAuthor && (

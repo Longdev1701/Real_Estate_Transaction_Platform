@@ -124,7 +124,6 @@ export default function PostDetailPage() {
 
     router.push("/posts");
   }, [router]);
-
   const prefetchPostDetail = useCallback(
     (postId: string) => {
       if (!postId || postId === params.id || prefetchingPostIdsRef.current.has(postId)) {
