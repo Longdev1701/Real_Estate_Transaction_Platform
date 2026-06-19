@@ -16,6 +16,7 @@ import {
   SlidersHorizontal,
   X,
   Warehouse,
+  RefreshCw,
 } from "lucide-react";
 
 import { api } from "@/lib/api";
@@ -114,6 +115,8 @@ export function PostList() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
+
+  const [showFloatingReload, setShowFloatingReload] = useState(false);
 
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const requestIdRef = useRef(0);
@@ -257,6 +260,24 @@ export function PostList() {
     [canUsePostListCache, postListCacheScope],
   );
 
+  const scrollToTopAndRefresh = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    const mainScroll = document.getElementById("main-scroll-container");
+    if (mainScroll) {
+      mainScroll.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    const query = buildPostQuery(activeFilter, 1, PAGE_SIZE);
+    const cacheKey = `posts:list:${postListCacheScope}:${query}`;
+    try {
+      sessionStorage.removeItem(cacheKey);
+    } catch (e) {}
+    fetchPosts(1, false, activeFilter);
+  };
+
   // Restore state on mount matching search params
   useEffect(() => {
     if (!hasHydrated || isLoadingUser) {
@@ -335,7 +356,10 @@ export function PostList() {
   const handleScroll = (e: React.UIEvent<HTMLElement>) => {
     if (!canUsePostListCache) return;
 
-    pendingScrollTopRef.current = e.currentTarget.scrollTop;
+    const scrollTop = e.currentTarget.scrollTop;
+    setShowFloatingReload(scrollTop > 400);
+
+    pendingScrollTopRef.current = scrollTop;
     if (!isRestoringScrollRef.current) {
       isSnapshotFrozenRef.current = false;
     }
@@ -351,21 +375,27 @@ export function PostList() {
       }
     };
 
-    mainScroll?.addEventListener("scroll", scheduleSaveCurrentScrollTop, { passive: true });
-    window.addEventListener("scroll", scheduleSaveCurrentScrollTop, { passive: true });
+    const handleScrollThrottled = () => {
+      const scrollTop = getCurrentScrollTop();
+      setShowFloatingReload(scrollTop > 400);
+      scheduleSaveCurrentScrollTop();
+    };
+
+    mainScroll?.addEventListener("scroll", handleScrollThrottled, { passive: true });
+    window.addEventListener("scroll", handleScrollThrottled, { passive: true });
     window.addEventListener("pagehide", handlePageExit);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      mainScroll?.removeEventListener("scroll", scheduleSaveCurrentScrollTop);
-      window.removeEventListener("scroll", scheduleSaveCurrentScrollTop);
+      mainScroll?.removeEventListener("scroll", handleScrollThrottled);
+      window.removeEventListener("scroll", handleScrollThrottled);
       window.removeEventListener("pagehide", handlePageExit);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       if (scrollSaveFrameRef.current !== null) {
         window.cancelAnimationFrame(scrollSaveFrameRef.current);
       }
     };
-  }, [saveCurrentScrollTop, scheduleSaveCurrentScrollTop]);
+  }, [getCurrentScrollTop, saveCurrentScrollTop, scheduleSaveCurrentScrollTop]);
   useEffect(() => {
     if (!hasHydrated || isLoadingUser) {
       return;
@@ -630,14 +660,31 @@ export function PostList() {
                   : "0 bài đăng đang hiển thị"}
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setIsFilterOpen(true)}
-              className="theme-surface-soft inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--surface-muted)] xl:hidden"
-            >
-              <Filter className="h-4 w-4 text-[var(--accent)]" />
-              Mở bộ lọc
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const query = buildPostQuery(activeFilter, 1, PAGE_SIZE);
+                  const cacheKey = `posts:list:${postListCacheScope}:${query}`;
+                  try {
+                    sessionStorage.removeItem(cacheKey);
+                  } catch (e) {}
+                  fetchPosts(1, false, activeFilter);
+                }}
+                className="theme-surface-soft inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--surface-muted)]"
+              >
+                <RefreshCw className={`h-4 w-4 text-[var(--accent)] ${isLoading ? "animate-spin" : ""}`} />
+                Mới nhất
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsFilterOpen(true)}
+                className="theme-surface-soft inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--surface-muted)] xl:hidden"
+              >
+                <Filter className="h-4 w-4 text-[var(--accent)]" />
+                Mở bộ lọc
+              </button>
+            </div>
           </div>
 
           {error && (
@@ -747,6 +794,18 @@ export function PostList() {
         </div>
       </div>
     ) : null}
+    {showFloatingReload && (
+      <div className="fixed left-1/2 top-24 z-40 -translate-x-1/2 animate-in fade-in slide-in-from-top-4 duration-300">
+        <button
+          type="button"
+          onClick={scrollToTopAndRefresh}
+          className="flex items-center gap-2 rounded-full border border-[var(--accent-border)] bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-[var(--primary-foreground)] shadow-[0_4px_20px_color-mix(in_srgb,var(--accent)_30%,transparent)] hover:scale-105 hover:brightness-110 active:scale-95 transition-all duration-300"
+        >
+          <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+          Xem bài đăng mới nhất
+        </button>
+      </div>
+    )}
     </>
   );
 }

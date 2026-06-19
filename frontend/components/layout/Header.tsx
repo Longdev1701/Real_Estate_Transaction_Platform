@@ -179,6 +179,7 @@ export function Header() {
             <>
               <Link
                 href={user ? "/notifications" : "/auth/login"}
+                prefetch={true}
                 className={`relative rounded-xl p-2 transition-colors ${pathname === "/notifications" ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "text-[var(--muted-foreground)] hover:bg-[var(--accent-soft)] hover:text-[var(--foreground)]"
                   }`}
                 aria-label="Thông báo"
@@ -210,6 +211,7 @@ export function Header() {
 
               <Link
                 href={user ? "/profile/saved" : "/auth/login"}
+                prefetch={true}
                 className="hidden md:flex rounded-xl p-2 text-[var(--muted-foreground)] transition-colors hover:bg-[var(--accent-soft)] hover:text-[var(--foreground)]"
                 aria-label="Bài đăng đã lưu"
               >

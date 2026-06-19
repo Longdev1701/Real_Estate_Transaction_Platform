@@ -44,7 +44,7 @@ export function UserMenu() {
 
   if (!user) {
     return (
-      <Link href="/auth/login" className="btn-primary flex items-center justify-center p-2 sm:px-4">
+      <Link href="/auth/login" prefetch={true} className="btn-primary flex items-center justify-center p-2 sm:px-4">
         <LogIn className="h-5 w-5 sm:hidden" />
         <span className="hidden sm:inline">Đăng nhập</span>
       </Link>

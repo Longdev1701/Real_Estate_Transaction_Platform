@@ -388,6 +388,7 @@ export default function CommentSection({ postId, postAuthorId }: CommentSectionP
                   })()
                 : ""
             )}`}
+            prefetch={true}
             className="btn-primary inline-flex px-5 py-2 text-sm font-medium"
           >
             Đăng nhập ngay
