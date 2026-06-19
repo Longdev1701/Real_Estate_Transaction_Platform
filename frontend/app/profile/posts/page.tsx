@@ -285,14 +285,21 @@ export default function ProfilePostsPage() {
     );
   }
 
-  const displayName =
-    targetAuthor?.fullName ?? user?.fullName ?? user?.name ?? user?.email ?? "Người đăng";
-  const avatarUrl = targetAuthor?.avatarUrl ?? (isOwnProfile ? user?.avatarUrl ?? null : null);
+  const displayName = isOwnProfile
+    ? (user?.fullName ?? user?.name ?? user?.email ?? "Tôi")
+    : (targetAuthor?.fullName ?? "Người đăng");
+  const avatarUrl = isOwnProfile
+    ? (user?.avatarUrl ?? null)
+    : (targetAuthor?.avatarUrl ?? null);
   const profileMeta = isOwnProfile ? `@${(user?.email ?? "user").split("@")[0]}` : "Hồ sơ công khai";
 
   const listTitle = isOwnProfile ? "Bài đăng của tôi" : `Bài đăng của ${displayName}`;
-  const bio = (targetAuthor as any)?.bio ?? (user as any)?.bio ?? null;
-  const address = (targetAuthor as any)?.address ?? (user as any)?.address ?? null;
+  const bio = isOwnProfile
+    ? ((user as any)?.bio ?? null)
+    : ((targetAuthor as any)?.bio ?? null);
+  const address = isOwnProfile
+    ? ((user as any)?.address ?? null)
+    : ((targetAuthor as any)?.address ?? null);
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-8 lg:px-8">
@@ -540,7 +547,7 @@ export default function ProfilePostsPage() {
                     </div>
                     <div>
                       <p className="text-xs text-[var(--muted-foreground)]">Email</p>
-                      <p className="font-medium text-[var(--foreground)]">{targetAuthor?.email || user?.email || "Đang cập nhật"}</p>
+                      <p className="font-medium text-[var(--foreground)]">{isOwnProfile ? (user?.email || "Đang cập nhật") : (targetAuthor?.email || "Đang cập nhật")}</p>
                     </div>
                   </li>
                   <li className="flex items-center gap-3 text-sm">
@@ -549,7 +556,7 @@ export default function ProfilePostsPage() {
                     </div>
                     <div>
                       <p className="text-xs text-[var(--muted-foreground)]">Số điện thoại</p>
-                      <p className="font-medium text-[var(--foreground)]">{targetAuthor?.phone || user?.phone || "Đang cập nhật"}</p>
+                      <p className="font-medium text-[var(--foreground)]">{isOwnProfile ? (user?.phone || "Đang cập nhật") : ((targetAuthor as any)?.phone || "Đang cập nhật")}</p>
                     </div>
                   </li>
                   <li className="flex items-center gap-3 text-sm">

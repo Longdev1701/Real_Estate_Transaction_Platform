@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { Scale } from "lucide-react";
+import { getVersionedStorageKey } from "@/lib/client-cache";
 import { type Post } from "@/lib/posts";
 import { toast } from "@/stores/toast.store";
+
+const compareStorageKey = getVersionedStorageKey("compared_posts");
 
 interface CompareButtonProps {
   post: Post;
@@ -16,7 +19,7 @@ export function CompareButton({ post, className = "" }: CompareButtonProps) {
   useEffect(() => {
     const handleCompareUpdate = () => {
       try {
-        const stored = localStorage.getItem("compared_posts");
+        const stored = localStorage.getItem(compareStorageKey);
         const list = stored ? JSON.parse(stored) : [];
         setIsCompared(Array.isArray(list) && list.some((item: any) => item.id === post.id));
       } catch {
@@ -33,7 +36,7 @@ export function CompareButton({ post, className = "" }: CompareButtonProps) {
     e.stopPropagation();
 
     try {
-      const stored = localStorage.getItem("compared_posts");
+      const stored = localStorage.getItem(compareStorageKey);
       let list = stored ? JSON.parse(stored) : [];
       if (!Array.isArray(list)) list = [];
 
@@ -53,7 +56,7 @@ export function CompareButton({ post, className = "" }: CompareButtonProps) {
         list.push(post);
         setIsCompared(true);
       }
-      localStorage.setItem("compared_posts", JSON.stringify(list));
+      localStorage.setItem(compareStorageKey, JSON.stringify(list));
       window.dispatchEvent(new Event("compare_list_updated"));
     } catch (e) {
       console.error(e);

@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 
 import { api } from "@/lib/api";
-import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
+import { getVersionedStorageKey, readSessionCache, writeSessionCache } from "@/lib/client-cache";
 import { FeatureIcon } from "@/lib/feature-icons";
 import { motion } from "framer-motion";
 import { groupFeaturesByCategory } from "@/lib/feature-groups";
@@ -75,7 +75,8 @@ const PostDetailMap = dynamic(() => import("@/components/map/PostDetailMap"), {
 const imageFallback =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 800'><rect width='1200' height='800' fill='%230b1120'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-family='Arial' font-size='52'>TrustEstate</text></svg>";
 
-const savedKey = "trustestate-saved-posts";
+const savedKey = getVersionedStorageKey("trustestate-saved-posts");
+const compareStorageKey = getVersionedStorageKey("compared_posts");
 const POST_DETAIL_CACHE_TTL_MS = 2 * 60 * 1000;
 const RELATED_POSTS_CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -115,6 +116,14 @@ export default function PostDetailPage() {
   const prefetchingPostIdsRef = useRef<Set<string>>(new Set());
   const prefetchingAuthorIdsRef = useRef<Set<string>>(new Set());
 
+  const handleBackToPosts = useCallback(() => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+      return;
+    }
+
+    router.push("/posts");
+  }, [router]);
   const prefetchPostDetail = useCallback(
     (postId: string) => {
       if (!postId || postId === params.id || prefetchingPostIdsRef.current.has(postId)) {
@@ -195,6 +204,21 @@ export default function PostDetailPage() {
   }, []);
 
   useEffect(() => {
+    const scrollToTop = () => {
+      document.getElementById("main-scroll-container")?.scrollTo({ top: 0 });
+      window.scrollTo({ top: 0 });
+    };
+
+    const frame = window.requestAnimationFrame(scrollToTop);
+    const timeout = window.setTimeout(scrollToTop, 80);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timeout);
+    };
+  }, [params.id]);
+
+  useEffect(() => {
     let isMounted = true;
 
     const fetchPost = async () => {
@@ -210,7 +234,7 @@ export default function PostDetailPage() {
           setSelectedImage(0);
           
           try {
-            const storedCompare = localStorage.getItem("compared_posts");
+            const storedCompare = localStorage.getItem(compareStorageKey);
             const compareList = storedCompare ? JSON.parse(storedCompare) : [];
             if (Array.isArray(compareList)) {
               setIsCompared(compareList.some((item: any) => item.id === cachedPost.id));
@@ -252,6 +276,21 @@ export default function PostDetailPage() {
   const relatedPostId = post?.id ?? "";
   const relatedPostCity = post?.city ?? "";
   const relatedPostPropertyType = post?.propertyType ?? "";
+  const relatedPostsListHref = useMemo(() => {
+    if (!relatedPostCity || !relatedPostPropertyType) {
+      return "/posts";
+    }
+
+    return `/posts?${buildPostQuery(
+      {
+        ...defaultPostFilter,
+        city: relatedPostCity,
+        propertyType: relatedPostPropertyType,
+      },
+      1,
+      15,
+    )}`;
+  }, [relatedPostCity, relatedPostPropertyType]);
 
   useEffect(() => {
     if (!relatedPostId || !relatedPostCity || !relatedPostPropertyType) return;
@@ -315,7 +354,7 @@ export default function PostDetailPage() {
 
     const handleCompareUpdate = () => {
       try {
-        const stored = window.localStorage.getItem("compared_posts");
+        const stored = window.localStorage.getItem(compareStorageKey);
         const parsed = stored ? JSON.parse(stored) : [];
         const list = Array.isArray(parsed) ? (parsed as Post[]) : [];
         setIsCompared(list.some((item) => item.id === post.id));
@@ -361,7 +400,7 @@ export default function PostDetailPage() {
     if (!post) return;
     const handleCompareUpdate = () => {
       try {
-        const stored = localStorage.getItem("compared_posts");
+        const stored = localStorage.getItem(compareStorageKey);
         const list = stored ? JSON.parse(stored) : [];
         setIsCompared(Array.isArray(list) && list.some((item: any) => item.id === post.id));
       } catch {
@@ -489,7 +528,7 @@ export default function PostDetailPage() {
     if (!post) return;
 
     try {
-      const stored = localStorage.getItem("compared_posts");
+      const stored = localStorage.getItem(compareStorageKey);
       let list = stored ? JSON.parse(stored) : [];
       if (!Array.isArray(list)) list = [];
 
@@ -511,7 +550,7 @@ export default function PostDetailPage() {
         setIsCompared(true);
         toast.success("Đã thêm vào danh sách so sánh.");
       }
-      localStorage.setItem("compared_posts", JSON.stringify(list));
+      localStorage.setItem(compareStorageKey, JSON.stringify(list));
       window.dispatchEvent(new Event("compare_list_updated"));
     } catch (e) {
       console.error(e);
@@ -651,7 +690,7 @@ export default function PostDetailPage() {
       <div className="container mx-auto px-4 py-10 lg:px-8">
         <div className="glass-card p-8 text-center">
           <p className="text-lg text-[var(--danger-foreground)]">{error}</p>
-          <button type="button" onClick={() => router.push("/posts")} className="btn-primary mt-6">
+          <button type="button" onClick={handleBackToPosts} className="btn-primary mt-6">
             Quay lại danh sách
           </button>
         </div>
@@ -769,7 +808,7 @@ export default function PostDetailPage() {
       <div className="lg:hidden">
         <button
           type="button"
-          onClick={() => router.push("/posts")}
+          onClick={handleBackToPosts}
           className="theme-surface-soft inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)]"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -1264,7 +1303,7 @@ export default function PostDetailPage() {
             >
               <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-xl font-semibold text-[var(--foreground)] sm:text-2xl">Bất động sản tương tự</h2>
-                <Link href="/posts" className="text-sm font-medium text-[var(--accent)] transition hover:brightness-110">
+                <Link href={relatedPostsListHref} className="text-sm font-medium text-[var(--accent)] transition hover:brightness-110">
                   Xem tất cả
                 </Link>
               </div>
@@ -1278,7 +1317,7 @@ export default function PostDetailPage() {
 
             <button
               type="button"
-              onClick={() => router.push("/posts")}
+              onClick={handleBackToPosts}
               className="hidden lg:inline-flex theme-surface-soft items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium text-[var(--secondary-foreground)] transition hover:bg-[var(--surface-muted)]"
             >
               <ArrowLeft className="h-4 w-4" />

@@ -1,5 +1,5 @@
 import { api } from "@/lib/api";
-import { readSessionCache, writeSessionCache } from "@/lib/client-cache";
+import { getVersionedStorageKey, readSessionCache, writeSessionCache } from "@/lib/client-cache";
 import type { PropertyFeature } from "@/lib/post-form";
 
 const FEATURE_CACHE_TTL_MS = 30 * 60 * 1000;
@@ -12,7 +12,8 @@ const readLocalFeatureCache = (cacheKey: string) => {
   if (typeof window === "undefined") return null;
 
   try {
-    const rawValue = window.localStorage.getItem(cacheKey);
+    const storageKey = getVersionedStorageKey(cacheKey);
+    const rawValue = window.localStorage.getItem(storageKey);
     if (!rawValue) return null;
 
     const parsed = JSON.parse(rawValue) as {
@@ -21,7 +22,7 @@ const readLocalFeatureCache = (cacheKey: string) => {
     };
 
     if (!Array.isArray(parsed.value) || !parsed.expiresAt || parsed.expiresAt <= Date.now()) {
-      window.localStorage.removeItem(cacheKey);
+      window.localStorage.removeItem(storageKey);
       return null;
     }
 
@@ -36,7 +37,7 @@ const writeLocalFeatureCache = (cacheKey: string, features: PropertyFeature[]) =
 
   try {
     window.localStorage.setItem(
-      cacheKey,
+      getVersionedStorageKey(cacheKey),
       JSON.stringify({
         value: features,
         expiresAt: Date.now() + FEATURE_CACHE_TTL_MS,
