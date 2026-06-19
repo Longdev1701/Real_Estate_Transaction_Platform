@@ -424,7 +424,7 @@ export default function SavedPostsPage() {
         ) : null}
 
         {isLoading ? (
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
             {Array.from({ length: 6 }).map((_, index) => (
               <div key={index} className="glass-card overflow-hidden p-0">
                 <div className="theme-skeleton aspect-[16/10] animate-pulse" />
@@ -465,7 +465,7 @@ export default function SavedPostsPage() {
             </div>
           </div>
         ) : (
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          <div key={filteredSavedPosts[0]?.id || "empty"} className="grid gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
             {filteredSavedPosts.map((savedPost) => {
               const { post } = savedPost;
               const imageUrl = post.images[0]?.imageUrl ?? imageFallback;

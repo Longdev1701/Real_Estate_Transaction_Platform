@@ -479,11 +479,17 @@ export default function ProfilePostsPage() {
           ) : null}
 
           {isLoading ? (
-            <div className="flex min-h-[240px] items-center justify-center">
-              <div className="inline-flex items-center gap-3 text-[var(--secondary-foreground)]">
-                <LoaderCircle className="h-5 w-5 animate-spin text-[var(--accent)]" />
-                Đang tải bài đăng...
-              </div>
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <div key={index} className="glass-card overflow-hidden p-0">
+                  <div className="theme-skeleton aspect-[16/10] animate-pulse" />
+                  <div className="space-y-4 p-5">
+                    <div className="theme-skeleton h-6 animate-pulse rounded-full" />
+                    <div className="theme-skeleton h-4 w-2/3 animate-pulse rounded-full" />
+                    <div className="theme-skeleton h-4 w-1/2 animate-pulse rounded-full" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : visiblePosts.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-[var(--border)] p-12 text-center text-[var(--muted-foreground)]">

@@ -39,8 +39,14 @@ const withStorageTimeout = async <T>(
 
 const contentTypeToExtension: Record<string, string> = {
   "image/jpeg": ".jpg",
+  "image/jpg": ".jpg",
+  "image/pjpeg": ".jpg",
   "image/png": ".png",
   "image/webp": ".webp",
+  "image/gif": ".gif",
+  "image/svg+xml": ".svg",
+  "image/heic": ".heic",
+  "image/heif": ".heif",
 };
 
 const getFileExtension = (file: Express.Multer.File) => {
@@ -83,14 +89,10 @@ export const uploadPostImages = async (
   files: Express.Multer.File[],
   imageMetadata: ImageMetadataInput[] = [],
 ) => {
-  const uploadedImages: Array<{
-    imageUrl: string;
-    caption?: string;
-    order: number;
-  }> = [];
+  const uploadedPaths: string[] = [];
 
   try {
-    for (const [index, file] of files.entries()) {
+    const uploadPromises = files.map(async (file, index) => {
       const storagePath = buildStoragePath(postId, file);
       const { error } = await withStorageTimeout(
         getSupabaseClient().storage
@@ -108,18 +110,25 @@ export const uploadPostImages = async (
         });
       }
 
-      uploadedImages.push({
+      uploadedPaths.push(storagePath);
+
+      return {
         imageUrl: getPublicUrl(storagePath),
         caption: imageMetadata[index]?.caption,
         order: imageMetadata[index]?.order ?? index,
-      });
-    }
+      };
+    });
 
+    const uploadedImages = await Promise.all(uploadPromises);
     return uploadedImages;
   } catch (error) {
-    await Promise.allSettled(
-      uploadedImages.map((image) => deleteImageByUrl(image.imageUrl)),
-    );
+    if (uploadedPaths.length > 0) {
+      await Promise.allSettled(
+        uploadedPaths.map((path) =>
+          getSupabaseClient().storage.from(propertyImagesBucket).remove([path])
+        )
+      );
+    }
     throw error;
   }
 };

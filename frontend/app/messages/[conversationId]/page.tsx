@@ -987,7 +987,14 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
     .reverse();
 
   return (
-    <div className="theme-message-surface theme-shadow-lg relative flex h-full min-h-0 flex-1 overflow-hidden overflow-x-hidden rounded-none border-none md:rounded-[26px] md:border md:border-[var(--border)]">
+    <div
+      style={{
+        height: typeof window !== "undefined" && window.innerWidth < 768
+          ? "var(--visual-viewport-height, 100vh)"
+          : "100%",
+      }}
+      className="theme-message-surface theme-shadow-lg relative flex min-h-0 flex-1 overflow-hidden overflow-x-hidden rounded-none border-none md:rounded-[26px] md:border md:border-[var(--border)]"
+    >
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-[78px] shrink-0 items-center justify-between border-b border-[var(--border)] bg-[var(--surface-muted)] px-5 lg:px-6">
           <div className="flex min-w-0 items-center gap-3">
@@ -1356,7 +1363,7 @@ export default function ChatWindow({ params }: { params: Promise<{ conversationI
                     onChange={handleInputChange}
                     disabled={isUploading}
                     placeholder={isUploading ? "Đang tải ảnh lên..." : "Nhập tin nhắn..."}
-                    className="w-full border-none bg-transparent px-2 py-2.5 text-[14px] text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]"
+                    className="w-full border-none bg-transparent px-2 py-2.5 text-base md:text-[14px] text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]"
                   />
                 </div>
 

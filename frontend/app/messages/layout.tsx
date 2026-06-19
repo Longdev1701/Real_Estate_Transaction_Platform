@@ -101,6 +101,27 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
   }, [searchQuery]);
 
   useEffect(() => {
+    if (typeof window === "undefined" || !window.visualViewport) return;
+
+    const handleViewportResize = () => {
+      const height = window.visualViewport?.height;
+      if (height) {
+        document.documentElement.style.setProperty("--visual-viewport-height", `${height}px`);
+      }
+    };
+
+    window.visualViewport.addEventListener("resize", handleViewportResize);
+    window.visualViewport.addEventListener("scroll", handleViewportResize);
+    handleViewportResize();
+
+    return () => {
+      window.visualViewport?.removeEventListener("resize", handleViewportResize);
+      window.visualViewport?.removeEventListener("scroll", handleViewportResize);
+      document.documentElement.style.removeProperty("--visual-viewport-height");
+    };
+  }, []);
+
+  useEffect(() => {
     if (hasHydrated && !user) {
       router.push("/auth/login");
     }
@@ -421,7 +442,14 @@ export default function MessagesLayout({ children }: { children: React.ReactNode
   };
 
   return (
-    <div className={`mx-auto max-w-[1520px] p-0 md:p-2.5 lg:p-4 h-full`}>
+    <div
+      style={{
+        height: typeof window !== "undefined" && window.innerWidth < 768
+          ? "var(--visual-viewport-height, 100vh)"
+          : "100%",
+      }}
+      className="mx-auto max-w-[1520px] p-0 md:p-2.5 lg:p-4"
+    >
       <div className="theme-message-shell flex h-full overflow-hidden rounded-none border-none md:rounded-[26px] md:border md:border-[var(--accent-border)]">
         <aside className="theme-message-rail hidden w-[84px] flex-col justify-between border-r border-[var(--border)] px-3 py-5 md:flex">
           <div className="space-y-2.5">
